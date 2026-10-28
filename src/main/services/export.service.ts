@@ -133,6 +133,7 @@ export function collectPageAssets(page: Pick<Page, 'blocks'>): PageAssetRef[] {
   const assets = new Map<string, PageAssetRef>()
 
   for (const block of page.blocks || []) {
+    // Header 'columns' tidak pernah punya aset; hanya blok image/file yang dicek.
     if (block.type !== 'image' && block.type !== 'file') continue
     if (!block.assetId || !block.assetExt) continue
     if (assets.has(block.assetId)) continue
@@ -149,7 +150,8 @@ export function collectPageAssets(page: Pick<Page, 'blocks'>): PageAssetRef[] {
   return Array.from(assets.values())
 }
 
-function renderBlock(block: DocumentBlock): string {
+/** Satu blok -> potongan Markdown. Header grup kolom sengaja kosong. */
+export function renderBlock(block: DocumentBlock): string {
   const content = block.content || ''
 
   switch (block.type) {
@@ -175,6 +177,10 @@ function renderBlock(block: DocumentBlock): string {
       return ['```dot', content, '```'].join('\n')
     case 'database':
       return renderDatabase(block)
+    case 'columns':
+      // Header grup hanya metadata; anak-anaknya dirender sebagai blok biasa.
+      // String kosong membuat pageToMarkdown melewatinya (tanpa paragraf kosong).
+      return ''
     case 'image': {
       if (!block.assetId || !block.assetExt) return content
       const alt = block.assetName || content || 'gambar'

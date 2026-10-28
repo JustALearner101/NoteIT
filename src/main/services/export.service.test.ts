@@ -3,6 +3,7 @@ import type { DocumentBlock, Page, ProjectTaskItem, WorkspaceSnapshot } from '@s
 import {
   collectPageAssets,
   pageToMarkdown,
+  renderBlock,
   slugifyTitle,
   workspaceToMarkdownFiles
 } from './export.service'
@@ -242,6 +243,68 @@ describe('export.service — pageToMarkdown', () => {
   it('tidak menambahkan section Canvas untuk halaman mode block', () => {
     const markdown = pageToMarkdown(makePage({ mode: 'block' }))
     expect(markdown).not.toContain('## Canvas')
+  })
+})
+
+describe('export.service — blok kolom', () => {
+  const columnHeader = makeBlock({
+    id: 'grp-1',
+    type: 'columns',
+    content: '',
+    columnWidths: [50, 50]
+  })
+
+  it('renderBlock mengembalikan string kosong untuk header columns', () => {
+    expect(renderBlock(columnHeader)).toBe('')
+  })
+
+  it('pageToMarkdown memuat teks semua kolom tanpa baris kosong dari header', () => {
+    const paragraphs = [
+      makeBlock({ id: 'b1', type: 'paragraph', content: 'Paragraf sebelum kolom.' }),
+      makeBlock({
+        id: 'c1',
+        type: 'paragraph',
+        content: 'Isi kolom kiri.',
+        columnGroupId: 'grp-1',
+        columnIndex: 0
+      }),
+      makeBlock({
+        id: 'c2',
+        type: 'paragraph',
+        content: 'Isi kolom kanan.',
+        columnGroupId: 'grp-1',
+        columnIndex: 1
+      }),
+      makeBlock({ id: 'b2', type: 'paragraph', content: 'Paragraf sesudah kolom.' })
+    ]
+
+    const withHeader = pageToMarkdown(
+      makePage({ blocks: [paragraphs[0], columnHeader, ...paragraphs.slice(1)] })
+    )
+    const withoutHeader = pageToMarkdown(makePage({ blocks: paragraphs }))
+
+    expect(withHeader).toContain('Isi kolom kiri.')
+    expect(withHeader).toContain('Isi kolom kanan.')
+    // Header tidak menyumbang apa pun: hasilnya identik dengan halaman tanpa header.
+    expect(withHeader).toBe(withoutHeader)
+    expect(withHeader).not.toContain('\n\n\n')
+  })
+
+  it('collectPageAssets tidak mengambil aset dari header kolom', () => {
+    const page = makePage({
+      blocks: [
+        columnHeader,
+        makeBlock({
+          id: 'c1',
+          type: 'paragraph',
+          content: 'Teks kolom.',
+          columnGroupId: 'grp-1',
+          columnIndex: 0
+        })
+      ]
+    })
+
+    expect(collectPageAssets(page)).toEqual([])
   })
 })
 

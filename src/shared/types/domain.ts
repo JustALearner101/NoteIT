@@ -53,6 +53,7 @@ export type BlockType =
   | 'database'
   | 'image'
   | 'file'
+  | 'columns'
 
 export interface DBMLTableLayout {
   [tableName: string]: { x: number; y: number; color?: MarkerColor }
@@ -80,6 +81,11 @@ export interface DocumentBlock {
   databaseActiveView?: 'gantt' | 'kanban' | 'table' | 'chart' | 'calendar'
   databaseChartType?: 'bar' | 'line' | 'area' | 'donut' | 'radar' | 'scatter'
   databaseItems?: ProjectTaskItem[]
+  // For 'columns' group: header bertipe 'columns' (content selalu ''), anak-anaknya
+  // menunjuk balik lewat columnGroupId + columnIndex; columnWidths hanya di header.
+  columnGroupId?: string
+  columnIndex?: number
+  columnWidths?: number[]
   // For 'image' | 'file' blocks (aset content-addressed di workspace/assets)
   assetId?: string
   assetExt?: string

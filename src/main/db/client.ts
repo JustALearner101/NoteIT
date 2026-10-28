@@ -11,6 +11,8 @@ export function extractPlainTextFromPage(page: Pick<Page, 'title' | 'blocks' | '
   const parts: string[] = [page.title]
 
   for (const b of page.blocks || []) {
+    // Header grup kolom hanya metadata (content ''); teksnya ada di blok anak.
+    if (b.type === 'columns') continue
     if (b.content) parts.push(b.content)
     if (b.calloutTitle) parts.push(b.calloutTitle)
     if (b.databaseTitle) parts.push(b.databaseTitle)

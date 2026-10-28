@@ -78,6 +78,25 @@ describe('extractPlainTextFromPage', () => {
     ])
   })
 
+  it('blok kolom: header dilewati, teks anak kolom tetap masuk', () => {
+    const page: Pick<Page, 'title' | 'blocks' | 'canvasData' | 'tags'> = {
+      title: 'Halaman Kolom',
+      blocks: [
+        block({ id: 'grp-1', type: 'columns', content: '', columnWidths: [50, 50] }),
+        block({ id: 'c1', content: 'Teks kolom satu', columnGroupId: 'grp-1', columnIndex: 0 }),
+        block({ id: 'c2', content: 'Teks kolom dua', columnGroupId: 'grp-1', columnIndex: 1 })
+      ],
+      canvasData: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+      tags: []
+    }
+
+    expect(extractPlainTextFromPage(page).split('\n')).toEqual([
+      'Halaman Kolom',
+      'Teks kolom satu',
+      'Teks kolom dua'
+    ])
+  })
+
   it('hanya mengembalikan judul bila tidak ada blocks, canvas, atau tags', () => {
     const page: Pick<Page, 'title' | 'blocks' | 'canvasData' | 'tags'> = {
       title: 'Halaman Kosong',

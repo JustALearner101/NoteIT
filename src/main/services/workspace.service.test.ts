@@ -343,6 +343,46 @@ describe('workspace.service (integration)', () => {
     expect(ftsRows.cnt).toBe(1)
   })
 
+  it('searchWorkspace menemukan kata di dalam kolom dan mengabaikan header kosong', () => {
+    const page = createPage({ sectionId, title: 'Halaman Kolom FTS', mode: 'block' })
+
+    updatePage({
+      id: page.id,
+      blocks: [
+        { id: 'grp-fts', type: 'columns', content: '', columnWidths: [50, 50] },
+        {
+          id: 'col-fts-1',
+          type: 'paragraph',
+          content: 'Kolom kiri berisi kalkulasi margin',
+          columnGroupId: 'grp-fts',
+          columnIndex: 0
+        },
+        {
+          id: 'col-fts-2',
+          type: 'paragraph',
+          content: 'Kolom kanan berisi rencana rilis',
+          columnGroupId: 'grp-fts',
+          columnIndex: 1
+        }
+      ]
+    })
+
+    const hits = searchWorkspace('kalkulasi').filter((r) => r.pageId === page.id)
+    expect(hits).toHaveLength(1)
+    expect(hits[0].snippet).toContain('kalkulasi')
+    expect(searchWorkspace('rencana').some((r) => r.pageId === page.id)).toBe(true)
+
+    // Header grup (content '') tidak menambah baris kosong ke plain_text.
+    const plainText = getDb()
+      .prepare('SELECT plain_text FROM pages WHERE id = ?')
+      .get(page.id) as { plain_text: string }
+    const lines = plainText.plain_text.split('\n')
+    expect(lines[0]).toBe('Halaman Kolom FTS')
+    expect(lines).toContain('Kolom kiri berisi kalkulasi margin')
+    expect(lines).toContain('Kolom kanan berisi rencana rilis')
+    expect(lines.filter((line) => line.trim() === '')).toEqual([])
+  })
+
   it('setiap page punya tepat satu row pages_fts setelah create/update/delete', () => {
     const a = createPage({ sectionId, title: 'Halaman Hitung FTS A', mode: 'block' })
     const b = createPage({ sectionId, title: 'Halaman Hitung FTS B', mode: 'block' })
