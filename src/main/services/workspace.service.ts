@@ -19,6 +19,7 @@ import {
   insertSection,
   listSections
 } from '../db/repository/section.repository'
+import type { SectionRow } from '../db/repository/section.repository'
 import {
   deletePageById,
   findPageById,
@@ -79,6 +80,19 @@ function mapRowToPage(row: PageRow): Page {
   }
 }
 
+function mapRowToSection(row: SectionRow): Section {
+  return {
+    id: row.id,
+    notebookId: row.notebook_id,
+    name: row.name,
+    code: row.code,
+    color: row.color as MarkerColor,
+    sortOrder: row.sort_order,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }
+}
+
 export function getWorkspaceSnapshot(): WorkspaceSnapshot {
   const notebookRows = listNotebooks()
   const sectionRows = listSections()
@@ -94,16 +108,7 @@ export function getWorkspaceSnapshot(): WorkspaceSnapshot {
     updatedAt: r.updated_at
   }))
 
-  const sections: Section[] = sectionRows.map((r) => ({
-    id: r.id,
-    notebookId: r.notebook_id,
-    name: r.name,
-    code: r.code,
-    color: r.color as MarkerColor,
-    sortOrder: r.sort_order,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at
-  }))
+  const sections: Section[] = sectionRows.map(mapRowToSection)
 
   const pages: Page[] = pageRows.map(mapRowToPage)
 
@@ -196,6 +201,35 @@ export function createSection(input: {
 
     return section
   })
+}
+
+const INBOX_SECTION_NAME = 'INBOX'
+
+function findSectionByName(name: string): Section | null {
+  const target = name.trim().toLowerCase()
+  const row = listSections().find((section) => section.name.trim().toLowerCase() === target)
+  return row ? mapRowToSection(row) : null
+}
+
+/** Notebook pertama (sortOrder terkecil); dibuat hanya kalau workspace benar-benar kosong. */
+function ensureDefaultNotebookId(): string {
+  const [firstNotebook] = listNotebooks()
+  if (firstNotebook) return firstNotebook.id
+  return createNotebook({ name: 'Catatan Pribadi', icon: '📔', color: 'cobalt' }).id
+}
+
+function ensureSectionByName(name: string, color: MarkerColor): Section {
+  const existing = findSectionByName(name)
+  if (existing) return existing
+  return createSection({ notebookId: ensureDefaultNotebookId(), name, color })
+}
+
+/**
+ * Section INBOX adalah rumah semua capture mentah. Quick capture memanggil ini tanpa
+ * lewat UI, jadi fungsi harus idempoten: nama dicocokkan case-insensitive + trim.
+ */
+export function ensureInboxSection(): Section {
+  return withTransaction(() => ensureSectionByName(INBOX_SECTION_NAME, 'slate'))
 }
 
 export function createPage(input: CreatePageInput): Page {
