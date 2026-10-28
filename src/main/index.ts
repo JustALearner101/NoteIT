@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, session, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { initDatabase } from './db/client'
@@ -45,6 +45,48 @@ process.on('unhandledRejection', (reason) => {
 })
 
 let mainWindow: BrowserWindow | null = null
+
+/**
+ * CSP dipasang sebagai header respons agar berlaku di dev maupun produksi.
+ * 'wasm-unsafe-eval' wajib ada: Graphviz (@viz-js/viz) mengompilasi WebAssembly.
+ * Longgarnya hanya ditambahkan saat dev (Vite HMR + preamble react-refresh).
+ */
+function buildContentSecurityPolicy(isDev: boolean): string {
+  const directives = [
+    "default-src 'self'",
+    isDev
+      ? "script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'"
+      : "script-src 'self' 'wasm-unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: noteit-asset:",
+    "media-src 'self' noteit-asset:",
+    "frame-src 'self' noteit-asset:",
+    "object-src 'self' noteit-asset:",
+    "font-src 'self' data:",
+    isDev
+      ? "connect-src 'self' noteit-asset: ws: http://localhost:* http://127.0.0.1:*"
+      : "connect-src 'self' noteit-asset:",
+    "worker-src 'self' blob:"
+  ]
+
+  return directives.join('; ')
+}
+
+function installContentSecurityPolicy(): void {
+  const isDev = !app.isPackaged && Boolean(process.env['ELECTRON_RENDERER_URL'])
+  const policy = buildContentSecurityPolicy(isDev)
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders: Record<string, string[]> = {}
+    for (const [key, value] of Object.entries(details.responseHeaders ?? {})) {
+      if (key.toLowerCase() === 'content-security-policy') continue
+      responseHeaders[key] = value
+    }
+    responseHeaders['Content-Security-Policy'] = [policy]
+
+    callback({ responseHeaders })
+  })
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -295,6 +337,8 @@ function registerIpcHandlers(): void {
 }
 
 app.whenReady().then(() => {
+  installContentSecurityPolicy()
+
   const workspaceDir = path.join(app.getPath('userData'), 'workspace')
   initDatabase(workspaceDir)
   startBackupScheduler(undefined, writeLog)
