@@ -1,5 +1,18 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+
+// Font self-hosted (subset latin) — menggantikan <link> Google Fonts di index.html.
+import '@fontsource/jetbrains-mono/latin-400.css'
+import '@fontsource/jetbrains-mono/latin-500.css'
+import '@fontsource/jetbrains-mono/latin-600.css'
+import '@fontsource/plus-jakarta-sans/latin-400.css'
+import '@fontsource/plus-jakarta-sans/latin-500.css'
+import '@fontsource/plus-jakarta-sans/latin-600.css'
+import '@fontsource/plus-jakarta-sans/latin-700.css'
+import '@fontsource/space-grotesk/latin-500.css'
+import '@fontsource/space-grotesk/latin-600.css'
+import '@fontsource/space-grotesk/latin-700.css'
+
 import { App } from './App'
 import { QuickCapture } from './components/capture/QuickCapture'
 import { ErrorBoundary } from './components/ErrorBoundary'
