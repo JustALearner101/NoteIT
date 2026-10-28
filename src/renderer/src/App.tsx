@@ -28,15 +28,13 @@ const WorkbenchPane: React.FC<{
 }
 
 /**
- * Target yang punya undo/redo native sendiri (input teks, textarea, contentEditable).
- * Shortcut aplikasi tidak boleh mencurinya.
+ * Undo/redo aplikasi menggantikan undo native, termasuk saat fokus di textarea/input
+ * editor: input-nya controlled React, jadi Ctrl+Z native tidak mengubah state apa pun.
+ * Konsekuensinya satu langkah undo = satu grup edit hasil coalescing 500ms, bukan per
+ * karakter. Satu-satunya pengecualian: Command Palette yang punya input pencarian sendiri.
  */
-const isNativeUndoTarget = (target: EventTarget | null): boolean => {
-  if (!(target instanceof HTMLElement)) return false
-  if (target.isContentEditable) return true
-  const tag = target.tagName
-  return tag === 'INPUT' || tag === 'TEXTAREA'
-}
+const isInsideCommandPalette = (target: EventTarget | null): boolean =>
+  target instanceof Element && target.closest('[data-command-palette]') !== null
 
 export const App: React.FC = () => {
   const {
@@ -72,9 +70,9 @@ export const App: React.FC = () => {
       const mod = e.ctrlKey || e.metaKey
       const key = e.key.toLowerCase()
 
-      // Undo/redo halaman: jangan intercept saat fokus di input native atau saat
-      // Command Palette terbuka — biarkan browser menangani undo teks sendiri.
-      if (mod && !isCommandPaletteOpen && !isNativeUndoTarget(e.target)) {
+      // Undo/redo halaman. Input editor tidak dikecualikan karena controlled:
+      // undo native tidak berefek di sana, undo aplikasi yang dipakai.
+      if (mod && !isCommandPaletteOpen && !isInsideCommandPalette(e.target)) {
         if (key === 'z' && !e.shiftKey) {
           e.preventDefault()
           undo()

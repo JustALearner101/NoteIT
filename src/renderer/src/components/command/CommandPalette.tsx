@@ -100,6 +100,7 @@ export const CommandPalette: React.FC = () => {
       className="fixed inset-0 z-50 bg-black/60 flex items-start justify-center pt-20 px-4 select-none"
     >
       <div
+        data-command-palette
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-2xl rounded-[8px] bg-surface-elevated border border-border-hairline shadow-2xl overflow-hidden"
       >
