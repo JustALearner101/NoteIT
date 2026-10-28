@@ -81,6 +81,11 @@ function mapRowToPage(row: PageRow): Page {
   }
 }
 
+/** NULL = snapshot legacy; '[]' = snapshot yang memang tanpa tag. */
+function parseVersionTags(tagsJson: string | null): string[] | null {
+  return tagsJson === null ? null : JSON.parse(tagsJson)
+}
+
 function mapRowToSection(row: SectionRow): Section {
   return {
     id: row.id,
@@ -442,6 +447,8 @@ export function createPage(input: CreatePageInput): Page {
       label: 'Inisialisasi Halaman',
       blocksJson: JSON.stringify(page.blocks),
       canvasJson: JSON.stringify(page.canvasData),
+      // Tanpa ini restore ke v1 menghapus tags halaman (jalur legacy NULL).
+      tagsJson: JSON.stringify(page.tags),
       createdAt: now
     })
 
@@ -530,6 +537,7 @@ export function getPageVersions(pageId: string): PageVersion[] {
     label: r.label,
     blocks: JSON.parse(r.blocks_json || '[]'),
     canvasData: JSON.parse(r.canvas_json || '{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}'),
+    tags: parseVersionTags(r.tags_json),
     createdAt: r.created_at
   }))
 }
@@ -569,6 +577,7 @@ export function createPageSnapshot(pageId: string, label?: string): PageVersion 
       label: snapLabel,
       blocks: JSON.parse(pageRow.blocks_json || '[]'),
       canvasData: JSON.parse(pageRow.canvas_json || '{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}'),
+      tags: parseVersionTags(pageRow.tags_json),
       createdAt: now
     }
   })

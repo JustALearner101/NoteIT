@@ -139,6 +139,8 @@ export interface PageVersion {
   label: string
   blocks: DocumentBlock[]
   canvasData: CanvasState
+  /** null = snapshot legacy (dibuat sebelum kolom tags_json ada), bukan "tanpa tag". */
+  tags: string[] | null
   createdAt: number
 }
 

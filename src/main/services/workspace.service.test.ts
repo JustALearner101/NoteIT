@@ -231,6 +231,34 @@ describe('workspace.service (integration)', () => {
     expect(restored.tags).toEqual(['tetap'])
   })
 
+  it('snapshot v1 dari createPage menyimpan tags dan restore memulihkannya', () => {
+    const page = createPage({ sectionId, title: 'Halaman V1 Tags', mode: 'block' })
+
+    const v1 = getDb()
+      .prepare('SELECT tags_json FROM page_versions WHERE page_id = ? AND version_number = 1')
+      .get(page.id) as { tags_json: string | null }
+    expect(v1.tags_json).not.toBeNull()
+    expect(JSON.parse(v1.tags_json as string)).toEqual(['draft'])
+
+    updatePage({ id: page.id, tags: ['diubah'] })
+    const restored = restorePageSnapshot(page.id, `ver-${page.id}-1`)
+
+    expect(restored.tags).toEqual(['draft'])
+    expect(getWorkspaceSnapshot().pages.find((p) => p.id === page.id)?.tags).toEqual(['draft'])
+  })
+
+  it('seed baseline menyimpan tags halaman, bukan NULL', () => {
+    const seeded = getWorkspaceSnapshot().pages.find((p) => p.id === 'pg-101')
+    expect(seeded).toBeDefined()
+
+    const row = getDb()
+      .prepare('SELECT tags_json FROM page_versions WHERE id = ?')
+      .get('ver-pg-101-1') as { tags_json: string | null }
+
+    expect(row.tags_json).not.toBeNull()
+    expect(JSON.parse(row.tags_json as string)).toEqual(seeded!.tags)
+  })
+
   it('deletePage menghapus page dan hasil search-nya', () => {
     expect(searchWorkspace('zettelkasten').some((r) => r.pageId === pageId)).toBe(true)
 

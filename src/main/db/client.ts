@@ -233,8 +233,8 @@ function seedInitialWorkspace(db: DatabaseSync): void {
   `)
 
   const insertVersion = db.prepare(`
-    INSERT INTO page_versions (id, page_id, version_number, title, label, blocks_json, canvas_json, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO page_versions (id, page_id, version_number, title, label, blocks_json, canvas_json, tags_json, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   for (const pg of pages) {
@@ -271,6 +271,7 @@ function seedInitialWorkspace(db: DatabaseSync): void {
       'Baseline Arsitektur Awal',
       blocksJson,
       canvasJson,
+      tagsJson,
       pg.updatedAt
     )
   }
