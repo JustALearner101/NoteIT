@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { MARKER_META } from '@renderer/lib/marker-colors'
-import { DAY_MS, formatIsoDate, parseIsoDate } from '@renderer/lib/database/dates'
+import { DAY_MS, formatIsoDate, parseIsoDate, todayIso } from '@renderer/lib/database/dates'
 import type { DatabaseViewProps } from './types'
 
 const DAY_COL_WIDTH = 34
@@ -18,7 +18,8 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
       .filter((ms): ms is number => ms !== null)
 
     if (starts.length === 0 || ends.length === 0) {
-      const base = Date.UTC(2026, 9, 18)
+      const now = new Date()
+      const base = Date.UTC(now.getFullYear(), now.getMonth(), 1)
       return { startMs: base, totalDays: 24 }
     }
 
@@ -41,8 +42,8 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
     })
   }, [timelineWindow])
 
-  const todayIso = '2026-10-27'
-  const todayIdx = daysArray.findIndex((d) => d.iso === todayIso)
+  const today = todayIso()
+  const todayIdx = daysArray.findIndex((d) => d.iso === today)
 
   /** Tanggal tidak valid jatuh ke awal timeline supaya tidak menghasilkan NaN. */
   const toMs = (iso: string): number => parseIsoDate(iso) ?? timelineWindow.startMs

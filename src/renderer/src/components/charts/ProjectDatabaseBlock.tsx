@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { AlertTriangle, BarChart3, GanttChart, Kanban, Plus, Table2 } from 'lucide-react'
 import type { ProjectTaskItem } from '@shared/types/domain'
-import { parseIsoDate } from '@renderer/lib/database/dates'
+import { parseIsoDate, todayIso } from '@renderer/lib/database/dates'
 import { createTask, deleteTask, shiftTask, updateTask } from '@renderer/lib/database/tasks'
 import { ChartView } from './views/ChartView'
 import { GanttView } from './views/GanttView'
@@ -51,7 +51,7 @@ export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
   }
 
   const handleAddTask = (): void => {
-    onChange({ databaseItems: [...items, createTask(items, '2026-10-27')] })
+    onChange({ databaseItems: [...items, createTask(items, todayIso())] })
   }
 
   const handleDeleteTask = (taskId: string): void => {
