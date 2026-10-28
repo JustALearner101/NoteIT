@@ -281,3 +281,114 @@ describe('workspace.service (integration)', () => {
     expect(singleAfter.cnt).toBe(1)
   })
 })
+
+describe('page_aliases — backlink stabil saat rename', () => {
+  function aliasRowsFor(pageId: string): Array<{ alias: string; page_id: string }> {
+    return getDb()
+      .prepare('SELECT alias, page_id FROM page_aliases WHERE page_id = ? ORDER BY alias ASC')
+      .all(pageId) as unknown as Array<{ alias: string; page_id: string }>
+  }
+
+  function countOrphanAliases(): number {
+    const row = getDb()
+      .prepare(
+        'SELECT COUNT(*) as cnt FROM page_aliases a LEFT JOIN pages p ON p.id = a.page_id WHERE p.id IS NULL'
+      )
+      .get() as { cnt: number }
+    return row?.cnt ?? 0
+  }
+
+  function createLinkSource(title: string, targetTitle: string): string {
+    const source = createPage({ sectionId, title, mode: 'block' })
+    updatePage({
+      id: source.id,
+      blocks: [
+        {
+          id: `blk-alias-${source.id}`,
+          type: 'paragraph',
+          content: `Rujukan ke [[${targetTitle}]] dari catatan ini.`
+        }
+      ]
+    })
+    return source.id
+  }
+
+  it('rename page tidak memutus backlink [[judul lama]]', () => {
+    const target = createPage({ sectionId, title: 'Arsitektur', mode: 'block' })
+    const sourceId = createLinkSource('Catatan Arsitektur', 'Arsitektur')
+
+    expect(getBacklinks(target.id).map((b) => b.sourcePageId)).toEqual([sourceId])
+
+    updatePage({ id: target.id, title: 'Arsitektur Baru' })
+
+    const backlinks = getBacklinks(target.id)
+    expect(backlinks.map((b) => b.sourcePageId)).toEqual([sourceId])
+    expect(backlinks[0].contextSnippet).toContain('[[Arsitektur]]')
+    expect(aliasRowsFor(target.id).map((a) => a.alias)).toContain('arsitektur')
+  })
+
+  it('setelah rename, [[judul baru]] juga resolve ke page yang sama', () => {
+    const target = createPage({ sectionId, title: 'Arsitektur Dua', mode: 'block' })
+    const oldRefSource = createLinkSource('Catatan Arsitektur Dua Lama', 'Arsitektur Dua')
+
+    updatePage({ id: target.id, title: 'Arsitektur Dua Baru' })
+    const newRefSource = createLinkSource('Catatan Arsitektur Dua Baru', 'Arsitektur Dua Baru')
+
+    const sourceIds = getBacklinks(target.id).map((b) => b.sourcePageId)
+    expect(sourceIds).toContain(oldRefSource)
+    expect(sourceIds).toContain(newRefSource)
+  })
+
+  it('rename berantai: [[A]], [[B]], dan [[C]] menunjuk page yang sama', () => {
+    const target = createPage({ sectionId, title: 'Rantai Satu', mode: 'block' })
+
+    updatePage({ id: target.id, title: 'Rantai Dua' })
+    updatePage({ id: target.id, title: 'Rantai Tiga' })
+
+    const firstId = createLinkSource('Rantai Sumber Satu', 'Rantai Satu')
+    const secondId = createLinkSource('Rantai Sumber Dua', 'Rantai Dua')
+    const thirdId = createLinkSource('Rantai Sumber Tiga', 'Rantai Tiga')
+
+    const sourceIds = getBacklinks(target.id).map((b) => b.sourcePageId)
+    expect(sourceIds).toContain(firstId)
+    expect(sourceIds).toContain(secondId)
+    expect(sourceIds).toContain(thirdId)
+  })
+
+  it('judul aktif menang atas alias saat dua page bertabrakan judul', () => {
+    const incumbent = createPage({ sectionId, title: 'Tabrakan Judul', mode: 'block' })
+    const renamer = createPage({ sectionId, title: 'Tabrakan Sumber', mode: 'block' })
+    const sourceId = createLinkSource('Catatan Tabrakan', 'Tabrakan Judul')
+
+    updatePage({ id: renamer.id, title: 'Tabrakan Judul' })
+
+    expect(getBacklinks(incumbent.id).map((b) => b.sourcePageId)).toContain(sourceId)
+    expect(getBacklinks(renamer.id).map((b) => b.sourcePageId)).not.toContain(sourceId)
+    expect(aliasRowsFor(renamer.id).map((a) => a.alias)).toEqual(['tabrakan sumber'])
+  })
+
+  it('menghapus page ikut menghapus alias miliknya', () => {
+    const page = createPage({ sectionId, title: 'Alias Akan Hilang', mode: 'block' })
+    updatePage({ id: page.id, title: 'Alias Akan Hilang Baru' })
+
+    expect(aliasRowsFor(page.id)).toHaveLength(1)
+
+    deletePage(page.id)
+
+    expect(aliasRowsFor(page.id)).toHaveLength(0)
+    expect(countOrphanAliases()).toBe(0)
+  })
+
+  it('rename ke judul kosong tidak membuat alias dan memakai judul fallback', () => {
+    const page = createPage({ sectionId, title: 'Judul Kosong Uji', mode: 'block' })
+
+    const updated = updatePage({ id: page.id, title: '   ' })
+
+    expect(updated.title).toBe('Halaman Tanpa Judul')
+    expect(aliasRowsFor(page.id)).toHaveLength(0)
+    expect(getWorkspaceSnapshot().pages.find((p) => p.id === page.id)?.title).toBe(
+      'Halaman Tanpa Judul'
+    )
+  })
+})
+

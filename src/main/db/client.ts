@@ -139,6 +139,13 @@ export function initDatabase(workspaceDir: string): DatabaseSync {
       PRIMARY KEY (source_page_id, target_page_id)
     );
 
+    CREATE TABLE IF NOT EXISTS page_aliases (
+      alias TEXT NOT NULL,
+      page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (alias, page_id)
+    );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(
       page_id UNINDEXED,
       title,
@@ -266,7 +273,9 @@ export function rebuildAllPageLinks(db: DatabaseSync): void {
   db.exec('DELETE FROM page_links;')
 
   const rows = db
-    .prepare('SELECT id, title, blocks_json, canvas_json FROM pages')
+    .prepare(
+      'SELECT id, title, blocks_json, canvas_json FROM pages ORDER BY created_at ASC, id ASC'
+    )
     .all() as Array<{
     id: string
     title: string
@@ -274,9 +283,23 @@ export function rebuildAllPageLinks(db: DatabaseSync): void {
     canvas_json: string
   }>
 
+  // Judul aktif selalu menang: alias hanya dipakai kalau judul itu tidak dipakai page mana pun.
   const titleToId = new Map<string, string>()
   for (const r of rows) {
-    titleToId.set(r.title.toLowerCase().trim(), r.id)
+    const key = r.title.toLowerCase().trim()
+    // Judul ganda: halaman yang lebih dulu ada memegang judul itu.
+    if (key && !titleToId.has(key)) titleToId.set(key, r.id)
+  }
+
+  const aliasRows = db
+    .prepare('SELECT alias, page_id FROM page_aliases ORDER BY created_at ASC, alias ASC')
+    .all() as Array<{ alias: string; page_id: string }>
+
+  const aliasToId = new Map<string, string>()
+  for (const a of aliasRows) {
+    const key = a.alias.toLowerCase().trim()
+    if (!key || titleToId.has(key) || aliasToId.has(key)) continue
+    aliasToId.set(key, a.page_id)
   }
 
   const insertLink = db.prepare(`
@@ -289,7 +312,8 @@ export function rebuildAllPageLinks(db: DatabaseSync): void {
     const canvasData = JSON.parse(r.canvas_json || '{"nodes":[],"edges":[]}')
     const refs = extractWikiLinkTitles({ blocks, canvasData })
     for (const ref of refs) {
-      const targetId = titleToId.get(ref.targetTitle.toLowerCase().trim())
+      const key = ref.targetTitle.toLowerCase().trim()
+      const targetId = titleToId.get(key) ?? aliasToId.get(key)
       if (targetId && targetId !== r.id) {
         insertLink.run(r.id, targetId, ref.snippet)
       }

@@ -30,6 +30,7 @@ import {
   updatePageVersionCount
 } from '../db/repository/page.repository'
 import { listBacklinks } from '../db/repository/link.repository'
+import { insertAlias } from '../db/repository/alias.repository'
 import {
   findVersionById,
   insertVersion,
@@ -344,6 +345,12 @@ export function createPage(input: CreatePageInput): Page {
   })
 }
 
+// Judul kosong / fallback bukan identitas yang layak dipertahankan sebagai alias.
+function isAliasWorthyTitle(title: string): boolean {
+  const clean = title.trim()
+  return clean.length > 0 && clean !== 'Halaman Tanpa Judul'
+}
+
 export function updatePage(input: UpdatePageInput): Page {
   return withTransaction(() => {
     const existingRow = findPageById(input.id)
@@ -352,12 +359,11 @@ export function updatePage(input: UpdatePageInput): Page {
     }
 
     const current = mapRowToPage(existingRow)
+    const nextTitle =
+      input.title !== undefined ? input.title.trim() || 'Halaman Tanpa Judul' : current.title
     const updated: Page = {
       ...current,
-      title:
-        input.title !== undefined
-          ? input.title.trim() || 'Halaman Tanpa Judul'
-          : current.title,
+      title: nextTitle,
       icon: input.icon !== undefined ? input.icon : current.icon,
       mode: input.mode !== undefined ? input.mode : current.mode,
       blocks: input.blocks !== undefined ? input.blocks : current.blocks,
@@ -371,6 +377,15 @@ export function updatePage(input: UpdatePageInput): Page {
     const plainText = extractPlainTextFromPage(updated)
 
     updatePageRow(updated, plainText)
+
+    // Rename: judul lama disimpan sebagai alias supaya [[judul lama]] tetap menunjuk page ini.
+    if (
+      nextTitle !== current.title &&
+      isAliasWorthyTitle(current.title) &&
+      isAliasWorthyTitle(nextTitle)
+    ) {
+      insertAlias(current.title, updated.id, updated.updatedAt)
+    }
 
     rebuildAllPageLinks(getDb())
     return updated
