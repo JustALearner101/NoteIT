@@ -78,7 +78,7 @@ Empat gelombang, urut dari risiko data nol ke paling besar:
 |---|---|---|
 | 0 | Gate runtime: test, typecheck, build, npm run dev, smoke 10 titik | — |
 | 1 ✅ | Chart lanjutan (line/radar/scatter) + Calendar view + pecah ProjectDatabaseBlock | Nol |
-| 2 | Graphviz DOT (@viz-js/viz) + multi-tab polish (drag, context menu, shortcut, divider split) | Nol |
+| 2 ✅ | Graphviz DOT (@viz-js/viz) + multi-tab polish (drag, context menu, shortcut, divider split) | Nol |
 | 3 ✅ | CSP + font self-hosted, version history polish, attachment/PDF | Tinggi (disk + skema) |
 | 4 | Multi-kolom penuh (model flat) | Sedang, diketahui akan dibuang saat Tiptap |
 
