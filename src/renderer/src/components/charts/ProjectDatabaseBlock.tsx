@@ -27,6 +27,7 @@ import {
 } from 'recharts'
 import type { MarkerColor, ProjectTaskItem, TaskStatus } from '@shared/types/domain'
 import { MARKER_COLORS, MARKER_META } from '@renderer/lib/marker-colors'
+import { createId } from '@renderer/lib/ids'
 
 interface ProjectDatabaseBlockProps {
   title: string
@@ -122,7 +123,7 @@ export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
     const nextNum = items.length + 1
     const lastTask = items[items.length - 1]
     const newTask: ProjectTaskItem = {
-      id: `tsk-${Date.now()}`,
+      id: createId('tsk'),
       code: `TSK-${String(nextNum).padStart(2, '0')}`,
       title: 'Spesifikasi Task Engineering Baru',
       category: 'Engineering',

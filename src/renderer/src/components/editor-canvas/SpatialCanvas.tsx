@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { MARKER_COLORS, MARKER_META } from '@renderer/lib/marker-colors'
+import { createId } from '@renderer/lib/ids'
 import type {
   MarkerColor,
   Page,
@@ -234,7 +235,7 @@ export const SpatialCanvas: React.FC<SpatialCanvasProps> = ({ page }) => {
       const newEdges = addEdge(
         {
           ...connection,
-          id: `edge-${Date.now()}`,
+          id: createId('edge'),
           label: 'RELASI',
           animated: true
         },
@@ -265,7 +266,7 @@ export const SpatialCanvas: React.FC<SpatialCanvasProps> = ({ page }) => {
   ): void => {
     const count = (page.canvasData?.nodes || []).length + 1
     const newNode: SpatialCanvasNode = {
-      id: `node-${Date.now()}`,
+      id: createId('cn'),
       type: 'workCard',
       position: {
         x: 120 + ((count * 60) % 420),

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { MARKER_META } from '@renderer/lib/marker-colors'
+import { createId } from '@renderer/lib/ids'
 import { DBMLStudio } from '@renderer/components/diagrams/dbml/DBMLStudio'
 import { MermaidStudio } from '@renderer/components/diagrams/mermaid/MermaidStudio'
 import { ProjectDatabaseBlock } from '@renderer/components/charts/ProjectDatabaseBlock'
@@ -106,9 +107,10 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
   }
 
   const insertBlockAfter = (afterId: string | null, type: BlockType): void => {
-    const now = Date.now()
+    const firstTaskId = createId('tsk')
+    const milestoneTaskId = createId('tsk')
     const newBlock: DocumentBlock = {
-      id: `blk-${now}`,
+      id: createId('blk'),
       type,
       content:
         type === 'dbml'
@@ -131,7 +133,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
         type === 'database'
           ? [
               {
-                id: `tsk-${now}-1`,
+                id: firstTaskId,
                 code: 'TSK-01',
                 title: 'Rancang Kontrak Data',
                 category: 'Core',
@@ -146,7 +148,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
                 estimateHours: 16
               },
               {
-                id: `tsk-${now}-2`,
+                id: milestoneTaskId,
                 code: 'M1',
                 title: 'Sign-Off Arsitektur',
                 category: 'Milestone',
@@ -156,7 +158,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
                 endDate: '2026-11-01',
                 progress: 0,
                 isMilestone: true,
-                dependsOn: [`tsk-${now}-1`],
+                dependsOn: [firstTaskId],
                 assignee: 'Team',
                 estimateHours: 4
               }
