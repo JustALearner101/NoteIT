@@ -8,6 +8,7 @@ import {
   Columns3,
   Database,
   GanttChart,
+  GripVertical,
   Heading1,
   Heading2,
   Heading3,
@@ -36,6 +37,7 @@ import {
   createColumnGroup,
   groupBlocks,
   removeColumn,
+  resolveColumnDrop,
   type ColumnBlock
 } from '@renderer/lib/columns'
 import type { AssetRecord, BlockType, DocumentBlock, Page } from '@shared/types/domain'
@@ -165,6 +167,9 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
   const { pages, updatePage, openPageInTab } = useWorkspaceStore()
   const [slashMenuForBlockId, setSlashMenuForBlockId] = useState<string | null>(null)
   const [wikiPickerForBlockId, setWikiPickerForBlockId] = useState<string | null>(null)
+  // Blok baru draggable setelah pointerdown di grip: seluruh blok draggable akan
+  // merusak seleksi teks di dalam editor.
+  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null)
 
   const updateBlock = (blockId: string, patch: Partial<DocumentBlock>): void => {
     const nextBlocks = page.blocks.map((b) => (b.id === blockId ? { ...b, ...patch } : b))
@@ -301,6 +306,17 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
       blocks: createColumnGroup(page.blocks, afterId, count) as DocumentBlock[]
     })
     setSlashMenuForBlockId(null)
+  }
+
+  /** Drop blok ke kolom lain; resolveColumnDrop mengembalikan null untuk no-op. */
+  const moveBlockToColumnAt = (
+    groupId: string,
+    blockId: string,
+    columnIndex: number
+  ): void => {
+    const nextBlocks = resolveColumnDrop(page.blocks, blockId, groupId, columnIndex)
+    if (!nextBlocks) return
+    updatePage({ id: page.id, blocks: nextBlocks })
   }
 
   /** Isi kolom dipindah ke kolom tetangga oleh removeColumn, bukan dibuang. */
@@ -448,6 +464,13 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
     return (
       <div
         key={block.id}
+        draggable={draggingBlockId === block.id}
+        onDragStart={(event) => {
+          if (draggingBlockId !== block.id) return
+          event.dataTransfer.setData('text/plain', block.id)
+          event.dataTransfer.effectAllowed = 'move'
+        }}
+        onDragEnd={() => setDraggingBlockId(null)}
         className={`group relative ${isWide ? 'max-w-full' : 'max-w-[780px] mx-auto'}`}
       >
         {/* Hover Block Controls Gutter */}
@@ -455,6 +478,16 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
           <span className="font-mono text-[9px] uppercase px-1.5 py-0.2 rounded bg-surface-chrome border border-border-hairline text-ink-muted">
             {block.type}
           </span>
+          <button
+            type="button"
+            onPointerDown={() => setDraggingBlockId(block.id)}
+            onPointerUp={() => setDraggingBlockId(null)}
+            title="Tarik ke kolom lain"
+            aria-label="Pegangan pindah blok"
+            className="p-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary cursor-grab active:cursor-grabbing"
+          >
+            <GripVertical size={11} />
+          </button>
           <button
             onClick={() =>
               setWikiPickerForBlockId(
@@ -763,6 +796,9 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
                   updateBlock(node.header.id, { columnWidths: widths })
                 }
                 onRemoveColumn={(columnIndex) => removeColumnAt(node.header.id, columnIndex)}
+                onDropBlock={(blockId, columnIndex) =>
+                  moveBlockToColumnAt(node.header.id, blockId, columnIndex)
+                }
               />
             </div>
           ) : (

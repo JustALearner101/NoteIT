@@ -7,6 +7,7 @@ import {
   normalizeWidths,
   nudgeDivider,
   removeColumn,
+  resolveColumnDrop,
   resizeColumnPair,
   type ColumnBlock,
   type ColumnRenderNode
@@ -315,6 +316,49 @@ describe('moveBlockToColumn', () => {
     expect(moveBlockToColumn(blocks, 'zz', 'g1', 1)).toEqual(blocks)
     expect(moveBlockToColumn(blocks, 'a', 'zz', 1)).toEqual(blocks)
     expect(moveBlockToColumn(blocks, 'a', 'g1', 5)).toEqual(blocks)
+  })
+})
+
+describe('resolveColumnDrop', () => {
+  const twoColumns = (): ColumnBlock[] => [
+    header('g1', [50, 50]),
+    block('a', 'A', { columnGroupId: 'g1', columnIndex: 0 }),
+    block('b', 'B', { columnGroupId: 'g1', columnIndex: 0 }),
+    block('c', 'C', { columnGroupId: 'g1', columnIndex: 1 })
+  ]
+
+  it('mengembalikan null saat blok dijatuhkan ke kolom asalnya', () => {
+    expect(resolveColumnDrop(twoColumns(), 'a', 'g1', 0)).toBeNull()
+    expect(resolveColumnDrop(twoColumns(), 'c', 'g1', 1)).toBeNull()
+  })
+
+  it('memindahkan blok ke kolom lain dan menjaga urutan relatif', () => {
+    const next = resolveColumnDrop(twoColumns(), 'a', 'g1', 1)
+    if (!next) throw new Error('expected change')
+    const group = groupBlocks(next)[0]
+    if (group.kind !== 'group') throw new Error('expected group')
+    expect(group.columns.map((col) => ids(col))).toEqual([['b'], ['c', 'a']])
+    expect(ids(next)).toEqual(['g1', 'b', 'c', 'a'])
+  })
+
+  it('mengembalikan null untuk blockId yang tidak dikenal', () => {
+    expect(resolveColumnDrop(twoColumns(), 'zz', 'g1', 1)).toBeNull()
+  })
+
+  it('mengembalikan null untuk grup tidak dikenal atau indeks di luar jangkauan', () => {
+    expect(resolveColumnDrop(twoColumns(), 'a', 'zz', 1)).toBeNull()
+    expect(resolveColumnDrop(twoColumns(), 'a', 'g1', 5)).toBeNull()
+    expect(resolveColumnDrop(twoColumns(), 'a', 'g1', -1)).toBeNull()
+  })
+
+  it('menolak memindahkan header grup ke dalam kolom', () => {
+    expect(resolveColumnDrop(twoColumns(), 'g1', 'g1', 1)).toBeNull()
+  })
+
+  it('tidak memutasi input', () => {
+    const blocks = twoColumns()
+    resolveColumnDrop(blocks, 'a', 'g1', 1)
+    expect(ids(blocks)).toEqual(['g1', 'a', 'b', 'c'])
   })
 })
 

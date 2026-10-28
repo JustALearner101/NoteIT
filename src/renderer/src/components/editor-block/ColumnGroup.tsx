@@ -15,6 +15,8 @@ interface ColumnGroupProps {
   renderBlock: (block: ColumnBlock, columnIndex: number) => React.ReactNode
   onWidthsChange: (widths: number[]) => void
   onRemoveColumn?: (columnIndex: number) => void
+  /** Drop blok dari blok lain; tanpa prop ini sel kolom tidak punya handler drag. */
+  onDropBlock?: (blockId: string, columnIndex: number) => void
   readOnly?: boolean
 }
 
@@ -38,12 +40,14 @@ export function ColumnGroup({
   renderBlock,
   onWidthsChange,
   onRemoveColumn,
+  onDropBlock,
   readOnly = false
 }: ColumnGroupProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
   const pendingRef = useRef<number[] | null>(null)
   const [dragWidths, setDragWidths] = useState<number[] | null>(null)
+  const [dropTargetColumn, setDropTargetColumn] = useState<number | null>(null)
 
   const columnCount = columns.length
   const committed = normalizeWidths(widths, columnCount)
@@ -101,6 +105,34 @@ export function ColumnGroup({
     if (final) onWidthsChange(final)
   }
 
+  /** Handler drop per sel kolom; kosong total bila onDropBlock tidak diberikan. */
+  const dropHandlers = (
+    columnIndex: number
+  ): Pick<React.HTMLAttributes<HTMLDivElement>, 'onDragOver' | 'onDragLeave' | 'onDrop'> => {
+    if (!onDropBlock) return {}
+    return {
+      onDragOver: (event) => {
+        // preventDefault wajib: tanpa ini browser menolak drop.
+        event.preventDefault()
+        event.stopPropagation()
+        event.dataTransfer.dropEffect = 'move'
+        setDropTargetColumn(columnIndex)
+      },
+      onDragLeave: (event) => {
+        // Perpindahan antar anak memicu dragleave; abaikan selama masih di sel ini.
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return
+        setDropTargetColumn((current) => (current === columnIndex ? null : current))
+      },
+      onDrop: (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        setDropTargetColumn(null)
+        const blockId = event.dataTransfer.getData('text/plain')
+        if (blockId) onDropBlock(blockId, columnIndex)
+      }
+    }
+  }
+
   const handleKeyDown =
     (dividerIndex: number) => (event: React.KeyboardEvent<HTMLDivElement>): void => {
       if (readOnly) return
@@ -120,7 +152,15 @@ export function ColumnGroup({
       style={{ gridTemplateColumns: template }}
     >
       {columns.map((columnBlocks, columnIndex) => (
-        <div key={`${header.id}-col-${columnIndex}`} className="min-w-0 px-3">
+        <div
+          key={`${header.id}-col-${columnIndex}`}
+          {...dropHandlers(columnIndex)}
+          className={`min-w-0 px-3 ${
+            dropTargetColumn === columnIndex
+              ? 'bg-accent-cobalt/5 ring-1 ring-inset ring-accent-cobalt/40'
+              : ''
+          }`}
+        >
           <div className="flex flex-col">
             {columnBlocks.length === 0 ? (
               <div className="font-mono text-[10px] text-ink-muted py-1 select-none">

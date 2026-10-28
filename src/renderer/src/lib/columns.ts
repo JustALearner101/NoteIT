@@ -419,3 +419,36 @@ export function moveBlockToColumn<B extends ColumnBlock>(
   list.splice(insertAt, 0, moved)
   return list
 }
+
+/**
+ * Keputusan drop drag-and-drop blok ke sebuah kolom.
+ * Mengembalikan null bila drop tidak mengubah apa pun (no-op), supaya
+ * pemanggil tidak menyimpan halaman dan tidak membuang entri undo.
+ */
+export function resolveColumnDrop<B extends ColumnBlock>(
+  blocks: readonly B[],
+  blockId: string,
+  groupId: string,
+  columnIndex: number
+): B[] | null {
+  if (!blockId || !groupId || blockId === groupId) return null
+
+  const block = blocks.find((item) => item.id === blockId)
+  if (!block) return null
+  // Header grup tidak boleh bersarang di dalam kolom.
+  if (block.type === 'columns') return null
+
+  const header = blocks.find((item) => item.id === groupId && item.type === 'columns')
+  if (!header) return null
+
+  const target = Number.isFinite(columnIndex) ? Math.floor(columnIndex) : -1
+  if (target < 0) return null
+  if (block.columnGroupId === groupId && block.columnIndex === target) return null
+
+  const next = moveBlockToColumn(blocks, blockId, groupId, target)
+  const moved = next.find((item) => item.id === blockId)
+  // moveBlockToColumn mengembalikan salinan apa adanya saat target di luar jangkauan.
+  if (!moved || moved.columnGroupId !== groupId || moved.columnIndex !== target) return null
+  return next
+}
+
