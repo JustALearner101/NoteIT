@@ -10,6 +10,7 @@ import type {
 import type { CreatePageInput, UpdatePageInput } from '@shared/ipc-channels'
 import { createSaveQueue } from '@renderer/lib/save-queue'
 import { createUndoStack } from '@renderer/lib/undo-stack'
+import * as tabRules from '@renderer/lib/tabs'
 
 interface TelemetryState {
   cursorX: number
@@ -32,7 +33,10 @@ interface WorkspaceStore {
   openTabIds: string[]
   activePageId: string
   splitPageId: string | null // Right pane page ID when Split-Pane is active
+  splitRatio: number // Lebar pane kiri (0.2..0.8) saat Split-Pane aktif
   focusedPane: 'primary' | 'split'
+  closedTabIds: string[] // Riwayat tab ditutup (Ctrl/Cmd+Shift+T), maks 10
+  dirtyPageIds: string[] // Halaman dengan perubahan yang belum selesai ditulis
   selectedTagFilter: string | null
 
   // UI Chrome State
@@ -46,6 +50,11 @@ interface WorkspaceStore {
   setActiveNotebook: (notebookId: string) => void
   openPageInTab: (pageId: string, inSplitPane?: boolean) => void
   closeTab: (pageId: string) => void
+  reorderTabs: (fromId: string, toId: string) => void
+  closeOtherTabs: (keepPageId: string) => void
+  closeTabsToRight: (pageId: string) => void
+  reopenLastClosed: () => void
+  setSplitRatio: (ratio: number) => void
   toggleSplitPane: (targetPageId?: string) => void
   setFocusedPane: (pane: 'primary' | 'split') => void
   setSelectedTagFilter: (tag: string | null) => void
@@ -100,6 +109,32 @@ const hasContentChange = (page: Page, input: UpdatePageInput): boolean =>
   (input.tags !== undefined && input.tags !== page.tags)
 
 /**
+ * Halaman yang punya perubahan belum tersimpan (dipakai untuk dirty dot di tab).
+ *
+ * Sumber kebenaran tetap saveQueue.hasPending(): set ini hanya MENAHAN id
+ * selama IPC masih berjalan. flushPage() menghapus entri pending sebelum
+ * memanggil send(), jadi hasPending() sudah false padahal SQLite belum tentu
+ * selesai menulis — tanpa penahan ini dot akan berkedip hilang terlalu cepat.
+ */
+const dirtyPageIds = new Set<string>()
+
+const syncDirtyState = (): void => {
+  useWorkspaceStore.setState({ dirtyPageIds: Array.from(dirtyPageIds) })
+}
+
+const markPageDirty = (pageId: string): void => {
+  if (dirtyPageIds.has(pageId)) return
+  dirtyPageIds.add(pageId)
+  syncDirtyState()
+}
+
+const clearPageDirty = (pageId: string): void => {
+  // Ada edit baru yang menunggu flush: halaman ini masih kotor.
+  if (saveQueue.hasPending(pageId)) return
+  if (dirtyPageIds.delete(pageId)) syncDirtyState()
+}
+
+/**
  * Antrean simpan: satu patch gabungan per halaman tiap 350ms idle.
  * send() sengaja tidak di-await — UI tidak boleh menunggu disk.
  */
@@ -109,6 +144,7 @@ const saveQueue = createSaveQueue<PagePatch>({
     void window.noteitAPI
       .updatePage({ id: pageId, ...patch })
       .then((saved) => {
+        clearPageDirty(pageId)
         // Jangan timpa state kalau sudah ada edit yang lebih baru menunggu flush.
         if (saveQueue.hasPending(pageId)) return
         useWorkspaceStore.setState((state) => ({
@@ -116,10 +152,19 @@ const saveQueue = createSaveQueue<PagePatch>({
         }))
       })
       .catch((error: unknown) => {
+        // Gagal simpan tetap harus melepas dot: kalau tidak, tab tampak
+        // "menyimpan" selamanya padahal antrean sudah kosong.
+        clearPageDirty(pageId)
         console.error('[save-queue] gagal menyimpan halaman', pageId, error)
       })
   }
 })
+
+/** Satu-satunya pintu masuk patch halaman: selalu menandai dirty lebih dulu. */
+const queuePagePatch = (pageId: string, patch: PagePatch): void => {
+  markPageDirty(pageId)
+  saveQueue.enqueue(pageId, patch)
+}
 
 const undoStack = createUndoStack<PageSnapshot>({ limit: 50, coalesceMs: 500 })
 
@@ -130,8 +175,56 @@ const applySnapshot = (pageId: string, snapshot: PageSnapshot): void => {
       p.id === pageId ? { ...p, ...snapshot, updatedAt: Date.now() } : p
     )
   }))
-  saveQueue.enqueue(pageId, snapshot)
+  queuePagePatch(pageId, snapshot)
   saveQueue.flushAll()
+}
+
+/**
+ * Persistensi tab (openTabIds / activePageId / splitPageId / splitRatio).
+ *
+ * BELUM TERVERIFIKASI: renderer Electron app ini dimuat dari origin file://
+ * (out/renderer/index.html). Chromium tidak menjamin localStorage tersedia dan
+ * persisten di origin file:// — perilakunya beda antar versi dan antar platform.
+ * Kode ini sengaja defensif: semua akses dibungkus try/catch, dan parseTabs
+ * menolak data yang tidak masuk akal. Kalau storage tidak tersedia, satu-satunya
+ * efek adalah state tab tidak dipulihkan setelah restart (bukan crash).
+ */
+let tabsHydrated = false
+
+const readPersistedTabs = (validIds: string[]): tabRules.TabPersistState | null => {
+  try {
+    return tabRules.parseTabs(window.localStorage.getItem(tabRules.TABS_STORAGE_KEY), validIds)
+  } catch (error) {
+    console.warn('[tabs] localStorage tidak bisa dibaca', error)
+    return null
+  }
+}
+
+const writePersistedTabs = (state: WorkspaceStore): void => {
+  // Sebelum hidrasi, state tab masih default/kosong: menulis sekarang akan
+  // menimpa sesi terakhir yang belum sempat dibaca.
+  if (!tabsHydrated) return
+  try {
+    window.localStorage.setItem(
+      tabRules.TABS_STORAGE_KEY,
+      tabRules.serializeTabs({
+        openTabIds: state.openTabIds,
+        activePageId: state.activePageId,
+        splitPageId: state.splitPageId,
+        splitRatio: state.splitRatio
+      })
+    )
+  } catch (error) {
+    console.warn('[tabs] localStorage tidak bisa ditulis', error)
+  }
+}
+
+/** Tab yang hilang dari daftar lama masuk riwayat reopen, urutan asli dipertahankan. */
+const pushClosedTabs = (before: string[], after: string[], stack: string[]): string[] => {
+  const kept = new Set(after)
+  return before
+    .filter((id) => !kept.has(id))
+    .reduce((acc, id) => tabRules.pushReopen(id, acc), stack)
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
@@ -151,7 +244,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   openTabIds: [],
   activePageId: '',
   splitPageId: null,
+  splitRatio: tabRules.SPLIT_RATIO_DEFAULT,
   focusedPane: 'primary',
+  closedTabIds: [],
+  dirtyPageIds: [],
   selectedTagFilter: null,
 
   isSidebarCollapsed: false,
@@ -186,6 +282,29 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
     if (defaultPageId && !openTabIds.includes(defaultPageId)) {
       openTabIds.unshift(defaultPageId)
+    }
+
+    // Hidrasi tab sekali saja, dan hanya setelah data workspace tersedia:
+    // parseTabs butuh daftar id halaman yang benar-benar ada di SQLite.
+    if (!tabsHydrated) {
+      tabsHydrated = true
+      const restored = readPersistedTabs(snap.pages.map((p) => p.id))
+      if (restored) {
+        set({
+          notebooks: snap.notebooks,
+          sections: snap.sections,
+          pages: snap.pages,
+          tags: snap.tags,
+          stats: snap.stats,
+          activeNotebookId: defaultNotebookId,
+          activePageId: restored.activePageId,
+          openTabIds: restored.openTabIds,
+          splitPageId: restored.splitPageId,
+          splitRatio: restored.splitRatio,
+          isLoading: false
+        })
+        return
+      }
     }
 
     set({
@@ -244,21 +363,64 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   closeTab: (pageId) => {
     saveQueue.flushAll()
     set((state) => {
-      const nextTabs = state.openTabIds.filter((id) => id !== pageId)
-      let nextActive = state.activePageId
-      if (state.activePageId === pageId) {
-        nextActive = nextTabs[nextTabs.length - 1] || state.pages[0]?.id || ''
-        if (nextActive && !nextTabs.includes(nextActive)) {
-          nextTabs.push(nextActive)
-        }
-      }
+      // Aturan "pilih tetangga kanan lalu kiri" hidup di lib murni, bukan di sini.
+      const result = tabRules.closeTabIds(state.openTabIds, state.activePageId, pageId)
+      if (result.ids === state.openTabIds) return {}
       return {
-        openTabIds: nextTabs,
-        activePageId: nextActive,
-        splitPageId: state.splitPageId === pageId ? null : state.splitPageId
+        openTabIds: result.ids,
+        activePageId: result.activeId,
+        splitPageId: state.splitPageId === pageId ? null : state.splitPageId,
+        closedTabIds: tabRules.pushReopen(pageId, state.closedTabIds)
       }
     })
   },
+
+  reorderTabs: (fromId, toId) => {
+    set((state) => {
+      const next = tabRules.reorderTabs(state.openTabIds, fromId, toId)
+      return next === state.openTabIds ? {} : { openTabIds: next }
+    })
+  },
+
+  closeOtherTabs: (keepPageId) => {
+    saveQueue.flushAll()
+    set((state) => {
+      const next = tabRules.closeOthers(state.openTabIds, keepPageId)
+      if (next === state.openTabIds) return {}
+      return {
+        openTabIds: next,
+        activePageId: next.includes(state.activePageId) ? state.activePageId : keepPageId,
+        splitPageId:
+          state.splitPageId && next.includes(state.splitPageId) ? state.splitPageId : null,
+        closedTabIds: pushClosedTabs(state.openTabIds, next, state.closedTabIds)
+      }
+    })
+  },
+
+  closeTabsToRight: (pageId) => {
+    saveQueue.flushAll()
+    set((state) => {
+      const next = tabRules.closeToRight(state.openTabIds, pageId)
+      if (next === state.openTabIds) return {}
+      return {
+        openTabIds: next,
+        activePageId: next.includes(state.activePageId) ? state.activePageId : pageId,
+        splitPageId:
+          state.splitPageId && next.includes(state.splitPageId) ? state.splitPageId : null,
+        closedTabIds: pushClosedTabs(state.openTabIds, next, state.closedTabIds)
+      }
+    })
+  },
+
+  reopenLastClosed: () => {
+    const popped = tabRules.popReopen(get().closedTabIds)
+    if (!popped) return
+    set({ closedTabIds: popped.rest })
+    // Halaman bisa sudah dihapus sejak tab ditutup: jangan buka tab hantu.
+    if (get().pages.some((p) => p.id === popped.id)) get().openPageInTab(popped.id)
+  },
+
+  setSplitRatio: (ratio) => set({ splitRatio: tabRules.clampSplitRatio(ratio) }),
 
   toggleSplitPane: (targetPageId) => {
     saveQueue.flushAll()
@@ -359,7 +521,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     // IPC lewat save queue (debounce 350ms). Promise resolve setelah enqueue,
     // bukan setelah flush, supaya UI tidak pernah menunggu disk.
     const { id: _pageId, ...patch } = input
-    saveQueue.enqueue(input.id, patch)
+    queuePagePatch(input.id, patch)
   },
 
   switchPageMode: async (pageId, mode) => {
@@ -409,3 +571,17 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (snapshot) applySnapshot(targetId, snapshot)
   }
 }))
+
+// Simpan state tab setiap kali berubah. Zustand memanggil listener setelah
+// set(), jadi tulisan tetap sinkron dengan state terbaru.
+useWorkspaceStore.subscribe((state, prev) => {
+  if (
+    state.openTabIds === prev.openTabIds &&
+    state.activePageId === prev.activePageId &&
+    state.splitPageId === prev.splitPageId &&
+    state.splitRatio === prev.splitRatio
+  ) {
+    return
+  }
+  writePersistedTabs(state)
+})

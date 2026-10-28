@@ -1,15 +1,18 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Columns2, Plus, X } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { MARKER_META } from '@renderer/lib/marker-colors'
 import { Titlebar } from '@renderer/components/layout/Titlebar'
 import { IndexRailSidebar } from '@renderer/components/layout/IndexRailSidebar'
 import { SpecHeader } from '@renderer/components/layout/SpecHeader'
+import { TabContextMenu } from '@renderer/components/layout/TabContextMenu'
+import { TabOverflowMenu } from '@renderer/components/layout/TabOverflowMenu'
 import { TelemetryStatusBar } from '@renderer/components/layout/TelemetryStatusBar'
 import { BlockEditor } from '@renderer/components/editor-block/BlockEditor'
 import { SpatialCanvas } from '@renderer/components/editor-canvas/SpatialCanvas'
 import { CommandPalette } from '@renderer/components/command/CommandPalette'
 import { resolveUndoTarget } from '@renderer/lib/undo-target'
+import { SPLIT_RATIO_DEFAULT, nextTabId } from '@renderer/lib/tabs'
 import type { Page } from '@shared/types/domain'
 
 const WorkbenchPane: React.FC<{
@@ -51,10 +54,15 @@ export const App: React.FC = () => {
     openTabIds,
     activePageId,
     splitPageId,
+    splitRatio,
+    dirtyPageIds,
     focusedPane,
     isSidebarCollapsed,
     openPageInTab,
     closeTab,
+    reorderTabs,
+    reopenLastClosed,
+    setSplitRatio,
     toggleSidebar,
     setCommandPaletteOpen,
     switchPageMode,
@@ -68,9 +76,29 @@ export const App: React.FC = () => {
     redo
   } = useWorkspaceStore()
 
+  // --- Multi-tab UI state ---
+  const tabStripRef = useRef<HTMLDivElement>(null)
+  const workAreaRef = useRef<HTMLDivElement>(null)
+  const [hasTabOverflow, setHasTabOverflow] = useState(false)
+  const [draggingTabId, setDraggingTabId] = useState<string | null>(null)
+  const [tabMenu, setTabMenu] = useState<{ pageId: string; x: number; y: number } | null>(null)
+  const [isDividerDragging, setIsDividerDragging] = useState(false)
+
   useEffect(() => {
     loadWorkspace()
   }, [loadWorkspace])
+
+  // Chevron hanya muncul kalau strip tab benar-benar tidak muat. ResizeObserver
+  // dipakai supaya jendela yang dilebarkan langsung menyembunyikan chevron lagi.
+  useEffect(() => {
+    const strip = tabStripRef.current
+    if (!strip) return
+    const update = (): void => setHasTabOverflow(strip.scrollWidth > strip.clientWidth + 1)
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(strip)
+    return () => observer.disconnect()
+  }, [openTabIds, isSidebarCollapsed])
 
   // Hotkey global daily note: page dibuat di main process, jadi store dimuat ulang
   // dulu supaya openPageInTab menemukan halamannya. Listener dibersihkan saat unmount.
@@ -108,6 +136,25 @@ export const App: React.FC = () => {
         }
       }
 
+      // Tab: tutup, siklus, dan buka ulang. Ctrl+Tab sengaja hanya ctrlKey
+      // (Cmd+Tab di macOS milik OS, bukan aplikasi).
+      if (mod && key === 'w') {
+        e.preventDefault()
+        closeTab(activePageId)
+        return
+      }
+      if (mod && e.shiftKey && key === 't') {
+        e.preventDefault()
+        reopenLastClosed()
+        return
+      }
+      if (e.ctrlKey && key === 'tab') {
+        e.preventDefault()
+        const targetId = nextTabId(openTabIds, activePageId, e.shiftKey ? -1 : 1)
+        if (targetId) openPageInTab(targetId)
+        return
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setCommandPaletteOpen(true)
@@ -134,7 +181,11 @@ export const App: React.FC = () => {
     toggleSidebar,
     isCommandPaletteOpen,
     undo,
-    redo
+    redo,
+    closeTab,
+    openTabIds,
+    reopenLastClosed,
+    openPageInTab
   ])
 
   // Durability: jangan biarkan edit terakhir hanya hidup di memori renderer.
@@ -177,64 +228,110 @@ export const App: React.FC = () => {
         <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           {/* Multi-Tab Bar with Section Drafting Marker Top Accent */}
           <div className="h-[34px] bg-surface-chrome border-b border-border-hairline flex items-center justify-between px-2 select-none shrink-0">
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1">
-              {openTabIds.map((tabId) => {
-                const tabPage = pages.find((p) => p.id === tabId)
-                if (!tabPage) return null
-                const sec = sections.find((s) => s.id === tabPage.sectionId)
-                const marker = MARKER_META[sec?.color || 'cobalt']
-                const isActive = tabPage.id === activePage?.id
-
-                return (
-                  <div
-                    key={tabId}
-                    onClick={() => openPageInTab(tabId)}
-                    className={`group relative h-7 px-3 rounded-[5px] border flex items-center gap-2 text-xs cursor-pointer transition-colors ${
-                      isActive
-                        ? 'bg-surface-elevated border-border-hairline text-ink-primary font-medium'
-                        : 'bg-surface-chrome border-transparent text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
-                    }`}
-                  >
-                    {/* 2px Active Section Marker Accent Line */}
-                    {isActive && (
-                      <span
-                        className={`absolute top-0 left-1.5 right-1.5 h-[2px] rounded-full ${marker.bgStrip}`}
-                      />
-                    )}
-                    <span className="text-xs">{tabPage.icon}</span>
-                    <span className="truncate max-w-[160px]">{tabPage.title}</span>
-                    <span className="font-mono text-[10px] text-ink-muted">{tabPage.code}</span>
-                    {openTabIds.length > 1 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          closeTab(tabId)
-                        }}
-                        className="opacity-60 group-hover:opacity-100 hover:text-[#EF4444]"
-                      >
-                        <X size={11} />
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
-
-              <button
-                onClick={() => {
-                  const secId = activePage?.sectionId || sections[0]?.id
-                  if (secId) {
-                    createPage({
-                      sectionId: secId,
-                      title: 'Spesifikasi Baru',
-                      template: 'blank'
-                    })
-                  }
-                }}
-                title="Buka Halaman Baru"
-                className="h-6 w-6 rounded hover:bg-surface-hover flex items-center justify-center text-ink-muted hover:text-ink-primary"
+            <div className="flex items-center gap-1 min-w-0">
+              <div
+                ref={tabStripRef}
+                className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 min-w-0"
               >
-                <Plus size={13} />
-              </button>
+                {openTabIds.map((tabId) => {
+                  const tabPage = pages.find((p) => p.id === tabId)
+                  if (!tabPage) return null
+                  const sec = sections.find((s) => s.id === tabPage.sectionId)
+                  const marker = MARKER_META[sec?.color || 'cobalt']
+                  const isActive = tabPage.id === activePage?.id
+                  const isDirty = dirtyPageIds.includes(tabId)
+
+                  return (
+                    <div
+                      key={tabId}
+                      draggable
+                      onDragStart={(e) => {
+                        setDraggingTabId(tabId)
+                        e.dataTransfer.effectAllowed = 'move'
+                        e.dataTransfer.setData('text/plain', tabId)
+                      }}
+                      onDragEnd={() => setDraggingTabId(null)}
+                      onDragOver={(e) => {
+                        // preventDefault wajib, kalau tidak drop tidak pernah terjadi.
+                        e.preventDefault()
+                        e.dataTransfer.dropEffect = 'move'
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        const fromId = draggingTabId || e.dataTransfer.getData('text/plain')
+                        if (fromId && fromId !== tabId) reorderTabs(fromId, tabId)
+                        setDraggingTabId(null)
+                      }}
+                      onClick={() => openPageInTab(tabId)}
+                      onAuxClick={(e) => {
+                        // Middle-click = close, sama seperti browser.
+                        if (e.button !== 1) return
+                        e.preventDefault()
+                        closeTab(tabId)
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault()
+                        setTabMenu({ pageId: tabId, x: e.clientX, y: e.clientY })
+                      }}
+                      className={`group relative h-7 px-3 rounded-[5px] border flex items-center gap-2 text-xs cursor-pointer transition-colors ${
+                        draggingTabId === tabId ? 'opacity-40' : ''
+                      } ${
+                        isActive
+                          ? 'bg-surface-elevated border-border-hairline text-ink-primary font-medium'
+                          : 'bg-surface-chrome border-transparent text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
+                      }`}
+                    >
+                      {/* 2px Active Section Marker Accent Line */}
+                      {isActive && (
+                        <span
+                          className={`absolute top-0 left-1.5 right-1.5 h-[2px] rounded-full ${marker.bgStrip}`}
+                        />
+                      )}
+                      <span className="text-xs">{tabPage.icon}</span>
+                      <span className="truncate max-w-[160px]">{tabPage.title}</span>
+                      {isDirty && (
+                        <span
+                          title="Perubahan belum tersimpan"
+                          aria-label="Perubahan belum tersimpan"
+                          className="w-1.5 h-1.5 rounded-full bg-accent-amber shrink-0"
+                        />
+                      )}
+                      <span className="font-mono text-[10px] text-ink-muted">{tabPage.code}</span>
+                      {openTabIds.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            closeTab(tabId)
+                          }}
+                          className="opacity-60 group-hover:opacity-100 hover:text-[#EF4444]"
+                        >
+                          <X size={11} />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+
+                <button
+                  onClick={() => {
+                    const secId = activePage?.sectionId || sections[0]?.id
+                    if (secId) {
+                      createPage({
+                        sectionId: secId,
+                        title: 'Spesifikasi Baru',
+                        template: 'blank'
+                      })
+                    }
+                  }}
+                  title="Buka Halaman Baru"
+                  className="h-6 w-6 rounded hover:bg-surface-hover flex items-center justify-center text-ink-muted hover:text-ink-primary"
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
+
+              {/* Chevron hanya ada saat strip tab overflow */}
+              {hasTabOverflow && <TabOverflowMenu />}
             </div>
 
             {/* Right Pane Indicator when Split-Pane is active */}
@@ -265,16 +362,61 @@ export const App: React.FC = () => {
           </div>
 
           {/* Primary & Optional Split-Pane Work Area */}
-          <div className="flex-1 flex min-h-0 overflow-hidden divide-x divide-border-hairline">
+          <div ref={workAreaRef} className="flex-1 flex min-h-0 overflow-hidden">
             {activePage && (
-              <WorkbenchPane page={activePage} onActivate={() => setFocusedPane('primary')} />
+              <div
+                className="flex flex-col min-w-0 h-full overflow-hidden"
+                style={
+                  splitPage
+                    ? {
+                        flexBasis: `${splitRatio * 100}%`,
+                        flexGrow: 0,
+                        flexShrink: 0
+                      }
+                    : { flex: '1 1 0%' }
+                }
+              >
+                <WorkbenchPane page={activePage} onActivate={() => setFocusedPane('primary')} />
+              </div>
             )}
             {splitPage && (
-              <WorkbenchPane
-                page={splitPage}
-                isSplitPane
-                onActivate={() => setFocusedPane('split')}
-              />
+              <>
+                {/* Divider split: pointer events (bukan drag HTML5) supaya
+                    pergerakan mengikuti kursor tanpa ghost image. */}
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  title="Geser untuk mengubah lebar split, double-click untuk reset"
+                  onPointerDown={(e) => {
+                    e.currentTarget.setPointerCapture(e.pointerId)
+                    setIsDividerDragging(true)
+                  }}
+                  onPointerMove={(e) => {
+                    if (!isDividerDragging) return
+                    const rect = workAreaRef.current?.getBoundingClientRect()
+                    if (!rect || rect.width === 0) return
+                    setSplitRatio((e.clientX - rect.left) / rect.width)
+                  }}
+                  onPointerUp={(e) => {
+                    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+                      e.currentTarget.releasePointerCapture(e.pointerId)
+                    }
+                    setIsDividerDragging(false)
+                  }}
+                  onPointerCancel={() => setIsDividerDragging(false)}
+                  onDoubleClick={() => setSplitRatio(SPLIT_RATIO_DEFAULT)}
+                  className={`w-1 shrink-0 cursor-col-resize transition-colors ${
+                    isDividerDragging ? 'bg-accent-cobalt' : 'bg-border-hairline hover:bg-accent-cobalt/60'
+                  }`}
+                />
+                <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+                  <WorkbenchPane
+                    page={splitPage}
+                    isSplitPane
+                    onActivate={() => setFocusedPane('split')}
+                  />
+                </div>
+              </>
             )}
           </div>
         </main>
@@ -285,6 +427,16 @@ export const App: React.FC = () => {
 
       {/* Command Palette & FTS5 Instant Search Modal (Ctrl+K) */}
       <CommandPalette />
+
+      {/* Tab Context Menu (klik kanan tab) */}
+      {tabMenu && (
+        <TabContextMenu
+          pageId={tabMenu.pageId}
+          x={tabMenu.x}
+          y={tabMenu.y}
+          onClose={() => setTabMenu(null)}
+        />
+      )}
 
       {/* Consistent Active-Voice Toast Notification */}
       {toastMessage && (
