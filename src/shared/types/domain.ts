@@ -69,10 +69,10 @@ export interface DocumentBlock {
   dbmlLayout?: DBMLTableLayout
   // For 'mermaid' block
   mermaidViewMode?: 'code' | 'split' | 'diagram'
-  // For 'database' block (Gantt / Kanban / Table / Chart)
+  // For 'database' block (Gantt / Kanban / Table / Chart / Calendar)
   databaseTitle?: string
-  databaseActiveView?: 'gantt' | 'kanban' | 'table' | 'chart'
-  databaseChartType?: 'bar' | 'line' | 'area' | 'donut'
+  databaseActiveView?: 'gantt' | 'kanban' | 'table' | 'chart' | 'calendar'
+  databaseChartType?: 'bar' | 'line' | 'area' | 'donut' | 'radar' | 'scatter'
   databaseItems?: ProjectTaskItem[]
 }
 

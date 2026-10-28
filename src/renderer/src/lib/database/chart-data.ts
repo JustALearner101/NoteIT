@@ -6,6 +6,7 @@
  */
 import type { ProjectTaskItem } from '@shared/types/domain'
 import { MARKER_META } from '@renderer/lib/marker-colors'
+import { taskDurationDays } from './calendar'
 
 export const CHART_KINDS = ['bar', 'line', 'area', 'donut', 'radar', 'scatter'] as const
 
@@ -27,6 +28,8 @@ export interface ChartSeriesPoint {
   hours: number
   colorHex: string
   count: number
+  /** Durasi inklusif dalam hari; dipakai Scatter sebagai ukuran marker (Z). */
+  durationDays: number
 }
 
 export interface ChartSeriesOptions {
@@ -47,7 +50,7 @@ export function buildChartSeries(
   if (options.dimension === 'category') {
     const buckets = new Map<
       string,
-      { hours: number; progressSum: number; count: number; colorHex: string }
+      { hours: number; progressSum: number; count: number; colorHex: string; durationSum: number }
     >()
 
     for (const item of items) {
@@ -55,11 +58,13 @@ export function buildChartSeries(
         hours: 0,
         progressSum: 0,
         count: 0,
-        colorHex: colorHexOf(item)
+        colorHex: colorHexOf(item),
+        durationSum: 0
       }
       bucket.hours += item.estimateHours
       bucket.progressSum += item.progress
       bucket.count += 1
+      bucket.durationSum += taskDurationDays(item)
       buckets.set(item.category, bucket)
     }
 
@@ -69,7 +74,8 @@ export function buildChartSeries(
       hours: bucket.hours,
       progress: Math.round(bucket.progressSum / bucket.count),
       colorHex: bucket.colorHex,
-      count: bucket.count
+      count: bucket.count,
+      durationDays: bucket.durationSum
     }))
   }
 
@@ -79,7 +85,8 @@ export function buildChartSeries(
     progress: item.progress,
     hours: item.estimateHours,
     colorHex: colorHexOf(item),
-    count: 1
+    count: 1,
+    durationDays: taskDurationDays(item)
   }))
 }
 
