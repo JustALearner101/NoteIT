@@ -91,37 +91,16 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
     })
   }
 
+  // Satu sumber ekspor: main process (export.service.ts) yang paham blok
+  // graphviz/database/canvas. Builder lokal dulu menghasilkan file berbeda
+  // dari CommandPalette — jangan dihidupkan lagi di renderer.
   const handleExportMarkdown = async (): Promise<void> => {
-    const mdLines: string[] = [
-      `# ${page.icon} ${page.title}`,
-      `> Spec Code: ${page.code} | Section: ${section?.name || '-'} | Tags: ${page.tags
-        .map((t) => `#${t}`)
-        .join(' ')}`,
-      ''
-    ]
-    for (const blk of page.blocks) {
-      if (blk.type === 'h1') mdLines.push(`# ${blk.content}\n`)
-      else if (blk.type === 'h2') mdLines.push(`## ${blk.content}\n`)
-      else if (blk.type === 'h3') mdLines.push(`### ${blk.content}\n`)
-      else if (blk.type === 'checklist')
-        mdLines.push(`- [${blk.checked ? 'x' : ' '}] ${blk.content}`)
-      else if (blk.type === 'callout')
-        mdLines.push(`> **${blk.calloutTitle || 'CATATAN'}**: ${blk.content}\n`)
-      else if (blk.type === 'code' || blk.type === 'dbml' || blk.type === 'mermaid') {
-        mdLines.push(`\`\`\`${blk.type === 'code' ? blk.language || 'sql' : blk.type}\n${blk.content}\n\`\`\`\n`)
-      } else {
-        mdLines.push(`${blk.content}\n`)
-      }
-    }
-
-    const res = await window.noteitAPI.exportContent({
-      filename: `${page.code}-${page.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-      content: mdLines.join('\n'),
-      extension: 'md'
-    })
-    if (res.saved) {
-      showToast('Dokumen diekspor ke Markdown (.md)')
-    }
+    const result = await window.noteitAPI.exportMarkdown({ scope: 'page', pageId: page.id })
+    showToast(
+      result.saved && result.filePath
+        ? `Markdown tersimpan: ${result.filePath}`
+        : 'Ekspor halaman dibatalkan'
+    )
   }
 
   return (
