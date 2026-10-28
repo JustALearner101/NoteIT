@@ -9,14 +9,20 @@ import { TelemetryStatusBar } from '@renderer/components/layout/TelemetryStatusB
 import { BlockEditor } from '@renderer/components/editor-block/BlockEditor'
 import { SpatialCanvas } from '@renderer/components/editor-canvas/SpatialCanvas'
 import { CommandPalette } from '@renderer/components/command/CommandPalette'
+import { resolveUndoTarget } from '@renderer/lib/undo-target'
 import type { Page } from '@shared/types/domain'
 
 const WorkbenchPane: React.FC<{
   page: Page
   isSplitPane?: boolean
-}> = ({ page, isSplitPane = false }) => {
+  onActivate: () => void
+}> = ({ page, isSplitPane = false, onActivate }) => {
   return (
-    <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-canvas-primary">
+    <div
+      onMouseDown={onActivate}
+      onFocusCapture={onActivate}
+      className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-canvas-primary"
+    >
       <SpecHeader page={page} />
       {page.mode === 'canvas' ? (
         <SpatialCanvas key={`canvas-${page.id}-${isSplitPane}`} page={page} />
@@ -45,6 +51,7 @@ export const App: React.FC = () => {
     openTabIds,
     activePageId,
     splitPageId,
+    focusedPane,
     isSidebarCollapsed,
     openPageInTab,
     closeTab,
@@ -52,6 +59,7 @@ export const App: React.FC = () => {
     setCommandPaletteOpen,
     switchPageMode,
     toggleSplitPane,
+    setFocusedPane,
     createPage,
     toastMessage,
     isCommandPaletteOpen,
@@ -73,14 +81,18 @@ export const App: React.FC = () => {
       // Undo/redo halaman. Input editor tidak dikecualikan karena controlled:
       // undo native tidak berefek di sana, undo aplikasi yang dipakai.
       if (mod && !isCommandPaletteOpen && !isInsideCommandPalette(e.target)) {
+        // Undo mengikuti pane yang fokus: saat split pane aktif, pane kanan bisa
+        // sedang diedit walau activePageId masih menunjuk pane kiri.
+        const undoTarget = resolveUndoTarget({ focusedPane, activePageId, splitPageId })
+
         if (key === 'z' && !e.shiftKey) {
           e.preventDefault()
-          undo()
+          undo(undoTarget)
           return
         }
         if ((key === 'z' && e.shiftKey) || key === 'y') {
           e.preventDefault()
-          redo()
+          redo(undoTarget)
           return
         }
       }
@@ -103,6 +115,8 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
     activePageId,
+    splitPageId,
+    focusedPane,
     pages,
     setCommandPaletteOpen,
     switchPageMode,
@@ -241,8 +255,16 @@ export const App: React.FC = () => {
 
           {/* Primary & Optional Split-Pane Work Area */}
           <div className="flex-1 flex min-h-0 overflow-hidden divide-x divide-border-hairline">
-            {activePage && <WorkbenchPane page={activePage} />}
-            {splitPage && <WorkbenchPane page={splitPage} isSplitPane />}
+            {activePage && (
+              <WorkbenchPane page={activePage} onActivate={() => setFocusedPane('primary')} />
+            )}
+            {splitPage && (
+              <WorkbenchPane
+                page={splitPage}
+                isSplitPane
+                onActivate={() => setFocusedPane('split')}
+              />
+            )}
           </div>
         </main>
       </div>

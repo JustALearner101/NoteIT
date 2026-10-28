@@ -66,8 +66,8 @@ interface WorkspaceStore {
 
   // Durability: debounced save + undo/redo per halaman
   flushSaves: () => void
-  undo: () => void
-  redo: () => void
+  undo: (pageId?: string) => void
+  redo: (pageId?: string) => void
 }
 
 /** Patch yang dikirim ke main process (tanpa id — id adalah kunci antrean). */
@@ -390,19 +390,22 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     saveQueue.flushAll()
   },
 
-  undo: () => {
+  undo: (pageId) => {
     const { activePageId, pages } = get()
-    const page = pages.find((p) => p.id === activePageId)
+    // Target eksplisit dari App.tsx (pane yang fokus); fallback ke tab aktif.
+    const targetId = pageId ?? activePageId
+    const page = pages.find((p) => p.id === targetId)
     if (!page) return
 
     // State sekarang dikirim ke redo stack; applySnapshot tidak push entri baru.
-    const snapshot = undoStack.undo(activePageId, snapshotOf(page))
-    if (snapshot) applySnapshot(activePageId, snapshot)
+    const snapshot = undoStack.undo(targetId, snapshotOf(page))
+    if (snapshot) applySnapshot(targetId, snapshot)
   },
 
-  redo: () => {
+  redo: (pageId) => {
     const { activePageId } = get()
-    const snapshot = undoStack.redo(activePageId)
-    if (snapshot) applySnapshot(activePageId, snapshot)
+    const targetId = pageId ?? activePageId
+    const snapshot = undoStack.redo(targetId)
+    if (snapshot) applySnapshot(targetId, snapshot)
   }
 }))
