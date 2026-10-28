@@ -9,12 +9,11 @@ dibiarkan. Ditulis 2026-10-28. Rencana lengkap ada di
 
 | Metrik | Awal v2.2 | Sekarang |
 |---|---|---|
-| Test | 87 (12 berkas) | 271 (20 berkas) |
-| Gelombang selesai | 0 | 3 dari 4 |
-| Fitur dibuka dari freeze | 0 | 6 dari 7 |
+| Test | 87 (12 berkas) | 315 (21 berkas) |
+| Gelombang selesai | 0 | 4 dari 4 |
+| Fitur dibuka dari freeze | 0 | 7 dari 7 |
 
-Gelombang 1, 2, 3 selesai. Gelombang 4 (multi-kolom) belum dikerjakan — lihat
-bagian Obstacle #2.
+Keempat gelombang selesai.
 
 ## Pencapaian
 
@@ -70,6 +69,18 @@ Tiga paket `@fontsource` menggantikan Google Fonts: nol referensi eksternal,
 - Ekspor: `image` → `![](assets/<hash>.<ext>)`, `file` → tautan; satu salinan per
   aset unik untuk ekspor seluruh workspace.
 
+### Gelombang 4 — Multi-kolom
+- Model flat, bukan array bersarang: `BlockType` dapat `'columns'`, `DocumentBlock` dapat
+  `columnGroupId`, `columnIndex`, `columnWidths` (hanya di header). FTS, ekspor, undo, dan
+  snapshot tidak berubah — itu alasan model ini dipilih meski akan dibuang saat Tiptap.
+- `lib/columns.ts`: `groupBlocks`, `flattenColumns`, `createColumnGroup`, `removeColumn`,
+  `moveBlockToColumn`, `resolveColumnDrop`, `normalizeWidths`, `resizeColumnPair`,
+  `nudgeDivider` — 26 test. Lebar minimum efektif `min(15, floor(100/count))`.
+- `ColumnGroup`: grid persen eksplisit, divider `role="separator"` + pointer capture, panah
+  kiri/kanan, empty state, drop target per kolom. `onChange` hanya saat pointerup, jadi satu
+  drag resize = satu entri undo.
+- DnD antar kolom hanya lewat handle grip. Kalau seluruh blok draggable, seleksi teks rusak.
+
 ## Obstacle
 
 ### 1. Flaky test yang bukan flaky
@@ -80,12 +91,16 @@ memakai UUID acak — jadi hasilnya acak. Diperbaiki jadi
 `ORDER BY created_at ASC, rowid ASC`. Verifikasi 10/10 lulus. Pelajarannya: jangan
 menambahkan retry sebelum membuktikan penyebabnya.
 
-### 2. Worker tanpa tool tulis (menghadang Gelombang 4)
+### 2. Worker tanpa tool tulis (menunda Gelombang 4)
 Tiga percobaan menjalankan Gelombang 4 lewat sub-agent berhenti di langkah 0 karena
 worker hanya menerima `Read`/`Grep` — tanpa `Write`, `Edit`, `Bash`. Probe minimal
 tanpa tugas pun mengembalikan hasil sama, jadi penyebabnya provisioning tool, bukan
 prompt. Karena worker berhenti sebelum membaca atau menulis apa pun, tidak ada
 perubahan setengah jadi. Gelombang 4 ditunda, bukan gagal.
+
+Yang kemudian membuka jalan: masalahnya acak, bukan sistematis. Task kecil berhasil
+padahal task besar dengan provisioning yang sama gagal. Gelombang 4 dipecah jadi empat
+langkah kecil — lib kolom, `ColumnGroup`, integrasi, DnD — dan keempatnya berhasil.
 
 ### 3. Spesifikasi undo yang salah
 Ctrl+Z tidak berfungsi di dalam editor karena saya mengecualikan target
@@ -131,6 +146,10 @@ menahan semua penulisan. Berkas baru tertulis setelah rencana disetujui.
 - Tanggal seed masih hardcoded di `BlockEditor.tsx`.
 - Tab persistensi memakai `localStorage`; perilaku di origin `file://` belum
   dibuktikan, fallback IPC `ui-state.json` belum dibuat.
+- Dua cast TypeScript di jalur kolom karena `ColumnBlock.type` bertipe string, bukan
+  `BlockType`.
+- Gutter hover (badge + tombol hapus grup) tambahan di luar rencana, dibuat supaya
+  hapus header grup terjangkau dari UI.
 
 ## Belum diverifikasi (butuh klik manual di Electron)
 
@@ -145,9 +164,10 @@ Semua di bawah ini **belum** dijalankan; jangan dianggap lulus:
 - CSP produksi tanpa error di console
 - urutan tab dan lebar divider split bertahan setelah restart
 - Graphviz membersihkan SVG lama saat error
+- slash entry 2/3 kolom, resize divider, hapus kolom, drag blok antar kolom, dan undo setelah drag
 
 ## Status gate
 
 Gate tetap **7 hari berturut-turut tanpa membuka Notion**, dan belum mulai dihitung.
-Enam dari tujuh fitur sudah ada; yang kurang hanya multi-kolom, yang justru
-direncanakan dibuang saat migrasi Tiptap. Menunda Gelombang 4 tidak menunda gate.
+Ketujuh fitur sudah ada. Gate bisa mulai dihitung kapan saja; yang tersisa hanya
+smoke manual di Electron.

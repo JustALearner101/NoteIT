@@ -68,7 +68,7 @@ file 776 baris berarti 5 fitur setengah jadi. Nol nilai untuk lab belajar, maksi
 Kalau gagal: plan berikutnya adalah audit friction (apa yang bikin balik ke Notion), BUKAN menambah fitur.
 
 
-## v2.2 — Unfreeze 7 Fitur (aktif)
+## v2.2 — Unfreeze 7 Fitur (selesai)
 
 Rencana lengkap: C:/Users/NHQFH/.codebuddy/plans/blazing-beacon-tesla-iu2JHptW.md
 
@@ -80,11 +80,11 @@ Empat gelombang, urut dari risiko data nol ke paling besar:
 | 1 ✅ | Chart lanjutan (line/radar/scatter) + Calendar view + pecah ProjectDatabaseBlock | Nol |
 | 2 ✅ | Graphviz DOT (@viz-js/viz) + multi-tab polish (drag, context menu, shortcut, divider split) | Nol |
 | 3 ✅ | CSP + font self-hosted, version history polish, attachment/PDF | Tinggi (disk + skema) |
-| 4 | Multi-kolom penuh (model flat) | Sedang, diketahui akan dibuang saat Tiptap |
+| 4 ✅ | Multi-kolom penuh (model flat) | Sedang, diketahui akan dibuang saat Tiptap |
 
 Keputusan kunci: aset = file content-addressed + tabel assets (K1); backup aset = salin folder inkremental (K2); CSP produksi + @fontsource (K3); multi-kolom model flat (K4); Graphviz @viz-js/viz (K5); tab persist localStorage (K6); restore versi pakai snapshot pengaman (K7); bulan Calendar = useState lokal (K8).
 
-Target test: 87 → ≥110 → ≥132 → ≥168 → ≥190. Status: 271 test / 20 berkas (target gelombang 3 ≥168 terlampaui).
+Target test: 87 → ≥110 → ≥132 → ≥168 → ≥190. Status: 315 test / 21 berkas (semua target gelombang terlampaui).
 
 ### Gelombang 3C — Attachment/PDF (selesai)
 
@@ -97,5 +97,14 @@ Target test: 87 → ≥110 → ≥132 → ≥168 → ≥190. Status: 271 test / 
 - Ekspor: `image` → `![](assets/<hash>.<ext>)`, `file` → `[](assets/<hash>.<ext>)`; `collectPageAssets`; penyalinan biner lewat `copyFileSync`.
 - Verifikasi: `npm test` 271 hijau, `npm run typecheck`, `npm run build` hijau. Smoke manual Electron (drag PNG, paste screenshot, PDF Range, impor 120 MB ditolak) **belum dijalankan**.
 - Utang yang diketahui: GC hanya dipicu saat halaman dihapus (menghapus blok aset tidak membersihkan berkas sampai halaman dihapus); impor besar dibaca penuh ke memori setelah cek `stat`; setiap backup menyalin ulang aset ke folder pasangannya (by design, folder terpisah per backup).
+
+### Gelombang 4 — Multi-kolom (selesai)
+
+- Model flat, bukan array bersarang: `BlockType` bertambah `'columns'`, dan `DocumentBlock` bertambah `columnGroupId`, `columnIndex`, `columnWidths` (hanya dibaca di blok header). Konsekuensinya FTS, ekspor, undo, dan snapshot tidak perlu berubah sama sekali — alasan utama model ini dipilih meski akan dibuang saat migrasi Tiptap.
+- `lib/columns.ts`: `groupBlocks`, `flattenColumns`, `createColumnGroup`, `removeColumn` (isi kolom dipindah, menolak hapus kolom terakhir), `moveBlockToColumn`, `resolveColumnDrop`, `normalizeWidths`, `resizeColumnPair`, `nudgeDivider`. Lebar minimum efektif = `min(15, floor(100/count))`.
+- `ColumnGroup`: grid persen eksplisit, divider `role="separator"` dengan pointer capture, `onChange` hanya saat pointerup (satu entri undo per drag), panah kiri/kanan, empty state, drop target per kolom.
+- DnD hanya lewat handle grip. Kalau seluruh blok dibuat draggable, seleksi teks rusak.
+- Integrasi domain/editor/ekspor/FTS dibuktikan lewat test, bukan asumsi: 26 + 7 + 5 + 6 test di empat commit (`9da7059`, `a2af1d8`, `c166c56`, `8c2f413`).
+- Smoke manual Electron belum dijalankan.
 
 Aturan gate Langkah 0: kalau app gagal boot atau ada kehilangan data saat smoke, BERHENTI — perbaiki durability dulu, 7 fitur ditunda.
