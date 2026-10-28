@@ -11,9 +11,12 @@ import {
   createPageSnapshot,
   createSection,
   deletePage,
+  deletePageSnapshot,
   getBacklinks,
+  getPageVersion,
   getPageVersions,
   getWorkspaceSnapshot,
+  renamePageSnapshot,
   openOrCreateDailyNote,
   restorePageSnapshot,
   searchWorkspace,
@@ -229,11 +232,20 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('workspace:getBacklinks', (_e, pageId) => getBacklinks(pageId))
   ipcMain.handle('workspace:getPageVersions', (_e, pageId) => getPageVersions(pageId))
+  ipcMain.handle('workspace:getPageVersion', (_e, { pageId, versionId }) =>
+    getPageVersion(pageId, versionId)
+  )
   ipcMain.handle('workspace:createPageSnapshot', (_e, { pageId, label }) =>
     createPageSnapshot(pageId, label)
   )
   ipcMain.handle('workspace:restorePageSnapshot', (_e, { pageId, versionId }) =>
     restorePageSnapshot(pageId, versionId)
+  )
+  ipcMain.handle('workspace:deletePageSnapshot', (_e, { pageId, versionId }) =>
+    deletePageSnapshot(pageId, versionId)
+  )
+  ipcMain.handle('workspace:renamePageSnapshot', (_e, { pageId, versionId, label }) =>
+    renamePageSnapshot(pageId, versionId, label)
   )
 
   ipcMain.handle('workspace:search', (_e, query) => searchWorkspace(query))

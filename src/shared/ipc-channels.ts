@@ -5,6 +5,7 @@ import type {
   Page,
   PageMode,
   PageVersion,
+  PageVersionSummary,
   SearchResultItem,
   Section,
   WorkspaceSnapshot
@@ -53,9 +54,18 @@ export interface NoteItAPI {
 
   // Backlinks & Version History (Snapshots)
   getBacklinks(pageId: string): Promise<BacklinkItem[]>
-  getPageVersions(pageId: string): Promise<PageVersion[]>
+  /** Metadata-only: tidak memuat blocks/canvas tiap versi. */
+  getPageVersions(pageId: string): Promise<PageVersionSummary[]>
+  /** Versi penuh (blocks + canvas) untuk preview/diff. */
+  getPageVersion(pageId: string, versionId: string): Promise<PageVersion>
   createPageSnapshot(pageId: string, label?: string): Promise<PageVersion>
   restorePageSnapshot(pageId: string, versionId: string): Promise<Page>
+  deletePageSnapshot(pageId: string, versionId: string): Promise<{ ok: boolean }>
+  renamePageSnapshot(
+    pageId: string,
+    versionId: string,
+    label: string
+  ): Promise<PageVersionSummary>
 
   // Full-Text Search (SQLite FTS5)
   searchWorkspace(query: string): Promise<SearchResultItem[]>

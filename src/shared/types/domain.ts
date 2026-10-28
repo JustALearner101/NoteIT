@@ -144,6 +144,19 @@ export interface PageVersion {
   createdAt: number
 }
 
+/** Baris daftar riwayat: metadata saja, tanpa blocks/canvas. */
+export interface PageVersionSummary {
+  id: string
+  pageId: string
+  versionNumber: number
+  title: string
+  label: string
+  /** null = snapshot legacy (dibuat sebelum kolom tags_json ada). */
+  tags: string[] | null
+  blockCount: number
+  createdAt: number
+}
+
 export interface BacklinkItem {
   sourcePageId: string
   sourcePageCode: string

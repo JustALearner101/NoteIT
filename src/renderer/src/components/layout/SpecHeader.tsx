@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { MARKER_META } from '@renderer/lib/marker-colors'
-import type { BacklinkItem, Page, PageVersion } from '@shared/types/domain'
+import type { BacklinkItem, Page, PageVersionSummary } from '@shared/types/domain'
 
 interface SpecHeaderProps {
   page: Page
@@ -31,7 +31,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
   } = useWorkspaceStore()
 
   const [backlinks, setBacklinks] = useState<BacklinkItem[]>([])
-  const [versions, setVersions] = useState<PageVersion[]>([])
+  const [versions, setVersions] = useState<PageVersionSummary[]>([])
   const [activeDrawer, setActiveDrawer] = useState<'backlinks' | 'versions' | null>(null)
   const [newTagInput, setNewTagInput] = useState('')
   const [isAddingTag, setIsAddingTag] = useState(false)
@@ -66,7 +66,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
     showToast(`${created.label} disimpan ke SQLite`)
   }
 
-  const handleRestoreSnapshot = async (ver: PageVersion): Promise<void> => {
+  const handleRestoreSnapshot = async (ver: PageVersionSummary): Promise<void> => {
     await window.noteitAPI.restorePageSnapshot(page.id, ver.id)
     await useWorkspaceStore.getState().loadWorkspace()
     setActiveDrawer(null)

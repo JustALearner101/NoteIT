@@ -15,10 +15,16 @@ const noteitAPI: NoteItAPI = {
 
   getBacklinks: (pageId: string) => ipcRenderer.invoke('workspace:getBacklinks', pageId),
   getPageVersions: (pageId: string) => ipcRenderer.invoke('workspace:getPageVersions', pageId),
+  getPageVersion: (pageId: string, versionId: string) =>
+    ipcRenderer.invoke('workspace:getPageVersion', { pageId, versionId }),
   createPageSnapshot: (pageId: string, label?: string) =>
     ipcRenderer.invoke('workspace:createPageSnapshot', { pageId, label }),
   restorePageSnapshot: (pageId: string, versionId: string) =>
     ipcRenderer.invoke('workspace:restorePageSnapshot', { pageId, versionId }),
+  deletePageSnapshot: (pageId: string, versionId: string) =>
+    ipcRenderer.invoke('workspace:deletePageSnapshot', { pageId, versionId }),
+  renamePageSnapshot: (pageId: string, versionId: string, label: string) =>
+    ipcRenderer.invoke('workspace:renamePageSnapshot', { pageId, versionId, label }),
 
   searchWorkspace: (query: string) => ipcRenderer.invoke('workspace:search', query),
 

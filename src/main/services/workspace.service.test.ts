@@ -9,8 +9,12 @@ import {
   createPageSnapshot,
   createSection,
   deletePage,
+  deletePageSnapshot,
   getBacklinks,
+  getPageVersion,
+  getPageVersions,
   getWorkspaceSnapshot,
+  renamePageSnapshot,
   restorePageSnapshot,
   searchWorkspace,
   updatePage
@@ -473,6 +477,97 @@ describe('page_aliases — backlink stabil saat rename', () => {
     expect(getWorkspaceSnapshot().pages.find((p) => p.id === page.id)?.title).toBe(
       'Halaman Tanpa Judul'
     )
+  })
+})
+
+describe('page_versions — listing metadata-only, hapus, rename', () => {
+  it('getPageVersions hanya mengembalikan metadata dan blockCount', () => {
+    const page = createPage({ sectionId, title: 'Halaman Listing Versi', mode: 'block' })
+    createPageSnapshot(page.id, 'Snapshot Listing')
+
+    const versions = getPageVersions(page.id)
+
+    expect(versions.length).toBeGreaterThanOrEqual(2)
+    const latest = versions[0]
+    expect(latest.id).toBeTruthy()
+    expect(latest.pageId).toBe(page.id)
+    expect(latest.versionNumber).toBe(2)
+    expect(latest.label).toBe('Snapshot Listing')
+    expect(latest.blockCount).toBe(1)
+    expect(latest.tags).toEqual(['draft'])
+    expect(latest.createdAt).toBeGreaterThan(0)
+    // Kontrak metadata-only: blocks/canvas tidak boleh ikut.
+    expect(Object.keys(latest).sort()).toEqual(
+      ['blockCount', 'createdAt', 'id', 'label', 'pageId', 'tags', 'title', 'versionNumber'].sort()
+    )
+  })
+
+  it('getPageVersions menandai snapshot legacy dengan tags null', () => {
+    const page = createPage({ sectionId, title: 'Halaman Listing Legacy', mode: 'block' })
+    const snapshot = createPageSnapshot(page.id, 'Snapshot Legacy Listing')
+    getDb().prepare('UPDATE page_versions SET tags_json = NULL WHERE id = ?').run(snapshot.id)
+
+    const legacy = getPageVersions(page.id).find((ver) => ver.id === snapshot.id)
+    expect(legacy?.tags).toBeNull()
+  })
+
+  it('getPageVersion mengembalikan blocks penuh dan menolak versi asing', () => {
+    const page = createPage({ sectionId, title: 'Halaman Versi Penuh', mode: 'block' })
+    updatePage({
+      id: page.id,
+      blocks: [
+        { id: 'blk-full-1', type: 'h2', content: 'Judul Bagian' },
+        { id: 'blk-full-2', type: 'paragraph', content: 'Isi bagian.' }
+      ],
+      tags: ['penuh']
+    })
+    const snapshot = createPageSnapshot(page.id, 'Snapshot Penuh')
+
+    const full = getPageVersion(page.id, snapshot.id)
+    expect(full.blocks).toHaveLength(2)
+    expect(full.blocks[1].content).toBe('Isi bagian.')
+    expect(full.tags).toEqual(['penuh'])
+    expect(full.canvasData.nodes.length).toBeGreaterThan(0)
+
+    expect(() => getPageVersion(page.id, 'ver-tidak-ada')).toThrow()
+  })
+
+  it('deletePageSnapshot menolak versi terakhir dan menghapus versi lain', () => {
+    const page = createPage({ sectionId, title: 'Halaman Hapus Versi', mode: 'block' })
+    const first = getPageVersions(page.id)[0]
+
+    expect(() => deletePageSnapshot(page.id, first.id)).toThrow(/terakhir/i)
+
+    const extra = createPageSnapshot(page.id, 'Snapshot Akan Dihapus')
+    expect(deletePageSnapshot(page.id, extra.id)).toEqual({ ok: true })
+
+    const remaining = getPageVersions(page.id)
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0].id).toBe(first.id)
+    expect(() => deletePageSnapshot(page.id, 'ver-tidak-ada')).toThrow()
+  })
+
+  it('renamePageSnapshot memperbarui label dan menolak label kosong', () => {
+    const page = createPage({ sectionId, title: 'Halaman Rename Versi', mode: 'block' })
+    const snapshot = createPageSnapshot(page.id, 'Label Lama')
+
+    const renamed = renamePageSnapshot(page.id, snapshot.id, '  Label Baru  ')
+    expect(renamed.id).toBe(snapshot.id)
+    expect(renamed.label).toBe('Label Baru')
+    expect(getPageVersions(page.id).find((ver) => ver.id === snapshot.id)?.label).toBe('Label Baru')
+
+    expect(() => renamePageSnapshot(page.id, snapshot.id, '   ')).toThrow(/kosong/i)
+    expect(() => renamePageSnapshot(page.id, 'ver-tidak-ada', 'X')).toThrow()
+  })
+
+  it('nomor versi tetap naik setelah versi lama dihapus', () => {
+    const page = createPage({ sectionId, title: 'Halaman Nomor Versi', mode: 'block' })
+    const second = createPageSnapshot(page.id, 'Snapshot Kedua')
+    deletePageSnapshot(page.id, second.id)
+
+    const third = createPageSnapshot(page.id, 'Snapshot Ketiga')
+    expect(third.versionNumber).toBe(3)
+    expect(getWorkspaceSnapshot().pages.find((p) => p.id === page.id)?.versionCount).toBe(3)
   })
 })
 

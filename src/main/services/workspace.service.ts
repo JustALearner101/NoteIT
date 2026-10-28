@@ -34,10 +34,14 @@ import {
 import { listBacklinks } from '../db/repository/link.repository'
 import { insertAlias } from '../db/repository/alias.repository'
 import {
+  countVersionsByPage,
+  deleteVersionById,
   findVersionById,
   insertVersion,
-  listVersionsByPage
+  listVersionSummariesByPage,
+  updateVersionLabel
 } from '../db/repository/version.repository'
+import type { VersionSummaryRow } from '../db/repository/version.repository'
 import {
   countIndexedPages,
   listRecentPages,
@@ -52,6 +56,7 @@ import type {
   Notebook,
   Page,
   PageVersion,
+  PageVersionSummary,
   SearchResultItem,
   Section,
   WorkspaceSnapshot
@@ -526,20 +531,44 @@ export function getBacklinks(pageId: string): BacklinkItem[] {
   }))
 }
 
-export function getPageVersions(pageId: string): PageVersion[] {
-  const rows = listVersionsByPage(pageId)
+function mapSummaryRow(row: VersionSummaryRow): PageVersionSummary {
+  return {
+    id: row.id,
+    pageId: row.page_id,
+    versionNumber: row.version_number,
+    title: row.title,
+    label: row.label,
+    tags: parseVersionTags(row.tags_json),
+    blockCount: row.block_count,
+    createdAt: row.created_at
+  }
+}
 
-  return rows.map((r) => ({
-    id: r.id,
-    pageId: r.page_id,
-    versionNumber: r.version_number,
-    title: r.title,
-    label: r.label,
-    blocks: JSON.parse(r.blocks_json || '[]'),
-    canvasData: JSON.parse(r.canvas_json || '{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}'),
-    tags: parseVersionTags(r.tags_json),
-    createdAt: r.created_at
-  }))
+/** Daftar riwayat tanpa blocks/canvas: payload kecil walau snapshot memuat diagram besar. */
+export function getPageVersions(pageId: string): PageVersionSummary[] {
+  return listVersionSummariesByPage(pageId).map(mapSummaryRow)
+}
+
+/** Versi penuh untuk preview/diff. */
+export function getPageVersion(pageId: string, versionId: string): PageVersion {
+  const row = findVersionById(versionId, pageId)
+  if (!row) {
+    throw new Error('Snapshot versi tidak ditemukan di SQLite.')
+  }
+
+  return {
+    id: row.id,
+    pageId: row.page_id,
+    versionNumber: row.version_number,
+    title: row.title,
+    label: row.label,
+    blocks: JSON.parse(row.blocks_json || '[]'),
+    canvasData: JSON.parse(
+      row.canvas_json || '{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}'
+    ),
+    tags: parseVersionTags(row.tags_json),
+    createdAt: row.created_at
+  }
 }
 
 export function createPageSnapshot(pageId: string, label?: string): PageVersion {
@@ -580,6 +609,52 @@ export function createPageSnapshot(pageId: string, label?: string): PageVersion 
       tags: parseVersionTags(pageRow.tags_json),
       createdAt: now
     }
+  })
+}
+
+export function deletePageSnapshot(pageId: string, versionId: string): { ok: boolean } {
+  return withTransaction(() => {
+    const row = findVersionById(versionId, pageId)
+    if (!row) {
+      throw new Error('Snapshot versi tidak ditemukan di SQLite.')
+    }
+
+    if (countVersionsByPage(pageId) <= 1) {
+      throw new Error(
+        'Versi terakhir tidak boleh dihapus. Simpan snapshot baru sebelum menghapus versi ini.'
+      )
+    }
+
+    deleteVersionById(versionId, pageId)
+    // version_count sengaja tidak diturunkan: ia dipakai sebagai nomor versi berikutnya,
+    // jadi penghapusan tidak boleh membuat nomor versi lama terpakai ulang.
+    return { ok: true }
+  })
+}
+
+export function renamePageSnapshot(
+  pageId: string,
+  versionId: string,
+  label: string
+): PageVersionSummary {
+  return withTransaction(() => {
+    const clean = label.trim()
+    if (!clean) {
+      throw new Error('Label snapshot tidak boleh kosong.')
+    }
+
+    const row = findVersionById(versionId, pageId)
+    if (!row) {
+      throw new Error('Snapshot versi tidak ditemukan di SQLite.')
+    }
+
+    updateVersionLabel(versionId, pageId, clean)
+
+    const updated = getPageVersions(pageId).find((ver) => ver.id === versionId)
+    if (!updated) {
+      throw new Error('Snapshot versi hilang setelah rename.')
+    }
+    return updated
   })
 }
 
