@@ -51,6 +51,8 @@ export type BlockType =
   | 'mermaid'
   | 'graphviz'
   | 'database'
+  | 'image'
+  | 'file'
 
 export interface DBMLTableLayout {
   [tableName: string]: { x: number; y: number; color?: MarkerColor }
@@ -78,6 +80,12 @@ export interface DocumentBlock {
   databaseActiveView?: 'gantt' | 'kanban' | 'table' | 'chart' | 'calendar'
   databaseChartType?: 'bar' | 'line' | 'area' | 'donut' | 'radar' | 'scatter'
   databaseItems?: ProjectTaskItem[]
+  // For 'image' | 'file' blocks (aset content-addressed di workspace/assets)
+  assetId?: string
+  assetExt?: string
+  assetMime?: string
+  assetName?: string
+  assetSize?: number
 }
 
 export interface SpatialCanvasNodeData {

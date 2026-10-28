@@ -9,9 +9,11 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Image as ImageIcon,
   Info,
   Link2,
   Network,
+  Paperclip,
   Plus,
   Sparkles,
   Trash2,
@@ -20,12 +22,14 @@ import {
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { MARKER_META } from '@renderer/lib/marker-colors'
 import { createId } from '@renderer/lib/ids'
+import { isImageMime } from '@shared/assets'
+import { AssetBlock } from '@renderer/components/editor-block/AssetBlock'
 import { DBMLStudio } from '@renderer/components/diagrams/dbml/DBMLStudio'
 import { MermaidStudio } from '@renderer/components/diagrams/mermaid/MermaidStudio'
 import { GraphvizStudio } from '@renderer/components/diagrams/graphviz/GraphvizStudio'
 import { DEFAULT_DOT } from '@renderer/lib/diagrams/graphviz'
 import { ProjectDatabaseBlock } from '@renderer/components/charts/ProjectDatabaseBlock'
-import type { BlockType, DocumentBlock, Page } from '@shared/types/domain'
+import type { AssetRecord, BlockType, DocumentBlock, Page } from '@shared/types/domain'
 
 interface BlockEditorProps {
   page: Page
@@ -102,8 +106,35 @@ const SLASH_OPTIONS: {
     label: 'Gantt Chart & Project Database',
     desc: 'Tabel multi-view: Gantt Timeline, Kanban, & Data Chart',
     icon: <GanttChart size={13} className="text-accent-amber" />
+  },
+  {
+    type: 'image',
+    label: 'Gambar / Screenshot',
+    desc: 'Impor PNG, JPG, WebP, atau SVG ke workspace/assets',
+    icon: <ImageIcon size={13} className="text-[#10B981]" />
+  },
+  {
+    type: 'file',
+    label: 'Berkas Lampiran',
+    desc: 'Lampirkan PDF atau berkas lain sebagai kartu berkas',
+    icon: <Paperclip size={13} className="text-accent-amber" />
   }
 ]
+
+/** Blok aset dari baris tabel assets; content = nama berkas agar ikut masuk FTS. */
+function buildAssetBlock(asset: AssetRecord, kind: 'image' | 'file'): DocumentBlock {
+  return {
+    id: createId('blk'),
+    type: kind,
+    content: asset.name,
+    wide: kind === 'image',
+    assetId: asset.id,
+    assetExt: asset.ext,
+    assetMime: asset.mime,
+    assetName: asset.name,
+    assetSize: asset.size
+  }
+}
 
 export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
   const { pages, updatePage, openPageInTab } = useWorkspaceStore()
@@ -179,17 +210,91 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
           : undefined
     }
 
+    insertBlocksAfter(afterId, [newBlock])
+  }
+
+  const insertBlocksAfter = (afterId: string | null, blocks: DocumentBlock[]): void => {
+    if (blocks.length === 0) {
+      setSlashMenuForBlockId(null)
+      return
+    }
+
     if (!afterId) {
-      updatePage({ id: page.id, blocks: [...page.blocks, newBlock] })
+      updatePage({ id: page.id, blocks: [...page.blocks, ...blocks] })
       setSlashMenuForBlockId(null)
       return
     }
 
     const idx = page.blocks.findIndex((b) => b.id === afterId)
     const nextBlocks = [...page.blocks]
-    nextBlocks.splice(idx + 1, 0, newBlock)
+    nextBlocks.splice(idx < 0 ? nextBlocks.length : idx + 1, 0, ...blocks)
     updatePage({ id: page.id, blocks: nextBlocks })
     setSlashMenuForBlockId(null)
+  }
+
+  const insertAssetBlocks = async (
+    afterId: string | null,
+    kind: 'image' | 'file'
+  ): Promise<void> => {
+    const result = await window.noteitAPI.importAssets()
+    if (!result.assets.length) {
+      setSlashMenuForBlockId(null)
+      return
+    }
+    insertBlocksAfter(
+      afterId,
+      result.assets.map((asset) => buildAssetBlock(asset, kind))
+    )
+  }
+
+  /**
+   * Drop dan paste sama-sama mengirim byte lewat IPC: File.path sudah tidak ada
+   * di Electron 35, dan screenshot clipboard memang tidak punya path.
+   */
+  const insertFiles = async (files: File[], afterId: string | null): Promise<void> => {
+    const blocks: DocumentBlock[] = []
+    for (const file of files) {
+      try {
+        const data = new Uint8Array(await file.arrayBuffer())
+        const name =
+          file.name && file.name.length > 0 ? file.name : `screenshot-${Date.now()}.png`
+        const asset = await window.noteitAPI.importAssetBytes({ name, data })
+        blocks.push(buildAssetBlock(asset, isImageMime(asset.mime) ? 'image' : 'file'))
+      } catch (error) {
+        console.error('Gagal mengimpor aset:', error)
+      }
+    }
+    insertBlocksAfter(afterId, blocks)
+  }
+
+  const handleSlashInsert = (afterId: string, type: BlockType): void => {
+    if (type === 'image' || type === 'file') {
+      void insertAssetBlocks(afterId, type)
+      return
+    }
+    insertBlockAfter(afterId, type)
+  }
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>): void => {
+    if (!event.dataTransfer?.types?.includes('Files')) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+  }
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>): void => {
+    const files = Array.from(event.dataTransfer?.files ?? [])
+    if (files.length === 0) return
+    event.preventDefault()
+    void insertFiles(files, null)
+  }
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>): void => {
+    const files = Array.from(event.clipboardData?.files ?? []).filter((file) =>
+      file.type.startsWith('image/')
+    )
+    if (files.length === 0) return
+    event.preventDefault()
+    void insertFiles(files, null)
   }
 
   const moveBlock = (blockId: string, dir: -1 | 1): void => {
@@ -254,7 +359,12 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-6">
+    <div
+      className="flex-1 overflow-y-auto px-6 py-6"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onPaste={handlePaste}
+    >
       <div className="space-y-2.5 pb-20">
         {page.blocks.map((block) => {
           const isWide =
@@ -262,7 +372,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
             block.type === 'dbml' ||
             block.type === 'mermaid' ||
             block.type === 'graphviz' ||
-            block.type === 'database'
+            block.type === 'database' ||
+            block.type === 'image'
 
           return (
             <div
@@ -496,6 +607,10 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
                 />
               )}
 
+              {(block.type === 'image' || block.type === 'file') && (
+                <AssetBlock block={block} />
+              )}
+
               {block.type === 'database' && (
                 <ProjectDatabaseBlock
                   title={block.databaseTitle || 'PROJECT DATABASE'}
@@ -522,7 +637,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
                     {SLASH_OPTIONS.map((opt) => (
                       <button
                         key={opt.type}
-                        onClick={() => insertBlockAfter(block.id, opt.type)}
+                        onClick={() => handleSlashInsert(block.id, opt.type)}
                         className="px-2.5 py-1.5 rounded-[5px] hover:bg-surface-hover text-left flex items-center gap-2.5 transition-colors"
                       >
                         <div className="w-6 h-6 rounded bg-surface-chrome border border-border-hairline flex items-center justify-center shrink-0">

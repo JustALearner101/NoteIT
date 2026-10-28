@@ -1,4 +1,13 @@
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, session, shell } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  globalShortcut,
+  ipcMain,
+  protocol,
+  session,
+  shell
+} from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { initDatabase } from './db/client'
@@ -7,8 +16,10 @@ import {
   getAsset,
   getAssetFilePath,
   importAsset,
-  importAssetFromPath
+  importAssetFromPath,
+  resolveAssetRequestPath
 } from './services/asset.service'
+import { mimeForExtension, parseRangeHeader } from '@shared/assets'
 import { runBackup, startBackupScheduler, stopBackupScheduler } from './services/backup.service'
 import { formatTimestamp, pageToMarkdown, slugifyTitle, workspaceToMarkdownFiles } from './services/export.service'
 import {
@@ -54,6 +65,18 @@ process.on('unhandledRejection', (reason) => {
   writeLog('ERROR', 'unhandledRejection', reason)
 })
 
+/**
+ * Wajib dipanggil sebelum app.whenReady(): skema privileged tidak bisa didaftarkan
+ * setelah ready. standard+secure membuat noteit-asset:// bisa dipakai <img>/<iframe>,
+ * stream+supportFetchAPI supaya PDF besar bisa dilayani per-Range.
+ */
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'noteit-asset',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
+  }
+])
+
 let mainWindow: BrowserWindow | null = null
 
 /**
@@ -95,6 +118,62 @@ function installContentSecurityPolicy(): void {
     responseHeaders['Content-Security-Policy'] = [policy]
 
     callback({ responseHeaders })
+  })
+}
+
+/**
+ * Handler aset: noteit-asset://asset/<sha256>.<ext>.
+ * Path di-resolve lewat resolveAssetRequestPath yang menolak traversal dan subfolder.
+ */
+function registerAssetProtocol(): void {
+  protocol.handle('noteit-asset', async (request) => {
+    let url: URL
+    try {
+      url = new URL(request.url)
+    } catch {
+      return new Response('Aset tidak ditemukan', { status: 404 })
+    }
+
+    if (url.hostname !== 'asset') {
+      return new Response('Aset tidak ditemukan', { status: 404 })
+    }
+
+    const filePath = resolveAssetRequestPath(url.pathname)
+    if (!filePath || !fs.existsSync(filePath)) {
+      return new Response('Aset tidak ditemukan', { status: 404 })
+    }
+
+    const stat = fs.statSync(filePath)
+    const baseHeaders: Record<string, string> = {
+      'Content-Type': mimeForExtension(path.extname(filePath).slice(1)),
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': 'no-cache'
+    }
+
+    const range = parseRangeHeader(request.headers.get('Range'), stat.size)
+    if (range) {
+      const length = range.end - range.start + 1
+      const buffer = Buffer.alloc(length)
+      const fd = fs.openSync(filePath, 'r')
+      try {
+        fs.readSync(fd, buffer, 0, length, range.start)
+      } finally {
+        fs.closeSync(fd)
+      }
+      return new Response(buffer, {
+        status: 206,
+        headers: {
+          ...baseHeaders,
+          'Content-Length': String(length),
+          'Content-Range': `bytes ${range.start}-${range.end}/${stat.size}`
+        }
+      })
+    }
+
+    return new Response(fs.readFileSync(filePath), {
+      status: 200,
+      headers: { ...baseHeaders, 'Content-Length': String(stat.size) }
+    })
   })
 }
 
@@ -422,6 +501,7 @@ app.whenReady().then(() => {
 
   const workspaceDir = path.join(app.getPath('userData'), 'workspace')
   initDatabase(workspaceDir)
+  registerAssetProtocol()
   startBackupScheduler(undefined, writeLog)
   registerIpcHandlers()
   createWindow()
