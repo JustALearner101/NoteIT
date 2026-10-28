@@ -299,10 +299,44 @@ export function getDbPath(): string {
   return currentDbPath
 }
 
+export function getJournalMode(): string {
+  const row = getDb().prepare('PRAGMA journal_mode').get() as { journal_mode: string } | undefined
+  return row?.journal_mode || ''
+}
+
+let transactionDepth = 0
+
+export function withTransaction<T>(fn: () => T): T {
+  // DatabaseSync is synchronous, so nested calls simply join the outer transaction.
+  if (transactionDepth > 0) {
+    return fn()
+  }
+
+  const db = getDb()
+  db.exec('BEGIN')
+  transactionDepth = 1
+
+  try {
+    const result = fn()
+    db.exec('COMMIT')
+    return result
+  } catch (error) {
+    try {
+      db.exec('ROLLBACK')
+    } catch {
+      // Keep the original failure: a rollback error must not mask it.
+    }
+    throw error
+  } finally {
+    transactionDepth = 0
+  }
+}
+
 export function closeDb(): void {
   if (dbInstance) {
     dbInstance.close()
     dbInstance = null
   }
   currentDbPath = ''
+  transactionDepth = 0
 }
