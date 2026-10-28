@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { initDatabase } from './db/client'
 import { runBackup, startBackupScheduler, stopBackupScheduler } from './services/backup.service'
+import { formatTimestamp, pageToMarkdown, slugifyTitle, workspaceToMarkdownFiles } from './services/export.service'
 import {
   createNotebook,
   createPage,
@@ -124,6 +125,57 @@ function registerIpcHandlers(): void {
 
       fs.writeFileSync(result.filePath, input.content, 'utf-8')
       return { saved: true, filePath: result.filePath }
+    }
+  )
+
+  ipcMain.handle(
+    'workspace:exportMarkdown',
+    async (_e, input: { scope: 'page' | 'workspace'; pageId?: string }) => {
+      if (!mainWindow) return { saved: false }
+      const snapshot = getWorkspaceSnapshot()
+
+      if (input.scope === 'page') {
+        const page = input.pageId ? snapshot.pages.find((p) => p.id === input.pageId) : undefined
+        if (!page) {
+          throw new Error('Halaman tidak ditemukan untuk ekspor Markdown.')
+        }
+
+        const slug = slugifyTitle(page.title) || slugifyTitle(page.code) || 'page'
+        const result = await dialog.showSaveDialog(mainWindow, {
+          title: 'Ekspor Halaman ke Markdown',
+          defaultPath: `${page.code}-${slug}.md`,
+          filters: [{ name: 'Markdown', extensions: ['md'] }]
+        })
+
+        if (result.canceled || !result.filePath) {
+          return { saved: false }
+        }
+
+        fs.writeFileSync(result.filePath, pageToMarkdown(page), 'utf-8')
+        return { saved: true, filePath: result.filePath }
+      }
+
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Pilih Folder Tujuan Ekspor Workspace',
+        properties: ['openDirectory', 'createDirectory']
+      })
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { saved: false }
+      }
+
+      const targetDir = path.join(
+        result.filePaths[0],
+        `noteit-export-${formatTimestamp(new Date())}`
+      )
+      fs.mkdirSync(targetDir, { recursive: true })
+
+      const files = workspaceToMarkdownFiles(snapshot)
+      for (const file of files) {
+        fs.writeFileSync(path.join(targetDir, file.filename), file.content, 'utf-8')
+      }
+
+      return { saved: true, filePath: targetDir, fileCount: files.length }
     }
   )
 

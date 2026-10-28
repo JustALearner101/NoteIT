@@ -31,6 +31,17 @@ export interface UpdatePageInput {
   isPinned?: boolean
 }
 
+export interface ExportMarkdownInput {
+  scope: 'page' | 'workspace'
+  pageId?: string
+}
+
+export interface ExportMarkdownResult {
+  saved: boolean
+  filePath?: string
+  fileCount?: number
+}
+
 export interface NoteItAPI {
   // Workspace & Hierarchy
   getWorkspace(): Promise<WorkspaceSnapshot>
@@ -55,6 +66,7 @@ export interface NoteItAPI {
     content: string
     extension: 'md' | 'sql' | 'json' | 'svg'
   }): Promise<{ saved: boolean; filePath?: string }>
+  exportMarkdown(input: ExportMarkdownInput): Promise<ExportMarkdownResult>
 
   // Desktop Window Controls
   windowMinimize(): Promise<void>

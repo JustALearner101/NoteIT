@@ -22,6 +22,7 @@ const noteitAPI: NoteItAPI = {
   searchWorkspace: (query: string) => ipcRenderer.invoke('workspace:search', query),
 
   exportContent: (input) => ipcRenderer.invoke('workspace:export', input),
+  exportMarkdown: (input) => ipcRenderer.invoke('workspace:exportMarkdown', input),
 
   windowMinimize: () => ipcRenderer.invoke('window:minimize'),
   windowMaximizeToggle: () => ipcRenderer.invoke('window:maximizeToggle'),

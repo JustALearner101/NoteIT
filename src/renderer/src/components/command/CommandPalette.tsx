@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react'
 import {
   Columns2,
   Database,
+  FileDown,
   FilePlus,
+  FolderDown,
   GanttChart,
   LayoutGrid,
   Moon,
@@ -20,11 +22,13 @@ export const CommandPalette: React.FC = () => {
     setCommandPaletteOpen,
     sections,
     activeNotebookId,
+    activePageId,
     openPageInTab,
     createPage,
     toggleSplitPane,
-     toggleTheme,
-    theme
+    toggleTheme,
+    theme,
+    showToast
   } = useWorkspaceStore()
 
   const [query, setQuery] = useState('')
@@ -63,6 +67,31 @@ export const CommandPalette: React.FC = () => {
       template
     })
     setCommandPaletteOpen(false)
+  }
+
+  const handleExportPage = async (): Promise<void> => {
+    if (!activePageId) {
+      showToast('Tidak ada halaman aktif untuk diekspor')
+      return
+    }
+
+    const result = await window.noteitAPI.exportMarkdown({ scope: 'page', pageId: activePageId })
+    setCommandPaletteOpen(false)
+    showToast(
+      result.saved && result.filePath
+        ? `Markdown tersimpan: ${result.filePath}`
+        : 'Ekspor halaman dibatalkan'
+    )
+  }
+
+  const handleExportWorkspace = async (): Promise<void> => {
+    const result = await window.noteitAPI.exportMarkdown({ scope: 'workspace' })
+    setCommandPaletteOpen(false)
+    showToast(
+      result.saved && result.filePath
+        ? `${result.fileCount ?? 0} halaman diekspor ke ${result.filePath}`
+        : 'Ekspor workspace dibatalkan'
+    )
   }
 
   return (
@@ -150,6 +179,20 @@ export const CommandPalette: React.FC = () => {
                 <Moon size={13} className="text-accent-cobalt" />
               )}
               <span>Ganti Tema ({theme === 'dark' ? 'Light' : 'Dark'})</span>
+            </button>
+            <button
+              onClick={handleExportPage}
+              className="px-2.5 py-1.5 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs text-ink-primary flex items-center gap-2"
+            >
+              <FileDown size={13} className="text-accent-amber" />
+              <span>Export halaman ini (Markdown)</span>
+            </button>
+            <button
+              onClick={handleExportWorkspace}
+              className="px-2.5 py-1.5 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs text-ink-primary flex items-center gap-2"
+            >
+              <FolderDown size={13} className="text-[#10B981]" />
+              <span>Export seluruh workspace (Markdown)</span>
             </button>
           </div>
         </div>
