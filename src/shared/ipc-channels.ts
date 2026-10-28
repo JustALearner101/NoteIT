@@ -58,6 +58,8 @@ export interface ExportMarkdownResult {
   saved: boolean
   filePath?: string
   fileCount?: number
+  /** Jumlah berkas aset yang ikut disalin ke folder assets/ hasil ekspor. */
+  assetCount?: number
 }
 
 export interface NoteItAPI {

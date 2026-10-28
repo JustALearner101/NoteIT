@@ -1,3 +1,4 @@
+import { assetRelativePath } from '@shared/assets'
 import type { DocumentBlock, Page, WorkspaceSnapshot } from '@shared/types/domain'
 
 const MAX_SLUG_LENGTH = 60
@@ -115,6 +116,39 @@ function renderDatabase(block: DocumentBlock): string {
   return lines.join('\n')
 }
 
+/** Aset yang dipakai satu halaman, siap disalin ke folder assets/ hasil ekspor. */
+export interface PageAssetRef {
+  assetId: string
+  ext: string
+  name: string
+  mime: string
+  relativePath: string
+}
+
+/**
+ * Kumpulan aset unik yang direferensikan blok image/file sebuah halaman.
+ * Blok tanpa assetId/assetExt dilewati: tidak ada berkas yang bisa diekspor.
+ */
+export function collectPageAssets(page: Pick<Page, 'blocks'>): PageAssetRef[] {
+  const assets = new Map<string, PageAssetRef>()
+
+  for (const block of page.blocks || []) {
+    if (block.type !== 'image' && block.type !== 'file') continue
+    if (!block.assetId || !block.assetExt) continue
+    if (assets.has(block.assetId)) continue
+
+    assets.set(block.assetId, {
+      assetId: block.assetId,
+      ext: block.assetExt,
+      name: block.assetName || block.content || block.assetId,
+      mime: block.assetMime || '',
+      relativePath: assetRelativePath(block.assetId, block.assetExt)
+    })
+  }
+
+  return Array.from(assets.values())
+}
+
 function renderBlock(block: DocumentBlock): string {
   const content = block.content || ''
 
@@ -141,6 +175,16 @@ function renderBlock(block: DocumentBlock): string {
       return ['```dot', content, '```'].join('\n')
     case 'database':
       return renderDatabase(block)
+    case 'image': {
+      if (!block.assetId || !block.assetExt) return content
+      const alt = block.assetName || content || 'gambar'
+      return `![${alt}](${assetRelativePath(block.assetId, block.assetExt)})`
+    }
+    case 'file': {
+      if (!block.assetId || !block.assetExt) return content
+      const label = block.assetName || content || 'berkas'
+      return `[${label}](${assetRelativePath(block.assetId, block.assetExt)})`
+    }
     default:
       return content
   }

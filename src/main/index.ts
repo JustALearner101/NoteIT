@@ -21,7 +21,13 @@ import {
 } from './services/asset.service'
 import { mimeForExtension, parseRangeHeader } from '@shared/assets'
 import { runBackup, startBackupScheduler, stopBackupScheduler } from './services/backup.service'
-import { formatTimestamp, pageToMarkdown, slugifyTitle, workspaceToMarkdownFiles } from './services/export.service'
+import {
+  collectPageAssets,
+  formatTimestamp,
+  pageToMarkdown,
+  slugifyTitle,
+  workspaceToMarkdownFiles
+} from './services/export.service'
 import {
   createNotebook,
   createPage,
@@ -449,7 +455,17 @@ function registerIpcHandlers(): void {
         }
 
         fs.writeFileSync(result.filePath, pageToMarkdown(page), 'utf-8')
-        return { saved: true, filePath: result.filePath }
+
+        // Aset ditulis dengan copyFileSync: writeFileSync utf-8 merusak PNG/PDF.
+        const pageAssets = collectPageAssets(page)
+        if (pageAssets.length > 0) {
+          const targetAssetsDir = path.join(path.dirname(result.filePath), 'assets')
+          for (const asset of pageAssets) {
+            copyAssetFile(asset.assetId, path.join(targetAssetsDir, `${asset.assetId}.${asset.ext}`))
+          }
+        }
+
+        return { saved: true, filePath: result.filePath, assetCount: pageAssets.length }
       }
 
       const result = await dialog.showOpenDialog(mainWindow, {
@@ -472,7 +488,26 @@ function registerIpcHandlers(): void {
         fs.writeFileSync(path.join(targetDir, file.filename), file.content, 'utf-8')
       }
 
-      return { saved: true, filePath: targetDir, fileCount: files.length }
+      // Satu salinan per aset unik, dipakai bersama semua halaman hasil ekspor.
+      const assetRefs = new Map<string, { assetId: string; ext: string }>()
+      for (const page of snapshot.pages) {
+        for (const asset of collectPageAssets(page)) {
+          assetRefs.set(asset.assetId, asset)
+        }
+      }
+      if (assetRefs.size > 0) {
+        const targetAssetsDir = path.join(targetDir, 'assets')
+        for (const asset of assetRefs.values()) {
+          copyAssetFile(asset.assetId, path.join(targetAssetsDir, `${asset.assetId}.${asset.ext}`))
+        }
+      }
+
+      return {
+        saved: true,
+        filePath: targetDir,
+        fileCount: files.length,
+        assetCount: assetRefs.size
+      }
     }
   )
 

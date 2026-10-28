@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DocumentBlock, Page, ProjectTaskItem, WorkspaceSnapshot } from '@shared/types/domain'
 import {
+  collectPageAssets,
   pageToMarkdown,
   slugifyTitle,
   workspaceToMarkdownFiles
@@ -241,6 +242,128 @@ describe('export.service — pageToMarkdown', () => {
   it('tidak menambahkan section Canvas untuk halaman mode block', () => {
     const markdown = pageToMarkdown(makePage({ mode: 'block' }))
     expect(markdown).not.toContain('## Canvas')
+  })
+})
+
+describe('export.service — blok aset (image/file)', () => {
+  const imageHash = 'a'.repeat(64)
+  const pdfHash = 'b'.repeat(64)
+
+  it('merender blok image sebagai gambar markdown dengan path relatif assets/', () => {
+    const markdown = pageToMarkdown(
+      makePage({
+        blocks: [
+          makeBlock({
+            id: 'img-1',
+            type: 'image',
+            content: 'Diagram Arsitektur.png',
+            assetId: imageHash,
+            assetExt: 'png',
+            assetMime: 'image/png',
+            assetName: 'Diagram Arsitektur.png',
+            assetSize: 2048
+          })
+        ]
+      })
+    )
+
+    expect(markdown).toContain(`![Diagram Arsitektur.png](assets/${imageHash}.png)`)
+    expect(markdown).not.toContain('file://')
+    expect(markdown).not.toContain('/assets/')
+  })
+
+  it('merender blok file sebagai tautan markdown relatif', () => {
+    const markdown = pageToMarkdown(
+      makePage({
+        blocks: [
+          makeBlock({
+            id: 'file-1',
+            type: 'file',
+            content: 'Spesifikasi.pdf',
+            assetId: pdfHash,
+            assetExt: 'pdf',
+            assetMime: 'application/pdf',
+            assetName: 'Spesifikasi.pdf',
+            assetSize: 5 * 1024 * 1024
+          })
+        ]
+      })
+    )
+
+    expect(markdown).toContain(`[Spesifikasi.pdf](assets/${pdfHash}.pdf)`)
+    expect(markdown).not.toContain('![')
+  })
+
+  it('blok aset tanpa assetId jatuh ke content apa adanya', () => {
+    const markdown = pageToMarkdown(
+      makePage({
+        blocks: [
+          makeBlock({ id: 'img-x', type: 'image', content: 'gambar hilang' }),
+          makeBlock({ id: 'file-x', type: 'file', content: 'berkas hilang', assetId: imageHash })
+        ]
+      })
+    )
+
+    expect(markdown).toContain('gambar hilang')
+    expect(markdown).toContain('berkas hilang')
+    expect(markdown).not.toContain('](assets/')
+  })
+
+  it('collectPageAssets mengembalikan tepat aset yang dipakai blok campuran', () => {
+    const page = makePage({
+      blocks: [
+        makeBlock({ id: 'p1', type: 'paragraph', content: 'Teks biasa tanpa aset.' }),
+        makeBlock({
+          id: 'i1',
+          type: 'image',
+          content: 'foto.png',
+          assetId: imageHash,
+          assetExt: 'png',
+          assetMime: 'image/png',
+          assetName: 'foto.png'
+        }),
+        makeBlock({
+          id: 'f1',
+          type: 'file',
+          content: 'dokumen.pdf',
+          assetId: pdfHash,
+          assetExt: 'pdf',
+          assetMime: 'application/pdf',
+          assetName: 'dokumen.pdf'
+        }),
+        makeBlock({
+          id: 'i2',
+          type: 'image',
+          content: 'foto-duplikat.png',
+          assetId: imageHash,
+          assetExt: 'png',
+          assetMime: 'image/png'
+        }),
+        makeBlock({ id: 'c1', type: 'checklist', content: 'bukan aset', checked: true })
+      ]
+    })
+
+    const assets = collectPageAssets(page)
+
+    expect(assets).toHaveLength(2)
+    expect(assets.map((asset) => asset.assetId)).toEqual([imageHash, pdfHash])
+    expect(assets[0].relativePath).toBe(`assets/${imageHash}.png`)
+    expect(assets[0].name).toBe('foto.png')
+    expect(assets[1].relativePath).toBe(`assets/${pdfHash}.pdf`)
+    expect(assets[1].mime).toBe('application/pdf')
+  })
+
+  it('collectPageAssets aman untuk halaman tanpa blok dan aset tanpa ekstensi', () => {
+    expect(collectPageAssets(makePage())).toEqual([])
+
+    const assets = collectPageAssets(
+      makePage({
+        blocks: [
+          makeBlock({ id: 'i9', type: 'image', content: 'tanpa ekstensi', assetId: imageHash })
+        ]
+      })
+    )
+    expect(assets).toEqual([])
   })
 })
 
