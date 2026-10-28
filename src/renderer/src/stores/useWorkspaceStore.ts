@@ -9,6 +9,7 @@ import type {
 } from '@shared/types/domain'
 import type { CreatePageInput, UpdatePageInput } from '@shared/ipc-channels'
 import { createSaveQueue } from '@renderer/lib/save-queue'
+import { createUndoStack } from '@renderer/lib/undo-stack'
 
 interface TelemetryState {
   cursorX: number
@@ -65,10 +66,38 @@ interface WorkspaceStore {
 
   // Durability: debounced save + undo/redo per halaman
   flushSaves: () => void
+  undo: () => void
+  redo: () => void
 }
 
 /** Patch yang dikirim ke main process (tanpa id — id adalah kunci antrean). */
 type PagePatch = Omit<UpdatePageInput, 'id'>
+
+/** Snapshot undo: hanya isi dokumen, bukan metadata (mode, icon, sortOrder, ...). */
+export interface PageSnapshot {
+  title: string
+  blocks: Page['blocks']
+  canvasData: Page['canvasData']
+  tags: string[]
+}
+
+const snapshotOf = (page: Page): PageSnapshot => ({
+  title: page.title,
+  blocks: page.blocks,
+  canvasData: page.canvasData,
+  tags: page.tags
+})
+
+/**
+ * Perubahan dianggap nyata kalau salah satu field isi dokumen berubah.
+ * Perbandingan pakai referensi: setiap edit menghasilkan array/objek baru,
+ * jadi tidak perlu deep-compare (dan tidak ada JSON.stringify per ketikan).
+ */
+const hasContentChange = (page: Page, input: UpdatePageInput): boolean =>
+  (input.title !== undefined && input.title !== page.title) ||
+  (input.blocks !== undefined && input.blocks !== page.blocks) ||
+  (input.canvasData !== undefined && input.canvasData !== page.canvasData) ||
+  (input.tags !== undefined && input.tags !== page.tags)
 
 /**
  * Antrean simpan: satu patch gabungan per halaman tiap 350ms idle.
@@ -91,6 +120,19 @@ const saveQueue = createSaveQueue<PagePatch>({
       })
   }
 })
+
+const undoStack = createUndoStack<PageSnapshot>({ limit: 50, coalesceMs: 500 })
+
+/** Terapkan snapshot undo/redo TANPA push entri baru, lalu simpan segera. */
+const applySnapshot = (pageId: string, snapshot: PageSnapshot): void => {
+  useWorkspaceStore.setState((state) => ({
+    pages: state.pages.map((p) =>
+      p.id === pageId ? { ...p, ...snapshot, updatedAt: Date.now() } : p
+    )
+  }))
+  saveQueue.enqueue(pageId, snapshot)
+  saveQueue.flushAll()
+}
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   notebooks: [],
@@ -293,6 +335,14 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   },
 
   updatePage: async (input) => {
+    const current = get().pages.find((p) => p.id === input.id)
+
+    // Snapshot state SEBELUM perubahan. Coalescing 500ms di undo stack membuat
+    // satu paragraf ketikan = satu langkah undo.
+    if (current && hasContentChange(current, input)) {
+      undoStack.push(input.id, snapshotOf(current))
+    }
+
     // Optimistic local state update for zero-latency typing & dragging.
     set((state) => ({
       pages: state.pages.map((p) =>
@@ -328,6 +378,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const target = get().pages.find((p) => p.id === pageId)
     saveQueue.flushAll()
     await window.noteitAPI.deletePage(pageId)
+    undoStack.clear(pageId)
     get().closeTab(pageId)
     await get().loadWorkspace()
     if (target) {
@@ -337,5 +388,21 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   flushSaves: () => {
     saveQueue.flushAll()
+  },
+
+  undo: () => {
+    const { activePageId, pages } = get()
+    const page = pages.find((p) => p.id === activePageId)
+    if (!page) return
+
+    // State sekarang dikirim ke redo stack; applySnapshot tidak push entri baru.
+    const snapshot = undoStack.undo(activePageId, snapshotOf(page))
+    if (snapshot) applySnapshot(activePageId, snapshot)
+  },
+
+  redo: () => {
+    const { activePageId } = get()
+    const snapshot = undoStack.redo(activePageId)
+    if (snapshot) applySnapshot(activePageId, snapshot)
   }
 }))

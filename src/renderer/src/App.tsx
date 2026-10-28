@@ -27,6 +27,17 @@ const WorkbenchPane: React.FC<{
   )
 }
 
+/**
+ * Target yang punya undo/redo native sendiri (input teks, textarea, contentEditable).
+ * Shortcut aplikasi tidak boleh mencurinya.
+ */
+const isNativeUndoTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable) return true
+  const tag = target.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA'
+}
+
 export const App: React.FC = () => {
   const {
     loadWorkspace,
@@ -44,7 +55,11 @@ export const App: React.FC = () => {
     switchPageMode,
     toggleSplitPane,
     createPage,
-    toastMessage
+    toastMessage,
+    isCommandPaletteOpen,
+    flushSaves,
+    undo,
+    redo
   } = useWorkspaceStore()
 
   useEffect(() => {
@@ -54,6 +69,24 @@ export const App: React.FC = () => {
   // Global Desktop Keyboard Shortcuts (from DESIGN.md)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
+      const mod = e.ctrlKey || e.metaKey
+      const key = e.key.toLowerCase()
+
+      // Undo/redo halaman: jangan intercept saat fokus di input native atau saat
+      // Command Palette terbuka — biarkan browser menangani undo teks sendiri.
+      if (mod && !isCommandPaletteOpen && !isNativeUndoTarget(e.target)) {
+        if (key === 'z' && !e.shiftKey) {
+          e.preventDefault()
+          undo()
+          return
+        }
+        if ((key === 'z' && e.shiftKey) || key === 'y') {
+          e.preventDefault()
+          redo()
+          return
+        }
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setCommandPaletteOpen(true)
@@ -70,7 +103,33 @@ export const App: React.FC = () => {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activePageId, pages, setCommandPaletteOpen, switchPageMode, toggleSidebar])
+  }, [
+    activePageId,
+    pages,
+    setCommandPaletteOpen,
+    switchPageMode,
+    toggleSidebar,
+    isCommandPaletteOpen,
+    undo,
+    redo
+  ])
+
+  // Durability: jangan biarkan edit terakhir hanya hidup di memori renderer.
+  useEffect(() => {
+    const flush = (): void => {
+      flushSaves()
+    }
+    const handleVisibilityChange = (): void => {
+      if (document.visibilityState === 'hidden') flushSaves()
+    }
+
+    window.addEventListener('beforeunload', flush)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      window.removeEventListener('beforeunload', flush)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [flushSaves])
 
   if (isLoading) {
     return (
