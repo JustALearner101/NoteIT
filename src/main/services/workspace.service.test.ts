@@ -123,6 +123,28 @@ describe('workspace.service (integration)', () => {
     expect(hit?.snippet).toContain('zettelkasten')
   })
 
+  it('searchWorkspace memakai snippet di sekitar match prefix, bukan 150 karakter awal', () => {
+    const page = createPage({ sectionId, title: 'Halaman Snippet Prefix', mode: 'block' })
+    const prefix = 'pengantar panjang tanpa kata kunci. '.repeat(10)
+
+    updatePage({
+      id: page.id,
+      blocks: [
+        {
+          id: 'blk-snippet-1',
+          type: 'paragraph',
+          content: `${prefix}zettelkasten adalah metode catatan`
+        }
+      ]
+    })
+
+    // FTS5 prefix match: "zettel" cocok dengan "zettelkasten" walau indexOf gagal.
+    const hit = searchWorkspace('zettel').find((r) => r.pageId === page.id)
+    expect(hit).toBeDefined()
+    expect(hit?.snippet).toContain('zettelkasten')
+    expect(hit?.snippet.startsWith('...')).toBe(true)
+  })
+
   it('getBacklinks mengembalikan link ketika page berisi [[Judul]] page lain', () => {
     const target = createPage({
       sectionId,

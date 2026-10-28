@@ -483,6 +483,40 @@ export function restorePageSnapshot(pageId: string, versionId: string): Page {
   })
 }
 
+/**
+ * Snippet pencarian di sekitar match.
+ *
+ * FTS5 mencocokkan prefix ("zettel" cocok dengan "zettelkasten"), sedangkan
+ * indexOf(query) tidak: tanpa helper ini snippet jatuh ke 150 karakter awal dan
+ * kata yang cocok tidak terlihat. Urutan pencarian posisi: query utuh, lalu token
+ * pertama yang ketemu. Kalau sama sekali tidak ada match (mis. hanya cocok lewat
+ * stemming), pakai perilaku lama: 150 karakter awal.
+ */
+function findMatchIndex(text: string, query: string): { index: number; length: number } | null {
+  const haystack = text.toLowerCase()
+  const whole = query.toLowerCase()
+  const wholeIndex = haystack.indexOf(whole)
+  if (wholeIndex !== -1) return { index: wholeIndex, length: whole.length }
+
+  for (const token of query.toLowerCase().split(/\s+/).filter(Boolean)) {
+    const tokenIndex = haystack.indexOf(token)
+    if (tokenIndex !== -1) return { index: tokenIndex, length: token.length }
+  }
+
+  return null
+}
+
+function buildSearchSnippet(text: string, query: string, radius = 70): string {
+  const match = findMatchIndex(text, query)
+  if (!match) return text.slice(0, 150).replace(/\n+/g, ' ')
+
+  const start = Math.max(0, match.index - radius)
+  const end = Math.min(text.length, match.index + match.length + radius)
+  const body = text.slice(start, end).replace(/\s+/g, ' ').trim()
+
+  return `${start > 0 ? '...' : ''}${body}${end < text.length ? '...' : ''}`
+}
+
 export function searchWorkspace(query: string): SearchResultItem[] {
   const clean = query.trim()
 
@@ -528,9 +562,7 @@ export function searchWorkspace(query: string): SearchResultItem[] {
 
   return matchedRows.map((r) => {
     const text: string = r.plain_text || ''
-    const idx = text.toLowerCase().indexOf(clean.toLowerCase())
-    const start = idx > 30 ? idx - 30 : 0
-    const snippet = text.slice(start, start + 150).replace(/\n+/g, ' ')
+    const snippet = buildSearchSnippet(text, clean)
 
     return {
       pageId: r.id,
