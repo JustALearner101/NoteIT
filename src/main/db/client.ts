@@ -298,3 +298,11 @@ export function getDb(): DatabaseSync {
 export function getDbPath(): string {
   return currentDbPath
 }
+
+export function closeDb(): void {
+  if (dbInstance) {
+    dbInstance.close()
+    dbInstance = null
+  }
+  currentDbPath = ''
+}
