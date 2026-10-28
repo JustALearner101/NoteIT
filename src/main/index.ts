@@ -14,6 +14,7 @@ import {
   getBacklinks,
   getPageVersions,
   getWorkspaceSnapshot,
+  openOrCreateDailyNote,
   restorePageSnapshot,
   searchWorkspace,
   updatePage
@@ -156,8 +157,24 @@ function registerGlobalShortcut(accelerator: string, handler: () => void): void 
   }
 }
 
+/** Daily note dibuka di window utama: fokuskan, lalu suruh renderer pindah tab. */
+function focusDailyNote(): void {
+  try {
+    const page = openOrCreateDailyNote()
+    if (!mainWindow || mainWindow.isDestroyed()) return
+
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+    mainWindow.webContents.send('workspace:navigate', page.id)
+  } catch (error) {
+    writeLog('ERROR', 'Gagal membuka daily note', error)
+  }
+}
+
 function registerGlobalShortcuts(): void {
   registerGlobalShortcut('CommandOrControl+Shift+Space', toggleCaptureWindow)
+  registerGlobalShortcut('CommandOrControl+Shift+D', focusDailyNote)
 }
 
 function registerIpcHandlers(): void {
@@ -180,6 +197,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('workspace:search', (_e, query) => searchWorkspace(query))
 
   ipcMain.handle('capture:save', (_e, text: string) => createQuickNote(text))
+  ipcMain.handle('daily:open', () => openOrCreateDailyNote())
 
   ipcMain.handle(
     'workspace:export',

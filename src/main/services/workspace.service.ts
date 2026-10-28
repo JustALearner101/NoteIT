@@ -8,6 +8,7 @@ import {
   withTransaction
 } from '../db/client'
 import { INITIAL_SEED_DBML } from '../db/seed'
+import { formatDailyTitle } from './date.util'
 import {
   getMaxNotebookSortOrder,
   insertNotebook,
@@ -204,6 +205,7 @@ export function createSection(input: {
 }
 
 const INBOX_SECTION_NAME = 'INBOX'
+const DAILY_SECTION_NAME = 'Daily'
 
 function findSectionByName(name: string): Section | null {
   const target = name.trim().toLowerCase()
@@ -266,6 +268,38 @@ export function createQuickNote(text: string): Page {
 
     // createPage menyiapkan placeholder + tag 'draft'; capture mentah tidak butuh keduanya.
     return updatePage({ id: page.id, blocks, tags: [] })
+  })
+}
+
+/**
+ * Daily note per hari: section 'Daily' (case-insensitive) + satu page berjudul
+ * YYYY-MM-DD waktu lokal. Idempoten per hari, jadi hotkey boleh ditekan berkali-kali.
+ */
+export function openOrCreateDailyNote(): Page {
+  const title = formatDailyTitle(new Date())
+
+  return withTransaction(() => {
+    const section = ensureSectionByName(DAILY_SECTION_NAME, 'cobalt')
+    const existing = listPages().find(
+      (row) => row.section_id === section.id && row.title.trim() === title
+    )
+    if (existing) return mapRowToPage(existing)
+
+    const page = createPage({ sectionId: section.id, title, mode: 'block' })
+
+    return updatePage({
+      id: page.id,
+      blocks: [
+        { id: 'blk-' + page.id + '-1', type: 'h2', content: 'Catatan' },
+        { id: 'blk-' + page.id + '-2', type: 'paragraph', content: '' },
+        {
+          id: 'blk-' + page.id + '-3',
+          type: 'checklist',
+          content: 'Review hari ini',
+          checked: false
+        }
+      ]
+    })
   })
 }
 

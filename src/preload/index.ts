@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { IpcRendererEvent } from 'electron'
 import type { NoteItAPI, CreatePageInput, UpdatePageInput } from '@shared/ipc-channels'
 import type { MarkerColor } from '@shared/types/domain'
 
@@ -25,6 +26,12 @@ const noteitAPI: NoteItAPI = {
   exportMarkdown: (input) => ipcRenderer.invoke('workspace:exportMarkdown', input),
 
   createQuickNote: (text: string) => ipcRenderer.invoke('capture:save', text),
+  openDailyNote: () => ipcRenderer.invoke('daily:open'),
+  onNavigateToPage: (callback: (pageId: string) => void) => {
+    const listener = (_event: IpcRendererEvent, pageId: string): void => callback(pageId)
+    ipcRenderer.on('workspace:navigate', listener)
+    return () => ipcRenderer.removeListener('workspace:navigate', listener)
+  },
 
   windowMinimize: () => ipcRenderer.invoke('window:minimize'),
   windowMaximizeToggle: () => ipcRenderer.invoke('window:maximizeToggle'),

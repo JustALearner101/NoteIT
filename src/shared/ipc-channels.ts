@@ -68,8 +68,11 @@ export interface NoteItAPI {
   }): Promise<{ saved: boolean; filePath?: string }>
   exportMarkdown(input: ExportMarkdownInput): Promise<ExportMarkdownResult>
 
-  // Quick Capture
+  // Quick Capture & Daily Note
   createQuickNote(text: string): Promise<Page>
+  openDailyNote(): Promise<Page>
+  /** Event dari main process (global hotkey daily note); return fungsi unsubscribe. */
+  onNavigateToPage(callback: (pageId: string) => void): () => void
 
   // Desktop Window Controls
   windowMinimize(): Promise<void>

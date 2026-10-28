@@ -6,8 +6,10 @@ import { closeDb, getDb, initDatabase } from '../db/client'
 import {
   createQuickNote,
   ensureInboxSection,
-  getWorkspaceSnapshot
+  getWorkspaceSnapshot,
+  openOrCreateDailyNote
 } from './workspace.service'
+import { formatDailyTitle } from './date.util'
 
 let tempDir: string
 
@@ -114,5 +116,35 @@ describe('createQuickNote', () => {
   it('teks kosong atau spasi saja ditolak dengan pesan Indonesia', () => {
     expect(() => createQuickNote('   ')).toThrow(/tidak boleh kosong/i)
     expect(() => createQuickNote('\n\n\t')).toThrow(/tidak boleh kosong/i)
+  })
+})
+
+describe('openOrCreateDailyNote', () => {
+  it('dua pemanggilan di hari yang sama mengembalikan pageId yang sama', () => {
+    const first = openOrCreateDailyNote()
+    const second = openOrCreateDailyNote()
+
+    expect(second.id).toBe(first.id)
+    expect(getWorkspaceSnapshot().pages.filter((page) => page.id === first.id)).toHaveLength(1)
+  })
+
+  it('judul page adalah tanggal lokal YYYY-MM-DD di section Daily', () => {
+    const page = openOrCreateDailyNote()
+    const section = getWorkspaceSnapshot().sections.find((item) => item.id === page.sectionId)
+
+    expect(page.title).toBe(formatDailyTitle(new Date()))
+    expect(page.title).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(section?.name.trim().toLowerCase()).toBe('daily')
+    expect(section?.color).toBe('cobalt')
+  })
+
+  it('blok awal: h2 Catatan, paragraph kosong, checklist Review hari ini', () => {
+    const page = openOrCreateDailyNote()
+
+    expect(page.blocks.map((block) => block.type)).toEqual(['h2', 'paragraph', 'checklist'])
+    expect(page.blocks[0].content).toBe('Catatan')
+    expect(page.blocks[1].content).toBe('')
+    expect(page.blocks[2].content).toBe('Review hari ini')
+    expect(page.blocks[2].checked).toBe(false)
   })
 })

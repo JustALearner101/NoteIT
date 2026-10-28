@@ -72,6 +72,17 @@ export const App: React.FC = () => {
     loadWorkspace()
   }, [loadWorkspace])
 
+  // Hotkey global daily note: page dibuat di main process, jadi store dimuat ulang
+  // dulu supaya openPageInTab menemukan halamannya. Listener dibersihkan saat unmount.
+  useEffect(() => {
+    return window.noteitAPI.onNavigateToPage((pageId) => {
+      void (async () => {
+        await loadWorkspace()
+        openPageInTab(pageId)
+      })()
+    })
+  }, [loadWorkspace, openPageInTab])
+
   // Global Desktop Keyboard Shortcuts (from DESIGN.md)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {

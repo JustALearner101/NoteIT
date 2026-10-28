@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import {
+  CalendarDays,
   Columns2,
   Database,
   FileDown,
@@ -25,6 +26,7 @@ export const CommandPalette: React.FC = () => {
     activePageId,
     openPageInTab,
     createPage,
+    loadWorkspace,
     toggleSplitPane,
     toggleTheme,
     theme,
@@ -66,6 +68,13 @@ export const CommandPalette: React.FC = () => {
               : 'Dokumen Spesifikasi Baru',
       template
     })
+    setCommandPaletteOpen(false)
+  }
+
+  const handleOpenDailyNote = async (): Promise<void> => {
+    const page = await window.noteitAPI.openDailyNote()
+    await loadWorkspace()
+    openPageInTab(page.id)
     setCommandPaletteOpen(false)
   }
 
@@ -156,6 +165,13 @@ export const CommandPalette: React.FC = () => {
             >
               <LayoutGrid size={13} className="text-[#8B5CF6]" />
               <span>Buat Kanvas Spasial</span>
+            </button>
+            <button
+              onClick={handleOpenDailyNote}
+              className="px-2.5 py-1.5 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs text-ink-primary flex items-center gap-2"
+            >
+              <CalendarDays size={13} className="text-[#10B981]" />
+              <span>Buka daily note hari ini</span>
             </button>
             <button
               onClick={() => {
