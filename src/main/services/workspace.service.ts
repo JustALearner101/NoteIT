@@ -658,6 +658,11 @@ export function renamePageSnapshot(
   })
 }
 
+/**
+ * Restore = tulis kondisi saat ini sebagai snapshot pengaman, lalu tulis versi target.
+ * Keduanya dalam satu transaksi; jaring pengaman memakai insertVersion langsung supaya
+ * restore tidak memicu pembuatan snapshot tambahan lewat updatePage.
+ */
 export function restorePageSnapshot(pageId: string, versionId: string): Page {
   return withTransaction(() => {
     const verRow = findVersionById(versionId, pageId)
@@ -665,16 +670,57 @@ export function restorePageSnapshot(pageId: string, versionId: string): Page {
       throw new Error('Snapshot versi tidak ditemukan di SQLite.')
     }
 
-    // Snapshot legacy (tags_json NULL) tidak menyentuh tags halaman: perilaku lama dipertahankan.
-    const tags = verRow.tags_json === null ? undefined : JSON.parse(verRow.tags_json)
+    const pageRow = findPageById(pageId)
+    if (!pageRow) {
+      throw new Error(`Halaman '${pageId}' tidak ditemukan.`)
+    }
 
-    return updatePage({
-      id: pageId,
+    const current = mapRowToPage(pageRow)
+    const nextVer = (pageRow.version_count || 1) + 1
+    const now = Date.now()
+
+    // Jaring pengaman: isi halaman sebelum restore tetap bisa dipulihkan.
+    insertVersion({
+      id: `ver-${randomUUID()}`,
+      pageId,
+      versionNumber: nextVer,
+      title: pageRow.title,
+      label: `Sebelum restore v${verRow.version_number}`,
+      blocksJson: pageRow.blocks_json,
+      canvasJson: pageRow.canvas_json,
+      tagsJson: pageRow.tags_json,
+      createdAt: now
+    })
+
+    // Snapshot legacy (tags_json NULL) tidak menyentuh tags halaman: perilaku lama dipertahankan.
+    const tags = verRow.tags_json === null ? current.tags : JSON.parse(verRow.tags_json)
+
+    const restored: Page = {
+      ...current,
       title: verRow.title,
       blocks: JSON.parse(verRow.blocks_json || '[]'),
-      canvasData: JSON.parse(verRow.canvas_json || '{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}'),
-      ...(tags !== undefined ? { tags } : {})
-    })
+      canvasData: JSON.parse(
+        verRow.canvas_json || '{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}'
+      ),
+      tags,
+      updatedAt: Date.now(),
+      versionCount: nextVer
+    }
+
+    updatePageRow(restored, extractPlainTextFromPage(restored))
+
+    if (
+      restored.title !== current.title &&
+      isAliasWorthyTitle(current.title) &&
+      isAliasWorthyTitle(restored.title)
+    ) {
+      insertAlias(current.title, restored.id, restored.updatedAt)
+    }
+
+    updatePageVersionCount(pageId, nextVer)
+    rebuildAllPageLinks(getDb())
+
+    return restored
   })
 }
 

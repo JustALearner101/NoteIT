@@ -560,6 +560,48 @@ describe('page_versions — listing metadata-only, hapus, rename', () => {
     expect(() => renamePageSnapshot(page.id, 'ver-tidak-ada', 'X')).toThrow()
   })
 
+  it('restore membuat snapshot pengaman berisi kondisi sebelum restore', () => {
+    const page = createPage({ sectionId, title: 'Halaman Pengaman Restore', mode: 'block' })
+    updatePage({
+      id: page.id,
+      title: 'Judul Sebelum Restore',
+      blocks: [{ id: 'blk-safety-1', type: 'paragraph', content: 'Isi yang akan ditimpa.' }],
+      tags: ['sebelum']
+    })
+
+    const target = createPageSnapshot(page.id, 'Target Restore')
+    updatePage({
+      id: page.id,
+      title: 'Judul Setelah Snapshot',
+      blocks: [{ id: 'blk-safety-2', type: 'paragraph', content: 'Isi terbaru.' }],
+      tags: ['sesudah']
+    })
+
+    const before = getWorkspaceSnapshot().pages.find((p) => p.id === page.id)
+    const restored = restorePageSnapshot(page.id, target.id)
+
+    expect(restored.title).toBe('Judul Sebelum Restore')
+    expect(restored.versionCount).toBe(before!.versionCount + 1)
+
+    const versions = getPageVersions(page.id)
+    const safety = versions.find((ver) => ver.label === `Sebelum restore v${target.versionNumber}`)
+    expect(safety).toBeDefined()
+    expect(safety!.versionNumber).toBe(before!.versionCount + 1)
+
+    const safetyFull = getPageVersion(page.id, safety!.id)
+    expect(safetyFull.title).toBe('Judul Setelah Snapshot')
+    expect(safetyFull.blocks[0].content).toBe('Isi terbaru.')
+    expect(safetyFull.tags).toEqual(['sesudah'])
+
+    // Snapshot pengaman cukup satu, tidak berlipat lewat jalur updatePage.
+    expect(
+      versions.filter((ver) => ver.label === `Sebelum restore v${target.versionNumber}`)
+    ).toHaveLength(1)
+    expect(getWorkspaceSnapshot().pages.find((p) => p.id === page.id)?.versionCount).toBe(
+      before!.versionCount + 1
+    )
+  })
+
   it('nomor versi tetap naik setelah versi lama dihapus', () => {
     const page = createPage({ sectionId, title: 'Halaman Nomor Versi', mode: 'block' })
     const second = createPageSnapshot(page.id, 'Snapshot Kedua')
