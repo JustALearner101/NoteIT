@@ -4,6 +4,7 @@ import os from 'os'
 import path from 'path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { closeDb, getDb, initDatabase } from '../db/client'
+import { createPage, deletePage, searchWorkspace, updatePage } from './workspace.service'
 import {
   MAX_ASSET_BYTES,
   collectReferencedAssetIds,
@@ -207,6 +208,37 @@ describe('asset.service — hapus dan GC', () => {
     getDb().prepare('DELETE FROM pages WHERE id IN (?, ?)').run(pageA, pageB)
     expect(gcOrphanAssets().deleted).toContain(shared.id)
     expect(getAsset(shared.id)).toBeNull()
+  })
+
+  it('hapus halaman lewat workspace.service lalu GC membuang asetnya', () => {
+    const asset = importAsset({ data: Buffer.from('aset-halaman-terhapus'), name: 'terhapus.png' })
+    const page = createPage({ sectionId, title: 'Halaman Dengan Aset', template: 'blank' })
+
+    updatePage({
+      id: page.id,
+      blocks: [
+        {
+          id: 'blk-img',
+          type: 'image',
+          content: 'terhapus.png',
+          assetId: asset.id,
+          assetExt: 'png',
+          assetMime: 'image/png',
+          assetName: 'terhapus.png'
+        }
+      ]
+    })
+
+    // content = nama berkas harus ikut masuk plain_text FTS.
+    const found = searchWorkspace('terhapus')
+    expect(found.map((row) => row.pageId)).toContain(page.id)
+
+    expect(getAsset(asset.id)).not.toBeNull()
+    deletePage(page.id)
+
+    expect(gcOrphanAssets().deleted).toContain(asset.id)
+    expect(getAsset(asset.id)).toBeNull()
+    expect(fs.existsSync(path.join(getAssetsDir(), `${asset.id}.png`))).toBe(false)
   })
 
   it('GC membersihkan berkas yatim yang tidak punya baris', () => {

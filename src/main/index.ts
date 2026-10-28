@@ -13,6 +13,7 @@ import path from 'path'
 import { initDatabase } from './db/client'
 import {
   copyAssetFile,
+  gcOrphanAssets,
   getAsset,
   getAssetFilePath,
   importAsset,
@@ -320,7 +321,19 @@ function registerIpcHandlers(): void {
   ipcMain.handle('workspace:createSection', (_e, input) => createSection(input))
   ipcMain.handle('workspace:createPage', (_e, input) => createPage(input))
   ipcMain.handle('workspace:updatePage', (_e, input) => updatePage(input))
-  ipcMain.handle('workspace:deletePage', (_e, pageId) => deletePage(pageId))
+  ipcMain.handle('workspace:deletePage', (_e, pageId) => {
+    const result = deletePage(pageId)
+    // Halaman terhapus bisa jadi satu-satunya pemakai aset: bersihkan setelah commit.
+    try {
+      const gc = gcOrphanAssets()
+      if (gc.deleted.length > 0) {
+        writeLog('INFO', `GC aset menghapus ${gc.deleted.length} aset yatim`)
+      }
+    } catch (error) {
+      writeLog('WARN', 'GC aset gagal setelah hapus halaman', error)
+    }
+    return result
+  })
 
   ipcMain.handle('workspace:getBacklinks', (_e, pageId) => getBacklinks(pageId))
   ipcMain.handle('workspace:getPageVersions', (_e, pageId) => getPageVersions(pageId))
