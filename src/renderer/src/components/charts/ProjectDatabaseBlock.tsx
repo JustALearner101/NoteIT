@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react'
-import { AlertTriangle, BarChart3, GanttChart, Kanban, Plus, Table2 } from 'lucide-react'
+import { AlertTriangle, BarChart3, CalendarDays, GanttChart, Kanban, Plus, Table2 } from 'lucide-react'
 import type { ProjectTaskItem } from '@shared/types/domain'
+import { moveTaskToDate } from '@renderer/lib/database/calendar'
 import { parseIsoDate, todayIso } from '@renderer/lib/database/dates'
 import { createTask, deleteTask, shiftTask, updateTask } from '@renderer/lib/database/tasks'
+import { CalendarView } from './views/CalendarView'
 import { ChartView } from './views/ChartView'
 import { GanttView } from './views/GanttView'
 import { KanbanView } from './views/KanbanView'
@@ -50,8 +52,14 @@ export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
     handleUpdateTask(task.id, { startDate: next.startDate, endDate: next.endDate })
   }
 
-  const handleAddTask = (): void => {
-    onChange({ databaseItems: [...items, createTask(items, todayIso())] })
+  /**
+   * startDate opsional dari Calendar: createTask menempel setelah task terakhir,
+   * jadi task baru digeser ke tanggal terpilih kalau parameter diberikan.
+   */
+  const handleAddTask = (startDate?: string): void => {
+    const created = createTask(items, startDate ?? todayIso())
+    const next = startDate ? moveTaskToDate(created, startDate) : created
+    onChange({ databaseItems: [...items, next] })
   }
 
   const handleDeleteTask = (taskId: string): void => {
@@ -90,7 +98,7 @@ export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* 4-View Switcher: Gantt | Kanban | Table | Data Chart */}
+          {/* 5-View Switcher: Gantt | Kanban | Table | Data Chart | Calendar */}
           <div className="p-0.5 rounded bg-surface-elevated border border-border-hairline flex items-center font-mono text-[10px]">
             <button
               onClick={() => onChange({ databaseActiveView: 'gantt' })}
@@ -136,10 +144,21 @@ export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
               <BarChart3 size={11} />
               <span>Data Chart</span>
             </button>
+            <button
+              onClick={() => onChange({ databaseActiveView: 'calendar' })}
+              className={`px-2.5 py-1 rounded flex items-center gap-1 ${
+                activeView === 'calendar'
+                  ? 'bg-accent-cobalt text-white font-semibold'
+                  : 'text-ink-secondary hover:text-ink-primary'
+              }`}
+            >
+              <CalendarDays size={11} />
+              <span>Calendar</span>
+            </button>
           </div>
 
           <button
-            onClick={handleAddTask}
+            onClick={() => handleAddTask()}
             className="h-7 px-2.5 rounded bg-accent-cobalt hover:opacity-90 text-white font-mono text-[10px] font-semibold flex items-center gap-1"
           >
             <Plus size={11} />
@@ -153,6 +172,7 @@ export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
       {activeView === 'kanban' && <KanbanView {...viewProps} />}
       {activeView === 'table' && <TableView {...viewProps} />}
       {activeView === 'chart' && <ChartView {...viewProps} chartType={chartType} />}
+      {activeView === 'calendar' && <CalendarView {...viewProps} />}
     </div>
   )
 }

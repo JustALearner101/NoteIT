@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { ProjectTaskItem } from '@shared/types/domain'
-import { buildMonthGrid, moveTaskToDate, resizeTaskEnd, taskDurationDays, tasksForDate } from './calendar'
+import {
+  WEEKDAY_LABELS,
+  buildMonthGrid,
+  isSameMonth,
+  monthLabel,
+  moveTaskToDate,
+  resizeTaskEnd,
+  shiftMonth,
+  taskDurationDays,
+  taskSpanClass,
+  taskSpanPosition,
+  tasksForDate
+} from './calendar'
 
 function makeTask(overrides: Partial<ProjectTaskItem> = {}): ProjectTaskItem {
   return {
@@ -118,3 +130,117 @@ describe('resizeTaskEnd', () => {
     expect(resizeTaskEnd(makeTask(), '2026-02-30').endDate).toBe('2026-10-30')
   })
 })
+
+describe('shiftMonth', () => {
+  it('maju dari Desember ke Januari tahun berikutnya', () => {
+    expect(shiftMonth(2026, 12, 1)).toEqual({ year: 2027, month: 1 })
+  })
+
+  it('mundur dari Januari ke Desember tahun sebelumnya', () => {
+    expect(shiftMonth(2026, 1, -1)).toEqual({ year: 2025, month: 12 })
+  })
+
+  it('delta besar melewati beberapa tahun', () => {
+    expect(shiftMonth(2026, 10, 15)).toEqual({ year: 2028, month: 1 })
+    expect(shiftMonth(2026, 2, -14)).toEqual({ year: 2024, month: 12 })
+  })
+
+  it('delta nol tidak mengubah bulan', () => {
+    expect(shiftMonth(2026, 7, 0)).toEqual({ year: 2026, month: 7 })
+  })
+})
+
+describe('monthLabel', () => {
+  it('memakai nama bulan dan tahun id-ID', () => {
+    expect(monthLabel(2026, 10)).toBe('Oktober 2026')
+  })
+
+  it('Januari dan Desember tidak tertukar', () => {
+    expect(monthLabel(2026, 1)).toBe('Januari 2026')
+    expect(monthLabel(2026, 12)).toBe('Desember 2026')
+  })
+
+  it('Februari tahun kabisat tetap Februari', () => {
+    expect(monthLabel(2028, 2)).toBe('Februari 2028')
+  })
+})
+
+
+describe('isSameMonth', () => {
+  it('true untuk tanggal di bulan yang sama', () => {
+    expect(isSameMonth('2026-10-01', 2026, 10)).toBe(true)
+    expect(isSameMonth('2026-10-31', 2026, 10)).toBe(true)
+  })
+
+  it('false untuk bulan lain meski tahun sama', () => {
+    expect(isSameMonth('2026-09-30', 2026, 10)).toBe(false)
+    expect(isSameMonth('2026-11-01', 2026, 10)).toBe(false)
+  })
+
+  it('false untuk tahun lain', () => {
+    expect(isSameMonth('2025-10-15', 2026, 10)).toBe(false)
+  })
+
+  it('false untuk tanggal tidak valid', () => {
+    expect(isSameMonth('2026-02-30', 2026, 2)).toBe(false)
+  })
+})
+
+describe('WEEKDAY_LABELS', () => {
+  it('dimulai Senin dan berakhir Minggu', () => {
+    expect(WEEKDAY_LABELS).toHaveLength(7)
+    expect(WEEKDAY_LABELS[0]).toBe('Sen')
+    expect(WEEKDAY_LABELS[6]).toBe('Min')
+  })
+})
+
+
+describe('taskSpanPosition', () => {
+  const task = makeTask({ startDate: '2026-10-26', endDate: '2026-10-29' })
+
+  it('single untuk task sehari', () => {
+    const oneDay = makeTask({ startDate: '2026-10-26', endDate: '2026-10-26' })
+    expect(taskSpanPosition(oneDay, '2026-10-26')).toBe('single')
+  })
+
+  it('first di hari pertama', () => {
+    expect(taskSpanPosition(task, '2026-10-26')).toBe('first')
+  })
+
+  it('middle di hari tengah', () => {
+    expect(taskSpanPosition(task, '2026-10-27')).toBe('middle')
+    expect(taskSpanPosition(task, '2026-10-28')).toBe('middle')
+  })
+
+  it('last di hari terakhir', () => {
+    expect(taskSpanPosition(task, '2026-10-29')).toBe('last')
+  })
+
+  it('null di luar rentang atau tanggal tidak valid', () => {
+    expect(taskSpanPosition(task, '2026-10-25')).toBeNull()
+    expect(taskSpanPosition(task, '2026-10-30')).toBeNull()
+    expect(taskSpanPosition(task, '2026-02-30')).toBeNull()
+  })
+})
+
+describe('taskSpanClass', () => {
+  const task = makeTask({ startDate: '2026-10-26', endDate: '2026-10-29' })
+
+  it('single membulat di kedua sisi', () => {
+    const oneDay = makeTask({ startDate: '2026-10-26', endDate: '2026-10-26' })
+    expect(taskSpanClass(oneDay, '2026-10-26')).toBe('rounded-[3px]')
+  })
+
+  it('first hanya membulat di kiri', () => {
+    expect(taskSpanClass(task, '2026-10-26')).toBe('rounded-l-[3px]')
+  })
+
+  it('middle rata di kedua sisi supaya terlihat satu batang', () => {
+    expect(taskSpanClass(task, '2026-10-27')).toBe('')
+  })
+
+  it('last hanya membulat di kanan', () => {
+    expect(taskSpanClass(task, '2026-10-29')).toBe('rounded-r-[3px]')
+  })
+})
+

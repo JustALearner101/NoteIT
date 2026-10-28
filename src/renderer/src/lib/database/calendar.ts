@@ -69,3 +69,71 @@ export function resizeTaskEnd(task: ProjectTaskItem, iso: string): ProjectTaskIt
   if (end < start) return { ...task, endDate: task.startDate }
   return { ...task, endDate: iso }
 }
+
+/** Label hari untuk grid dengan weekStartsOn = 1 (Senin). */
+export const WEEKDAY_LABELS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'] as const
+
+/** Geser bulan tanpa melewati bulan 0 atau 13; delta boleh negatif. */
+export function shiftMonth(
+  year: number,
+  month: number,
+  delta: number
+): { year: number; month: number } {
+  const total = year * 12 + (month - 1) + delta
+  return { year: Math.floor(total / 12), month: (((total % 12) + 12) % 12) + 1 }
+}
+
+/** "Oktober 2026" menurut locale id-ID. Formatting sengaja di lib, bukan di JSX. */
+export function monthLabel(year: number, month: number): string {
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('id-ID', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC'
+  })
+}
+
+/** Apakah iso berada di bulan/tahun tertentu. Tanggal tidak valid -> false. */
+export function isSameMonth(iso: string, year: number, month: number): boolean {
+  const ms = parseIsoDate(iso)
+  if (ms === null) return false
+  const date = new Date(ms)
+  return date.getUTCFullYear() === year && date.getUTCMonth() + 1 === month
+}
+
+export type TaskSpanPosition = 'single' | 'first' | 'middle' | 'last'
+
+/**
+ * Posisi potongan task pada satu tanggal: task sehari = single, hari pertama =
+ * first, hari terakhir = last, sisanya middle. Null kalau tanggal di luar rentang.
+ */
+export function taskSpanPosition(task: ProjectTaskItem, iso: string): TaskSpanPosition | null {
+  const target = parseIsoDate(iso)
+  const start = parseIsoDate(task.startDate)
+  const end = parseIsoDate(task.endDate)
+  if (target === null || start === null || end === null) return null
+  if (target < start || target > end) return null
+
+  const isFirst = target === start
+  const isLast = target === end
+  if (isFirst && isLast) return 'single'
+  if (isFirst) return 'first'
+  if (isLast) return 'last'
+  return 'middle'
+}
+
+/**
+ * Kelas sudut chip supaya task multi-hari terlihat satu batang: hanya ujung
+ * rentang yang membulat, potongan tengah rata di kedua sisi.
+ */
+export function taskSpanClass(task: ProjectTaskItem, iso: string): string {
+  switch (taskSpanPosition(task, iso)) {
+    case 'single':
+      return 'rounded-[3px]'
+    case 'first':
+      return 'rounded-l-[3px]'
+    case 'last':
+      return 'rounded-r-[3px]'
+    default:
+      return ''
+  }
+}
