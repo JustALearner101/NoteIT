@@ -13,20 +13,12 @@ import {
   XAxis,
   YAxis
 } from 'recharts'
-import { MARKER_META } from '@renderer/lib/marker-colors'
+import { buildChartSeries, chartTooltipStyle } from '@renderer/lib/database/chart-data'
 import type { ChartViewProps } from './types'
 
 export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType }) => {
   // Aggregated data for Recharts Data Visualization View
-  const chartData = useMemo(() => {
-    return items.map((item) => ({
-      name: item.code,
-      fullTitle: item.title,
-      progress: item.progress,
-      hours: item.estimateHours,
-      colorHex: MARKER_META[item.color]?.hex || '#3B82F6'
-    }))
-  }, [items])
+  const chartData = useMemo(() => buildChartSeries(items, { dimension: 'item' }), [items])
 
   return (
     <div className="p-4 bg-canvas-primary">
@@ -59,12 +51,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
               <XAxis dataKey="name" stroke="var(--text-secondary)" fontSize={11} />
               <YAxis stroke="var(--text-secondary)" fontSize={11} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'var(--bg-surface-elevated)',
-                  borderColor: 'var(--border-hairline)',
-                  fontSize: '12px',
-                  fontFamily: 'JetBrains Mono'
-                }}
+                contentStyle={chartTooltipStyle}
               />
               <Bar dataKey="progress" name="Progress (%)" radius={[4, 4, 0, 0]}>
                 {chartData.map((entry, index) => (
@@ -84,12 +71,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
               <XAxis dataKey="name" stroke="var(--text-secondary)" fontSize={11} />
               <YAxis stroke="var(--text-secondary)" fontSize={11} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'var(--bg-surface-elevated)',
-                  borderColor: 'var(--border-hairline)',
-                  fontSize: '12px',
-                  fontFamily: 'JetBrains Mono'
-                }}
+                contentStyle={chartTooltipStyle}
               />
               <Area
                 type="monotone"
@@ -124,12 +106,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
                 ))}
               </Pie>
               <Tooltip
-                contentStyle={{
-                  backgroundColor: 'var(--bg-surface-elevated)',
-                  borderColor: 'var(--border-hairline)',
-                  fontSize: '12px',
-                  fontFamily: 'JetBrains Mono'
-                }}
+                contentStyle={chartTooltipStyle}
               />
             </PieChart>
           )}

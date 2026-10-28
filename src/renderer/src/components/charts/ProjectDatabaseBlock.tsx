@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react'
 import { AlertTriangle, BarChart3, GanttChart, Kanban, Plus, Table2 } from 'lucide-react'
 import type { ProjectTaskItem } from '@shared/types/domain'
-import { MARKER_COLORS } from '@renderer/lib/marker-colors'
-import { createId } from '@renderer/lib/ids'
+import { parseIsoDate } from '@renderer/lib/database/dates'
+import { createTask, deleteTask, shiftTask, updateTask } from '@renderer/lib/database/tasks'
 import { ChartView } from './views/ChartView'
 import { GanttView } from './views/GanttView'
 import { KanbanView } from './views/KanbanView'
@@ -17,21 +17,6 @@ interface ProjectDatabaseBlockProps {
   onChange: (updates: DatabaseChangePatch) => void
 }
 
-const DAY_MS = 86400000
-
-function parseDateUTC(dateStr: string): number {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  return Date.UTC(y || 2026, (m || 10) - 1, d || 1)
-}
-
-function formatDateUTC(ms: number): string {
-  const d = new Date(ms)
-  const yyyy = d.getUTCFullYear()
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0')
-  const dd = String(d.getUTCDate()).padStart(2, '0')
-  return yyyy + '-' + mm + '-' + dd
-}
-
 export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
   title,
   activeView = 'gantt',
@@ -43,9 +28,12 @@ export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
   const conflicts = useMemo(() => {
     const list: { fromCode: string; toCode: string }[] = []
     for (const task of items) {
+      const taskStart = parseIsoDate(task.startDate)
+      if (taskStart === null) continue
       for (const depId of task.dependsOn || []) {
         const pred = items.find((i) => i.id === depId)
-        if (pred && parseDateUTC(task.startDate) < parseDateUTC(pred.endDate)) {
+        const predEnd = pred ? parseIsoDate(pred.endDate) : null
+        if (pred && predEnd !== null && taskStart < predEnd) {
           list.push({ fromCode: pred.code, toCode: task.code })
         }
       }
@@ -53,53 +41,31 @@ export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
     return list
   }, [items])
 
-  const updateTask = (taskId: string, patch: Partial<ProjectTaskItem>): void => {
-    onChange({
-      databaseItems: items.map((item) => (item.id === taskId ? { ...item, ...patch } : item))
-    })
+  const handleUpdateTask = (taskId: string, patch: Partial<ProjectTaskItem>): void => {
+    onChange({ databaseItems: updateTask(items, taskId, patch) })
   }
 
-  const shiftTask = (task: ProjectTaskItem, deltaDays: number): void => {
-    const nextStart = formatDateUTC(parseDateUTC(task.startDate) + deltaDays * DAY_MS)
-    const nextEnd = formatDateUTC(parseDateUTC(task.endDate) + deltaDays * DAY_MS)
-    updateTask(task.id, { startDate: nextStart, endDate: nextEnd })
+  const handleShiftTask = (task: ProjectTaskItem, deltaDays: number): void => {
+    const next = shiftTask(task, deltaDays)
+    handleUpdateTask(task.id, { startDate: next.startDate, endDate: next.endDate })
   }
 
   const handleAddTask = (): void => {
-    const nextNum = items.length + 1
-    const lastTask = items[items.length - 1]
-    const newTask: ProjectTaskItem = {
-      id: createId('tsk'),
-      code: 'TSK-' + String(nextNum).padStart(2, '0'),
-      title: 'Spesifikasi Task Engineering Baru',
-      category: 'Engineering',
-      color: MARKER_COLORS[nextNum % MARKER_COLORS.length],
-      status: 'backlog',
-      startDate: lastTask ? lastTask.endDate : '2026-10-27',
-      endDate: lastTask
-        ? formatDateUTC(parseDateUTC(lastTask.endDate) + 4 * DAY_MS)
-        : '2026-10-31',
-      progress: 0,
-      isMilestone: false,
-      dependsOn: lastTask ? [lastTask.id] : [],
-      assignee: 'Engineer',
-      estimateHours: 16
-    }
-    onChange({ databaseItems: [...items, newTask] })
+    onChange({ databaseItems: [...items, createTask(items, '2026-10-27')] })
   }
 
   const handleDeleteTask = (taskId: string): void => {
-    onChange({
-      databaseItems: items
-        .filter((i) => i.id !== taskId)
-        .map((i) => ({
-          ...i,
-          dependsOn: (i.dependsOn || []).filter((d) => d !== taskId)
-        }))
-    })
+    onChange({ databaseItems: deleteTask(items, taskId) })
   }
 
-  const viewProps = { items, onChange, updateTask, shiftTask, handleAddTask, handleDeleteTask }
+  const viewProps = {
+    items,
+    onChange,
+    updateTask: handleUpdateTask,
+    shiftTask: handleShiftTask,
+    handleAddTask,
+    handleDeleteTask
+  }
 
   return (
     <div className="rounded-[8px] bg-surface-elevated border border-border-hairline overflow-hidden shadow-sm my-3">

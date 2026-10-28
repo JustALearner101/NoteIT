@@ -1,36 +1,29 @@
 import React, { useMemo } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { MARKER_META } from '@renderer/lib/marker-colors'
+import { DAY_MS, formatIsoDate, parseIsoDate } from '@renderer/lib/database/dates'
 import type { DatabaseViewProps } from './types'
 
-const DAY_MS = 86400000
 const DAY_COL_WIDTH = 34
 const ROW_HEIGHT = 40
-
-function parseDateUTC(dateStr: string): number {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  return Date.UTC(y || 2026, (m || 10) - 1, d || 1)
-}
-
-function formatDateUTC(ms: number): string {
-  const d = new Date(ms)
-  const yyyy = d.getUTCFullYear()
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0')
-  const dd = String(d.getUTCDate()).padStart(2, '0')
-  return yyyy + '-' + mm + '-' + dd
-}
 
 export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shiftTask }) => {
   // Compute timeline window for Gantt Chart
   const timelineWindow = useMemo(() => {
-    if (items.length === 0) {
+    const starts = items
+      .map((item) => parseIsoDate(item.startDate))
+      .filter((ms): ms is number => ms !== null)
+    const ends = items
+      .map((item) => parseIsoDate(item.endDate))
+      .filter((ms): ms is number => ms !== null)
+
+    if (starts.length === 0 || ends.length === 0) {
       const base = Date.UTC(2026, 9, 18)
       return { startMs: base, totalDays: 24 }
     }
-    const minMs = Math.min(...items.map((i) => parseDateUTC(i.startDate)))
-    const maxMs = Math.max(...items.map((i) => parseDateUTC(i.endDate)))
-    const startMs = minMs - DAY_MS * 2
-    const totalDays = Math.max(22, Math.ceil((maxMs - startMs) / DAY_MS) + 4)
+
+    const startMs = Math.min(...starts) - DAY_MS * 2
+    const totalDays = Math.max(22, Math.ceil((Math.max(...ends) - startMs) / DAY_MS) + 4)
     return { startMs, totalDays }
   }, [items])
 
@@ -40,7 +33,7 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
       const d = new Date(ms)
       return {
         ms,
-        iso: formatDateUTC(ms),
+        iso: formatIsoDate(ms),
         dayNum: String(d.getUTCDate()).padStart(2, '0'),
         monthShort: d.toLocaleDateString('id-ID', { month: 'short', timeZone: 'UTC' }).toUpperCase(),
         isWeekend: d.getUTCDay() === 0 || d.getUTCDay() === 6
@@ -50,6 +43,9 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
 
   const todayIso = '2026-10-27'
   const todayIdx = daysArray.findIndex((d) => d.iso === todayIso)
+
+  /** Tanggal tidak valid jatuh ke awal timeline supaya tidak menghasilkan NaN. */
+  const toMs = (iso: string): number => parseIsoDate(iso) ?? timelineWindow.startMs
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12">
@@ -178,10 +174,10 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
                   const pred = items[predIdx]
 
                   const predEndOffset = Math.round(
-                    (parseDateUTC(pred.endDate) - timelineWindow.startMs) / DAY_MS
+                    (toMs(pred.endDate) - timelineWindow.startMs) / DAY_MS
                   )
                   const taskStartOffset = Math.round(
-                    (parseDateUTC(task.startDate) - timelineWindow.startMs) / DAY_MS
+                    (toMs(task.startDate) - timelineWindow.startMs) / DAY_MS
                   )
 
                   const x1 = (predEndOffset + 1) * DAY_COL_WIDTH
@@ -189,7 +185,7 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
                   const x2 = taskStartOffset * DAY_COL_WIDTH
                   const y2 = rowIdx * ROW_HEIGHT + ROW_HEIGHT / 2
 
-                  const isConflict = parseDateUTC(task.startDate) < parseDateUTC(pred.endDate)
+                  const isConflict = toMs(task.startDate) < toMs(pred.endDate)
                   const strokeColor = isConflict ? '#EF4444' : '#3B82F6'
                   const midX = x2 >= x1 ? (x1 + x2) / 2 : x1 + 10
 
@@ -217,11 +213,11 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
             {items.map((task) => {
               const startOffset = Math.max(
                 0,
-                Math.round((parseDateUTC(task.startDate) - timelineWindow.startMs) / DAY_MS)
+                Math.round((toMs(task.startDate) - timelineWindow.startMs) / DAY_MS)
               )
               const durationDays = Math.max(
                 1,
-                Math.round((parseDateUTC(task.endDate) - parseDateUTC(task.startDate)) / DAY_MS) +
+                Math.round((toMs(task.endDate) - toMs(task.startDate)) / DAY_MS) +
                   1
               )
               const leftPx = startOffset * DAY_COL_WIDTH
