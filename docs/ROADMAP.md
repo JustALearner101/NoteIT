@@ -66,3 +66,24 @@ file 776 baris berarti 5 fitur setengah jadi. Nol nilai untuk lab belajar, maksi
 **7 hari berturut-turut tanpa membuka Notion.**
 
 Kalau gagal: plan berikutnya adalah audit friction (apa yang bikin balik ke Notion), BUKAN menambah fitur.
+
+
+## v2.2 — Unfreeze 7 Fitur (aktif)
+
+Rencana lengkap: C:/Users/NHQFH/.codebuddy/plans/blazing-beacon-tesla-iu2JHptW.md
+
+Empat gelombang, urut dari risiko data nol ke paling besar:
+
+| Gelombang | Fitur | Risiko data |
+|---|---|---|
+| 0 | Gate runtime: test, typecheck, build, npm run dev, smoke 10 titik | — |
+| 1 | Chart lanjutan (line/radar/scatter) + Calendar view + pecah ProjectDatabaseBlock | Nol |
+| 2 | Graphviz DOT (@viz-js/viz) + multi-tab polish (drag, context menu, shortcut, divider split) | Nol |
+| 3 | CSP + font self-hosted, version history polish, attachment/PDF | Tinggi (disk + skema) |
+| 4 | Multi-kolom penuh (model flat) | Sedang, diketahui akan dibuang saat Tiptap |
+
+Keputusan kunci: aset = file content-addressed + tabel assets (K1); backup aset = salin folder inkremental (K2); CSP produksi + @fontsource (K3); multi-kolom model flat (K4); Graphviz @viz-js/viz (K5); tab persist localStorage (K6); restore versi pakai snapshot pengaman (K7); bulan Calendar = useState lokal (K8).
+
+Target test: 87 → ≥110 → ≥132 → ≥168 → ≥190.
+
+Aturan gate Langkah 0: kalau app gagal boot atau ada kehilangan data saat smoke, BERHENTI — perbaiki durability dulu, 7 fitur ditunda.
