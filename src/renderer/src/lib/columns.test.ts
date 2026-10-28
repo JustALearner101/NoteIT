@@ -5,6 +5,7 @@ import {
   groupBlocks,
   moveBlockToColumn,
   normalizeWidths,
+  nudgeDivider,
   removeColumn,
   resizeColumnPair,
   type ColumnBlock,
@@ -314,5 +315,50 @@ describe('moveBlockToColumn', () => {
     expect(moveBlockToColumn(blocks, 'zz', 'g1', 1)).toEqual(blocks)
     expect(moveBlockToColumn(blocks, 'a', 'zz', 1)).toEqual(blocks)
     expect(moveBlockToColumn(blocks, 'a', 'g1', 5)).toEqual(blocks)
+  })
+})
+
+describe('nudgeDivider', () => {
+  it('panah kanan menggeser batas sebesar step default', () => {
+    expect(nudgeDivider([50, 50], 0, 1)).toEqual([52, 48])
+    const four = nudgeDivider([25, 25, 25, 25], 1, 1)
+    expect(four).toEqual([25, 27, 23, 25])
+    expect(sum(four)).toBe(100)
+  })
+
+  it('panah kiri menggeser batas ke arah sebaliknya', () => {
+    expect(nudgeDivider([50, 50], 0, -1)).toEqual([48, 52])
+    const three = nudgeDivider([20, 30, 50], 1, -1)
+    expect(three).toEqual([20, 28, 52])
+    expect(sum(three)).toBe(100)
+  })
+
+  it('clamp di divider pertama: panah kiri saat kolom kiri sudah di min', () => {
+    expect(nudgeDivider([15, 85], 0, -1)).toEqual([15, 85])
+    expect(nudgeDivider([16, 84], 0, -1)).toEqual([15, 85])
+  })
+
+  it('clamp saat menyentuh min di kolom kanan', () => {
+    expect(nudgeDivider([85, 15], 0, 1)).toEqual([85, 15])
+    expect(nudgeDivider([84, 16], 0, 1)).toEqual([85, 15])
+  })
+
+  it('menghormati stepPct kustom', () => {
+    expect(nudgeDivider([50, 50], 0, 1, 10)).toEqual([60, 40])
+    expect(nudgeDivider([50, 50], 0, -1, 5)).toEqual([45, 55])
+    expect(nudgeDivider([50, 50], 0, 1, 0)).toEqual([52, 48])
+  })
+
+  it('tidak memutasi input dan mengembalikan array baru', () => {
+    const widths = [50, 50]
+    const next = nudgeDivider(widths, 0, 1)
+    expect(widths).toEqual([50, 50])
+    expect(next).not.toBe(widths)
+  })
+
+  it('mengabaikan divider di luar jangkauan dan input kosong', () => {
+    expect(nudgeDivider([50, 50], -1, 1)).toEqual([50, 50])
+    expect(nudgeDivider([50, 50], 1, 1)).toEqual([50, 50])
+    expect(nudgeDivider([], 0, 1)).toEqual([])
   })
 })

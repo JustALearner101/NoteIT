@@ -183,6 +183,26 @@ export function resizeColumnPair(
   return next
 }
 
+/** Langkah geser default untuk navigasi divider dengan tombol panah. */
+export const NUDGE_STEP_PCT = 2
+
+/**
+ * Geser divider satu langkah (navigasi panah keyboard).
+ * Delegasi ke resizeColumnPair supaya aturan min/total hanya punya satu sumber.
+ */
+export function nudgeDivider(
+  widths: number[],
+  dividerIndex: number,
+  direction: -1 | 1,
+  stepPct: number = NUDGE_STEP_PCT
+): number[] {
+  const list = Array.isArray(widths) ? widths : []
+  const step = Number.isFinite(stepPct) && stepPct > 0 ? stepPct : NUDGE_STEP_PCT
+  const sign = direction === -1 ? -1 : direction === 1 ? 1 : 0
+  if (sign === 0) return normalizeWidths(list, list.length)
+  return resizeColumnPair(list, dividerIndex, sign * step)
+}
+
 /** Susun struktur render; tidak ada blok yang hilang. */
 export function groupBlocks<B extends ColumnBlock>(
   blocks: readonly B[]
