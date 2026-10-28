@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Light Mode: Archival Vellum */
+  --bg-canvas-primary: #F7F6F2;
+  --bg-surface-chrome: #EFECE6;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-surface-hover: #E5E1D8;
+
+  --border-hairline: #D8D4CA;
+  --border-subtle: #E6E3DC;
+
+  --text-primary: #141619;
+  --text-secondary: #525866;
+  --text-muted: #8A909E;
+
+  --accent-cobalt: #2563EB;
+  --accent-amber: #D97706;
+
+  /* Drafting Markers (Light) */
+  --marker-cobalt: #2563EB;
+  --marker-amber: #D97706;
+  --marker-teal: #059669;
+  --marker-red: #DC2626;
+  --marker-violet: #7C3AED;
+  --marker-slate: #475569;
+
+  --grid-dot: rgba(20, 22, 25, 0.11);
+  --grid-major: rgba(37, 99, 235, 0.09);
+}
+
+.dark {
+  /* Dark Mode: Graphite Slate (Default) */
+  --bg-canvas-primary: #111317;
+  --bg-surface-chrome: #0C0E12;
+  --bg-surface-elevated: #181B22;
+  --bg-surface-hover: #20242D;
+
+  --border-hairline: #262A34;
+  --border-subtle: #1C2029;
+
+  --text-primary: #ECEEF2;
+  --text-secondary: #949BA6;
+  --text-muted: #5E6572;
+
+  --accent-cobalt: #3B82F6;
+  --accent-amber: #F59E0B;
+
+  /* Drafting Markers (Dark) */
+  --marker-cobalt: #3B82F6;
+  --marker-amber: #F59E0B;
+  --marker-teal: #10B981;
+  --marker-red: #EF4444;
+  --marker-violet: #8B5CF6;
+  --marker-slate: #64748B;
+
+  --grid-dot: rgba(236, 238, 242, 0.08);
+  --grid-major: rgba(59, 130, 246, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg-canvas-primary);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+/* Allow text selection inside editors and inputs */
+input,
+textarea,
+pre,
+code,
+.selectable-text {
+  user-select: text;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Architectural Crosshair & Micro-Dot Drafting Grid */
+.bg-blueprint-grid {
+  background-color: var(--bg-canvas-primary);
+  background-image:
+    radial-gradient(circle, var(--grid-dot) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px);
+  background-size:
+    24px 24px,
+    96px 96px,
+    96px 96px;
+}
+
+/* Engineering Hatched Pattern for Unfinished Gantt Bars */
+.hatched-pattern {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.05) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+/* Electron Custom Titlebar Drag Regions */
+.app-drag-region {
+  -webkit-app-region: drag;
+}
+
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Precision Thin Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-hairline);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ReactFlow overrides to match Precision Drafting Workbench */
+.react-flow__attribution {
+  display: none !important;
+}
