@@ -137,6 +137,8 @@ function renderBlock(block: DocumentBlock): string {
       return ['```dbml', content, '```'].join('\n')
     case 'mermaid':
       return ['```mermaid', content, '```'].join('\n')
+    case 'graphviz':
+      return ['```dot', content, '```'].join('\n')
     case 'database':
       return renderDatabase(block)
     default:

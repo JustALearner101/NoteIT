@@ -141,6 +141,19 @@ describe('export.service — pageToMarkdown', () => {
     expect(markdown).toContain('\u0060\u0060\u0060mermaid\ngraph TD; A-->B;\n\u0060\u0060\u0060')
   })
 
+  it('merender blok graphviz sebagai fence dot', () => {
+    const markdown = pageToMarkdown(
+      makePage({
+        blocks: [
+          makeBlock({ id: 'gv1', type: 'graphviz', content: 'digraph G { A -> B }' })
+        ]
+      })
+    )
+
+    expect(markdown).toContain('\u0060\u0060\u0060dot\ndigraph G { A -> B }\n\u0060\u0060\u0060')
+    expect(markdown).not.toContain('\u0060\u0060\u0060graphviz')
+  })
+
   it('merender database block sebagai heading + tabel + catatan milestone/dependency', () => {
     const items = [
       makeItem({ id: 'item-1', code: 'TSK-01', title: 'Rancang skema', isMilestone: true }),

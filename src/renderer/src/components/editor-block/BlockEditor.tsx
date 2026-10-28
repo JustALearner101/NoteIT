@@ -11,6 +11,7 @@ import {
   Heading3,
   Info,
   Link2,
+  Network,
   Plus,
   Sparkles,
   Trash2,
@@ -21,6 +22,8 @@ import { MARKER_META } from '@renderer/lib/marker-colors'
 import { createId } from '@renderer/lib/ids'
 import { DBMLStudio } from '@renderer/components/diagrams/dbml/DBMLStudio'
 import { MermaidStudio } from '@renderer/components/diagrams/mermaid/MermaidStudio'
+import { GraphvizStudio } from '@renderer/components/diagrams/graphviz/GraphvizStudio'
+import { DEFAULT_DOT } from '@renderer/lib/diagrams/graphviz'
 import { ProjectDatabaseBlock } from '@renderer/components/charts/ProjectDatabaseBlock'
 import type { BlockType, DocumentBlock, Page } from '@shared/types/domain'
 
@@ -89,6 +92,12 @@ const SLASH_OPTIONS: {
     icon: <Sparkles size={13} className="text-[#10B981]" />
   },
   {
+    type: 'graphviz',
+    label: 'Diagram Graphviz (DOT)',
+    desc: 'DOT language dengan engine dot, neato, fdp, circo, twopi',
+    icon: <Network size={13} className="text-[#8B5CF6]" />
+  },
+  {
     type: 'database',
     label: 'Gantt Chart & Project Database',
     desc: 'Tabel multi-view: Gantt Timeline, Kanban, & Data Chart',
@@ -117,15 +126,19 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
           ? `Table services [color: cobalt] {\n  id uuid [pk]\n  name varchar(120) [not null]\n}\n\nTable deployments [color: amber] {\n  id uuid [pk]\n  service_id uuid [ref: > services.id]\n  version varchar(32)\n}`
           : type === 'mermaid'
             ? `flowchart LR\n    A["Client Request"] --> B["IPC Bridge"]\n    B --> C["SQLite WAL Engine"]`
-            : type === 'code'
-              ? `-- Tulis kueri atau kode di sini\nSELECT * FROM pages_fts WHERE pages_fts MATCH 'dbml';`
-              : '',
+            : type === 'graphviz'
+              ? DEFAULT_DOT
+              : type === 'code'
+                ? `-- Tulis kueri atau kode di sini\nSELECT * FROM pages_fts WHERE pages_fts MATCH 'dbml';`
+                : '',
       checked: false,
       calloutColor: 'cobalt',
       calloutTitle: 'CATATAN SPESIFIKASI',
-      wide: type === 'dbml' || type === 'mermaid' || type === 'database',
+      wide: type === 'dbml' || type === 'mermaid' || type === 'graphviz' || type === 'database',
       dbmlViewMode: 'split',
       mermaidViewMode: 'split',
+      graphvizViewMode: 'split',
+      graphvizEngine: 'dot',
       databaseTitle: 'JADWAL & METRIK MODUL',
       databaseActiveView: 'gantt',
       databaseChartType: 'bar',
@@ -248,6 +261,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
             block.wide ||
             block.type === 'dbml' ||
             block.type === 'mermaid' ||
+            block.type === 'graphviz' ||
             block.type === 'database'
 
           return (
@@ -473,6 +487,15 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
                 />
               )}
 
+              {block.type === 'graphviz' && (
+                <GraphvizStudio
+                  code={block.content}
+                  viewMode={block.graphvizViewMode || 'split'}
+                  engine={block.graphvizEngine}
+                  onChange={(updates) => updateBlock(block.id, updates)}
+                />
+              )}
+
               {block.type === 'database' && (
                 <ProjectDatabaseBlock
                   title={block.databaseTitle || 'PROJECT DATABASE'}
@@ -542,6 +565,12 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
             className="px-2.5 py-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline font-mono text-[11px] text-[#10B981] flex items-center gap-1"
           >
             <Sparkles size={11} /> + Diagram Mermaid
+          </button>
+          <button
+            onClick={() => insertBlockAfter(null, 'graphviz')}
+            className="px-2.5 py-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline font-mono text-[11px] text-[#8B5CF6] flex items-center gap-1"
+          >
+            <Network size={11} /> + Graphviz DOT
           </button>
           <button
             onClick={() => insertBlockAfter(null, 'database')}

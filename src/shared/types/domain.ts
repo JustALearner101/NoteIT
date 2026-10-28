@@ -49,6 +49,7 @@ export type BlockType =
   | 'code'
   | 'dbml'
   | 'mermaid'
+  | 'graphviz'
   | 'database'
 
 export interface DBMLTableLayout {
@@ -69,6 +70,9 @@ export interface DocumentBlock {
   dbmlLayout?: DBMLTableLayout
   // For 'mermaid' block
   mermaidViewMode?: 'code' | 'split' | 'diagram'
+  // For 'graphviz' block (DOT language)
+  graphvizViewMode?: 'code' | 'split' | 'diagram'
+  graphvizEngine?: 'dot' | 'neato' | 'fdp' | 'circo' | 'twopi'
   // For 'database' block (Gantt / Kanban / Table / Chart / Calendar)
   databaseTitle?: string
   databaseActiveView?: 'gantt' | 'kanban' | 'table' | 'chart' | 'calendar'
