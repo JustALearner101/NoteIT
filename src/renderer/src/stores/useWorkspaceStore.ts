@@ -8,6 +8,7 @@ import type {
   WorkspaceSnapshot
 } from '@shared/types/domain'
 import type { CreatePageInput, UpdatePageInput } from '@shared/ipc-channels'
+import { createSaveQueue } from '@renderer/lib/save-queue'
 
 interface TelemetryState {
   cursorX: number
@@ -61,7 +62,35 @@ interface WorkspaceStore {
   updatePage: (input: UpdatePageInput) => Promise<void>
   switchPageMode: (pageId: string, mode: PageMode) => Promise<void>
   deletePage: (pageId: string) => Promise<void>
+
+  // Durability: debounced save + undo/redo per halaman
+  flushSaves: () => void
 }
+
+/** Patch yang dikirim ke main process (tanpa id — id adalah kunci antrean). */
+type PagePatch = Omit<UpdatePageInput, 'id'>
+
+/**
+ * Antrean simpan: satu patch gabungan per halaman tiap 350ms idle.
+ * send() sengaja tidak di-await — UI tidak boleh menunggu disk.
+ */
+const saveQueue = createSaveQueue<PagePatch>({
+  delayMs: 350,
+  send: (pageId, patch) => {
+    void window.noteitAPI
+      .updatePage({ id: pageId, ...patch })
+      .then((saved) => {
+        // Jangan timpa state kalau sudah ada edit yang lebih baru menunggu flush.
+        if (saveQueue.hasPending(pageId)) return
+        useWorkspaceStore.setState((state) => ({
+          pages: state.pages.map((p) => (p.id === saved.id ? saved : p))
+        }))
+      })
+      .catch((error: unknown) => {
+        console.error('[save-queue] gagal menyimpan halaman', pageId, error)
+      })
+  }
+})
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   notebooks: [],
@@ -93,6 +122,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   },
 
   loadWorkspace: async () => {
+    // Reload dari DB akan menimpa state lokal: kirim dulu edit yang tertunda.
+    saveQueue.flushAll()
     const snap = await window.noteitAPI.getWorkspace()
     const current = get()
 
@@ -143,6 +174,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   },
 
   openPageInTab: (pageId, inSplitPane = false) => {
+    saveQueue.flushAll()
     const { pages, sections } = get()
     const targetPage = pages.find((p) => p.id === pageId)
     if (!targetPage) return
@@ -168,6 +200,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   },
 
   closeTab: (pageId) => {
+    saveQueue.flushAll()
     set((state) => {
       const nextTabs = state.openTabIds.filter((id) => id !== pageId)
       let nextActive = state.activePageId
@@ -186,6 +219,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   },
 
   toggleSplitPane: (targetPageId) => {
+    saveQueue.flushAll()
     set((state) => {
       if (state.splitPageId && !targetPageId) {
         return { splitPageId: null, focusedPane: 'primary' }
@@ -259,7 +293,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   },
 
   updatePage: async (input) => {
-    // Optimistic local state update for zero-latency typing & dragging
+    // Optimistic local state update for zero-latency typing & dragging.
     set((state) => ({
       pages: state.pages.map((p) =>
         p.id === input.id
@@ -272,14 +306,17 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       )
     }))
 
-    const saved = await window.noteitAPI.updatePage(input)
-    set((state) => ({
-      pages: state.pages.map((p) => (p.id === saved.id ? saved : p))
-    }))
+    // IPC lewat save queue (debounce 350ms). Promise resolve setelah enqueue,
+    // bukan setelah flush, supaya UI tidak pernah menunggu disk.
+    const { id: _pageId, ...patch } = input
+    saveQueue.enqueue(input.id, patch)
   },
 
   switchPageMode: async (pageId, mode) => {
+    saveQueue.flushAll()
     await get().updatePage({ id: pageId, mode })
+    // Mode jarang berubah: simpan langsung, jangan biarkan tertahan 350ms.
+    saveQueue.flushAll()
     get().showToast(
       mode === 'canvas'
         ? 'Beralih ke Mode Kanvas Spasial (24px Crosshair Grid)'
@@ -289,11 +326,16 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   deletePage: async (pageId) => {
     const target = get().pages.find((p) => p.id === pageId)
+    saveQueue.flushAll()
     await window.noteitAPI.deletePage(pageId)
     get().closeTab(pageId)
     await get().loadWorkspace()
     if (target) {
       get().showToast(`Halaman '${target.code}' dihapus`)
     }
+  },
+
+  flushSaves: () => {
+    saveQueue.flushAll()
   }
 }))
