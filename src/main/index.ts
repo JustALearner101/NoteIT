@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { initDatabase } from './db/client'
+import { runBackup, startBackupScheduler, stopBackupScheduler } from './services/backup.service'
 import {
   createNotebook,
   createPage,
@@ -149,12 +150,27 @@ function registerIpcHandlers(): void {
 app.whenReady().then(() => {
   const workspaceDir = path.join(app.getPath('userData'), 'workspace')
   initDatabase(workspaceDir)
+  startBackupScheduler(undefined, writeLog)
   registerIpcHandlers()
   createWindow()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('before-quit', () => {
+  stopBackupScheduler()
+
+  try {
+    const result = runBackup()
+    if (!result.ok) {
+      writeLog('WARN', 'Backup terakhir sebelum quit gagal', result.error)
+    }
+  } catch (error) {
+    // Backup terakhir bersifat best-effort: kegagalan tidak boleh memblokir quit.
+    writeLog('WARN', 'Backup terakhir sebelum quit gagal', error)
+  }
 })
 
 app.on('window-all-closed', () => {
