@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import {
   extractPlainTextFromPage,
   getDb,
@@ -6,17 +7,23 @@ import {
   rebuildAllPageLinks,
   withTransaction
 } from '../db/client'
-import { INITIAL_SEED_DBML, INITIAL_SEED_MERMAID } from '../db/seed'
+import { INITIAL_SEED_DBML } from '../db/seed'
 import {
   getMaxNotebookSortOrder,
   insertNotebook,
   listNotebooks
 } from '../db/repository/notebook.repository'
-import { countSections, insertSection, listSections } from '../db/repository/section.repository'
 import {
-  countPages,
+  getMaxSectionSortOrder,
+  getSectionCodeState,
+  insertSection,
+  listSections
+} from '../db/repository/section.repository'
+import {
   deletePageById,
   findPageById,
+  getMaxPageSortOrder,
+  getPageCodeState,
   insertPage,
   listPages,
   updatePageRow,
@@ -136,7 +143,7 @@ export function createNotebook(input: {
 }): Notebook {
   return withTransaction(() => {
     const now = Date.now()
-    const id = `nb-${now}`
+    const id = `nb-${randomUUID()}`
 
     const notebook: Notebook = {
       id,
@@ -168,9 +175,10 @@ export function createSection(input: {
 }): Section {
   return withTransaction(() => {
     const now = Date.now()
-    const id = `sec-${now}`
-    const sectionCount = countSections()
-    const code = `SEC-${String(sectionCount + 1).padStart(2, '0')}`
+    const id = `sec-${randomUUID()}`
+    const codeState = getSectionCodeState()
+    const nextSectionCode = (codeState.maxSuffix > 0 ? codeState.maxSuffix : codeState.total) + 1
+    const code = `SEC-${String(nextSectionCode).padStart(2, '0')}`
 
     const section: Section = {
       id,
@@ -178,7 +186,7 @@ export function createSection(input: {
       name: input.name.trim() || 'Section Baru',
       code,
       color: input.color || 'cobalt',
-      sortOrder: sectionCount + 1,
+      sortOrder: getMaxSectionSortOrder() + 1,
       createdAt: now,
       updatedAt: now
     }
@@ -192,9 +200,10 @@ export function createSection(input: {
 export function createPage(input: CreatePageInput): Page {
   return withTransaction(() => {
     const now = Date.now()
-    const id = `pg-${now}`
-    const pageCount = countPages()
-    const code = `PG-${101 + pageCount}`
+    const id = `pg-${randomUUID()}`
+    const codeState = getPageCodeState()
+    const nextPageCode = (codeState.maxSuffix > 0 ? codeState.maxSuffix : codeState.total) + 1
+    const code = `PG-${nextPageCode}`
 
     const mode = input.mode || (input.template === 'canvas' ? 'canvas' : 'block')
     let blocks: Page['blocks'] = [
@@ -310,7 +319,7 @@ export function createPage(input: CreatePageInput): Page {
       tags,
       isFavorite: false,
       isPinned: false,
-      sortOrder: pageCount + 1,
+      sortOrder: getMaxPageSortOrder() + 1,
       versionCount: 1,
       createdAt: now,
       updatedAt: now
@@ -345,7 +354,10 @@ export function updatePage(input: UpdatePageInput): Page {
     const current = mapRowToPage(existingRow)
     const updated: Page = {
       ...current,
-      title: input.title !== undefined ? input.title : current.title,
+      title:
+        input.title !== undefined
+          ? input.title.trim() || 'Halaman Tanpa Judul'
+          : current.title,
       icon: input.icon !== undefined ? input.icon : current.icon,
       mode: input.mode !== undefined ? input.mode : current.mode,
       blocks: input.blocks !== undefined ? input.blocks : current.blocks,
@@ -411,7 +423,7 @@ export function createPageSnapshot(pageId: string, label?: string): PageVersion 
 
     const nextVer = (pageRow.version_count || 1) + 1
     const now = Date.now()
-    const id = `ver-${pageId}-${now}`
+    const id = `ver-${randomUUID()}`
     const snapLabel = label?.trim() || `Snapshot v${nextVer}`
 
     insertVersion({
@@ -425,7 +437,7 @@ export function createPageSnapshot(pageId: string, label?: string): PageVersion 
       createdAt: now
     })
 
-    updatePageVersionCount(pageId, nextVer, now)
+    updatePageVersionCount(pageId, nextVer)
 
     return {
       id,

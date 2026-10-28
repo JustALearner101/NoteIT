@@ -27,9 +27,24 @@ export function listPages(): PageRow[] {
     .all() as unknown as PageRow[]
 }
 
-export function countPages(): number {
-  const row = getDb().prepare('SELECT COUNT(*) as cnt FROM pages').get() as { cnt: number }
-  return row?.cnt || 0
+export function getMaxPageSortOrder(): number {
+  const row = getDb()
+    .prepare('SELECT COALESCE(MAX(sort_order), 0) as maxOrder FROM pages')
+    .get() as { maxOrder: number } | undefined
+  return row?.maxOrder || 0
+}
+
+export function getPageCodeState(): { total: number; maxSuffix: number } {
+  const row = getDb()
+    .prepare(
+      `SELECT
+        COUNT(*) as total,
+        COALESCE(MAX(CAST(SUBSTR(code, 4) AS INTEGER)), 0) as maxSuffix
+       FROM pages
+       WHERE code GLOB 'PG-[0-9]*' AND SUBSTR(code, 4) NOT GLOB '*[^0-9]*'`
+    )
+    .get() as { total: number; maxSuffix: number } | undefined
+  return { total: row?.total || 0, maxSuffix: row?.maxSuffix || 0 }
 }
 
 export function findPageById(id: string): PageRow | undefined {
@@ -103,8 +118,6 @@ export function deletePageById(id: string): void {
   getDb().prepare('DELETE FROM pages WHERE id = ?').run(id)
 }
 
-export function updatePageVersionCount(id: string, versionCount: number, updatedAt: number): void {
-  getDb()
-    .prepare('UPDATE pages SET version_count = ?, updated_at = ? WHERE id = ?')
-    .run(versionCount, updatedAt, id)
+export function updatePageVersionCount(id: string, versionCount: number): void {
+  getDb().prepare('UPDATE pages SET version_count = ? WHERE id = ?').run(versionCount, id)
 }
