@@ -20,7 +20,7 @@ Karena itu definisi "selesai" bukan rilis, tapi: **berhenti membuka Notion**.
 | D3 | Tetap `node:sqlite`, semua SQL lewat repository layer | Swap ke `better-sqlite3` nanti = 1 file, bukan 12 |
 | D4 | Target akhir: satu dokumen Tiptap, blok custom jadi node | Dieksekusi setelah data aman, bukan sekarang |
 | D5 | Backup `VACUUM INTO` tiap 10 menit, rotasi 7 hari | Aman dari corrupt, TIDAK aman dari disk mati |
-| D6 | Undo per halaman, 50 langkah, in-memory | Pindah tab = riwayat undo hilang |
+| D6 | Undo per halaman, 50 langkah, in-memory | Riwayat undo bertahan per halaman (dibersihkan saat halaman dihapus), bukan hilang saat pindah tab |
 
 ## Fase 0 — Bikin "bebas refactor" ada artinya
 
@@ -32,15 +32,15 @@ Bukan fitur. Tanpa ini Fase 1 cuma judi.
 
 ## Fase 1 — Durability (gerbang adopsi)
 
-- [ ] **Repository layer** — semua SQL pindah dari `workspace.service.ts` ke `src/main/db/repository/*.ts`
-- [ ] **Transaksi** — `withTransaction()`; `updatePage` jadi satu unit (UPDATE + FTS + rebuild link)
-- [ ] **FTS5 trigger** — buang `DELETE/INSERT` manual di `workspace.service.ts` (sekitar baris 426-427 dan 440)
-- [ ] **Debounce 350ms** + flush saat blur/quit; hentikan IPC per ketikan
-- [ ] **Undo per halaman** 50 langkah, coalescing 500ms
-- [ ] **Backup** `VACUUM INTO backups/noteit-YYYYMMDD-HHmm.db`, interval 10 menit, rotasi 7 hari, saat start + sebelum quit
-- [ ] **Export markdown** per halaman + seluruh workspace
-- [ ] **Link by ID** — rename halaman tidak lagi memutus backlink
-- [ ] Bonus: `rebuildAllPageLinks` hanya jalan kalau judul berubah atau teks mengandung `[[`
+- [x] **Repository layer** — semua SQL pindah dari `workspace.service.ts` ke `src/main/db/repository/*.ts`
+- [x] **Transaksi** — `withTransaction()`; `updatePage` jadi satu unit (UPDATE + FTS + rebuild link)
+- [x] **FTS5 trigger** — buang `DELETE/INSERT` manual di `workspace.service.ts` (sekitar baris 426-427 dan 440)
+- [x] **Debounce 350ms** + flush saat blur/quit; hentikan IPC per ketikan
+- [x] **Undo per halaman** 50 langkah, coalescing 500ms
+- [x] **Backup** `VACUUM INTO backups/noteit-YYYYMMDD-HHmm.db`, interval 10 menit, rotasi 7 hari, saat start + sebelum quit
+- [x] **Export markdown** per halaman + seluruh workspace
+- [x] **Link by ID** — rename halaman tidak lagi memutus backlink
+- [x] Bonus: `rebuildAllPageLinks` hanya jalan kalau judul berubah atau teks mengandung `[[`
 
 ## Fase 2 — Satu-satunya fitur baru yang diizinkan
 
