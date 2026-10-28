@@ -146,6 +146,17 @@ export function initDatabase(workspaceDir: string): DatabaseSync {
       PRIMARY KEY (alias, page_id)
     );
 
+    CREATE TABLE IF NOT EXISTS assets (
+      id TEXT PRIMARY KEY,
+      ext TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      name TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_assets_created_at ON assets (created_at);
+
     CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(
       page_id UNINDEXED,
       title,

@@ -2,6 +2,13 @@ import { app, BrowserWindow, dialog, globalShortcut, ipcMain, session, shell } f
 import fs from 'fs'
 import path from 'path'
 import { initDatabase } from './db/client'
+import {
+  copyAssetFile,
+  getAsset,
+  getAssetFilePath,
+  importAsset,
+  importAssetFromPath
+} from './services/asset.service'
 import { runBackup, startBackupScheduler, stopBackupScheduler } from './services/backup.service'
 import { formatTimestamp, pageToMarkdown, slugifyTitle, workspaceToMarkdownFiles } from './services/export.service'
 import {
@@ -249,6 +256,68 @@ function registerIpcHandlers(): void {
   )
 
   ipcMain.handle('workspace:search', (_e, query) => searchWorkspace(query))
+
+  ipcMain.handle('assets:import', async () => {
+    if (!mainWindow) return { assets: [], rejected: [] }
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Impor Berkas ke NoteIT',
+      properties: ['openFile', 'multiSelections']
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { assets: [], rejected: [] }
+    }
+
+    const assets: ReturnType<typeof importAsset>[] = []
+    const rejected: { name: string; reason: string }[] = []
+    for (const filePath of result.filePaths) {
+      try {
+        assets.push(importAssetFromPath(filePath))
+      } catch (error) {
+        rejected.push({
+          name: path.basename(filePath),
+          reason: error instanceof Error ? error.message : String(error)
+        })
+      }
+    }
+
+    return { assets, rejected }
+  })
+
+  ipcMain.handle('assets:importBytes', (_e, input: { name: string; data: Uint8Array }) => {
+    const name = typeof input?.name === 'string' && input.name.length > 0 ? input.name : 'aset.bin'
+    const bytes = Buffer.from(input?.data ?? new Uint8Array())
+    return importAsset({ data: bytes, name })
+  })
+
+  ipcMain.handle('assets:saveAs', async (_e, input: { assetId: string; name: string; ext: string }) => {
+    if (!mainWindow) return { saved: false }
+    const asset = getAsset(input.assetId)
+    if (!asset) throw new Error('Aset tidak ditemukan.')
+
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Simpan Aset dari NoteIT',
+      defaultPath: asset.name || `aset.${asset.ext}`,
+      filters: [{ name: 'Berkas Aset', extensions: [asset.ext] }]
+    })
+    if (result.canceled || !result.filePath) {
+      return { saved: false }
+    }
+
+    // copyFileSync: berkas biner tidak boleh lewat writeFileSync utf-8.
+    if (!copyAssetFile(asset.id, result.filePath)) {
+      throw new Error('Berkas aset tidak ditemukan di workspace.')
+    }
+    return { saved: true, filePath: result.filePath }
+  })
+
+  ipcMain.handle('assets:openExternal', async (_e, assetId: string) => {
+    const filePath = getAssetFilePath(assetId)
+    if (!filePath) return { ok: false, error: 'Berkas aset tidak ditemukan.' }
+
+    const error = await shell.openPath(filePath)
+    return error ? { ok: false, error } : { ok: true }
+  })
 
   ipcMain.handle('capture:save', (_e, text: string) => createQuickNote(text))
   ipcMain.handle('daily:open', () => openOrCreateDailyNote())

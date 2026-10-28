@@ -31,6 +31,11 @@ const noteitAPI: NoteItAPI = {
   exportContent: (input) => ipcRenderer.invoke('workspace:export', input),
   exportMarkdown: (input) => ipcRenderer.invoke('workspace:exportMarkdown', input),
 
+  importAssets: () => ipcRenderer.invoke('assets:import'),
+  importAssetBytes: (input) => ipcRenderer.invoke('assets:importBytes', input),
+  saveAssetAs: (input) => ipcRenderer.invoke('assets:saveAs', input),
+  openAssetExternal: (assetId: string) => ipcRenderer.invoke('assets:openExternal', assetId),
+
   createQuickNote: (text: string) => ipcRenderer.invoke('capture:save', text),
   openDailyNote: () => ipcRenderer.invoke('daily:open'),
   onNavigateToPage: (callback: (pageId: string) => void) => {

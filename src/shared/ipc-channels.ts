@@ -1,4 +1,5 @@
 import type {
+  AssetRecord,
   BacklinkItem,
   MarkerColor,
   Notebook,
@@ -30,6 +31,22 @@ export interface UpdatePageInput {
   tags?: string[]
   isFavorite?: boolean
   isPinned?: boolean
+}
+
+export interface AssetImportResult {
+  assets: AssetRecord[]
+  rejected: { name: string; reason: string }[]
+}
+
+export interface ImportAssetBytesInput {
+  name: string
+  data: Uint8Array
+}
+
+export interface SaveAssetAsInput {
+  assetId: string
+  name: string
+  ext: string
 }
 
 export interface ExportMarkdownInput {
@@ -77,6 +94,14 @@ export interface NoteItAPI {
     extension: 'md' | 'sql' | 'json' | 'svg'
   }): Promise<{ saved: boolean; filePath?: string }>
   exportMarkdown(input: ExportMarkdownInput): Promise<ExportMarkdownResult>
+
+  // Assets (attachment/PDF, content-addressed)
+  /** Dialog pemilih berkas; aset identik otomatis didedupe. */
+  importAssets(): Promise<AssetImportResult>
+  /** Impor byte langsung (paste screenshot / drag-drop tanpa path). */
+  importAssetBytes(input: ImportAssetBytesInput): Promise<AssetRecord>
+  saveAssetAs(input: SaveAssetAsInput): Promise<{ saved: boolean; filePath?: string }>
+  openAssetExternal(assetId: string): Promise<{ ok: boolean; error?: string }>
 
   // Quick Capture & Daily Note
   createQuickNote(text: string): Promise<Page>

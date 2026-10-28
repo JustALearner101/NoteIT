@@ -131,6 +131,16 @@ export interface Page {
   updatedAt: number
 }
 
+/** Baris tabel assets: satu baris per isi berkas unik (id = sha256 isi berkas). */
+export interface AssetRecord {
+  id: string
+  ext: string
+  mime: string
+  name: string
+  size: number
+  createdAt: number
+}
+
 export interface PageVersion {
   id: string
   pageId: string
