@@ -174,14 +174,18 @@ export function pruneBackups(
       const outsideLimit = index >= maxFiles
       if (!tooOld && !outsideLimit) return
 
+      let dbRemoved = false
       try {
         fs.unlinkSync(file.fullPath)
         deleted.push(file.fullPath)
+        dbRemoved = true
       } catch {
         // Berkas bisa terkunci proses lain; biarkan siklus backup berikutnya mencoba lagi.
       }
 
-      // Folder aset pasangan tidak boleh tertinggal setelah DB-nya dirotasi.
+      // Folder aset pasangan hanya dihapus kalau DB-nya benar-benar sudah hilang:
+      // jangan tinggalkan backup DB tanpa asetnya.
+      if (!dbRemoved) return
       const assetDir = getBackupAssetDir(file.fullPath)
       if (fs.existsSync(assetDir)) {
         try {
