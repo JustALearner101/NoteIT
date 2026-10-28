@@ -16,6 +16,30 @@ import {
   updatePage
 } from './services/workspace.service'
 
+function writeLog(level: 'INFO' | 'WARN' | 'ERROR', message: string, detail?: unknown): void {
+  try {
+    const logDir = path.join(app.getPath('userData'), 'logs')
+    fs.mkdirSync(logDir, { recursive: true })
+    const lines = [`[${new Date().toISOString()}] [${level}] ${message}`]
+    if (detail instanceof Error) {
+      lines.push(detail.stack || `${detail.name}: ${detail.message}`)
+    } else if (detail !== undefined) {
+      lines.push(typeof detail === 'string' ? detail : JSON.stringify(detail))
+    }
+    fs.appendFileSync(path.join(logDir, 'noteit.log'), lines.join('\n') + '\n', 'utf-8')
+  } catch {
+    // Logging must never take down the main process.
+  }
+}
+
+process.on('uncaughtException', (error) => {
+  writeLog('ERROR', 'uncaughtException', error)
+})
+
+process.on('unhandledRejection', (reason) => {
+  writeLog('ERROR', 'unhandledRejection', reason)
+})
+
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
@@ -42,6 +66,14 @@ function createWindow(): void {
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
+  })
+
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    writeLog(
+      'ERROR',
+      `render-process-gone (reason: ${details.reason}, exitCode: ${details.exitCode})`,
+      details
+    )
   })
 
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
