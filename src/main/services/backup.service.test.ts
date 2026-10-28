@@ -3,7 +3,15 @@ import os from 'os'
 import path from 'path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { closeDb, initDatabase } from '../db/client'
-import { getBackupDir, pruneBackups, runBackup } from './backup.service'
+import { importAsset } from './asset.service'
+import {
+  copyAssetsIncremental,
+  getAssetsSourceDir,
+  getBackupAssetDir,
+  getBackupDir,
+  pruneBackups,
+  runBackup
+} from './backup.service'
 
 let tempDir: string
 let backupDir: string
@@ -99,6 +107,80 @@ describe('backup.service (integration)', () => {
     expect(remaining).not.toContain('noteit-29990101-000000.db')
     expect(remaining).not.toContain('noteit-29990101-000001.db')
     expect(remaining).toContain('noteit-29990101-000008.db')
+  })
+
+  it('runBackup menyalin aset ke folder pasangan <nama backup>.assets', () => {
+    const png = importAsset({ data: Buffer.from('png-untuk-backup'), name: 'backup.png' })
+    const pdf = importAsset({ data: Buffer.from('pdf-untuk-backup'), name: 'backup.pdf' })
+
+    const result = runBackup()
+
+    expect(result.ok).toBe(true)
+    const assetDir = getBackupAssetDir(result.filePath as string)
+    expect(result.assetDir).toBe(assetDir)
+    expect(fs.existsSync(assetDir)).toBe(true)
+    expect(fs.readdirSync(assetDir).sort()).toEqual(
+      [`${png.id}.png`, `${pdf.id}.pdf`].sort()
+    )
+    expect(result.assetFileCount).toBe(2)
+  })
+
+  it('backup kedua pada detik yang sama memakai folder aset sendiri yang lengkap', () => {
+    const first = runBackup()
+    const second = runBackup()
+
+    expect(first.ok).toBe(true)
+    expect(second.ok).toBe(true)
+    expect(first.assetDir).not.toBe(second.assetDir)
+
+    const firstFiles = fs.readdirSync(first.assetDir as string).sort()
+    const secondFiles = fs.readdirSync(second.assetDir as string).sort()
+    expect(secondFiles).toEqual(firstFiles)
+  })
+
+  it('copyAssetsIncremental tidak menyalin ulang berkas yang sudah ada di tujuan', () => {
+    const sourceDir = path.join(tempDir, 'sumber-inkremental')
+    const targetDir = path.join(tempDir, 'tujuan-inkremental')
+    fs.mkdirSync(sourceDir, { recursive: true })
+    fs.writeFileSync(path.join(sourceDir, 'a.bin'), Buffer.from([1, 2, 3]))
+    fs.writeFileSync(path.join(sourceDir, 'b.bin'), Buffer.from([4, 5, 6]))
+
+    const firstRun = copyAssetsIncremental(sourceDir, targetDir)
+    expect(firstRun.copied.sort()).toEqual(['a.bin', 'b.bin'])
+
+    const targetFile = path.join(targetDir, 'a.bin')
+    const firstMtime = fs.statSync(targetFile).mtimeMs
+
+    // Sumber berubah, tapi tujuan tidak boleh ditimpa.
+    fs.writeFileSync(path.join(sourceDir, 'a.bin'), Buffer.from([9, 9, 9]))
+    const secondRun = copyAssetsIncremental(sourceDir, targetDir)
+
+    expect(secondRun.copied).toEqual([])
+    expect(fs.statSync(targetFile).mtimeMs).toBe(firstMtime)
+    expect(Array.from(fs.readFileSync(targetFile))).toEqual([1, 2, 3])
+  })
+
+  it('folder aset sumber tidak ada → copyAssetsIncremental tidak melempar error', () => {
+    const result = copyAssetsIncremental(
+      path.join(tempDir, 'tidak-ada'),
+      path.join(tempDir, 'tujuan-kosong')
+    )
+    expect(result.copied).toEqual([])
+    expect(getAssetsSourceDir()).toBe(path.join(tempDir, 'assets'))
+  })
+
+  it('pruneBackups menghapus folder .assets pasangan backup yang dirotasi', () => {
+    const dbPath = makeBackupFile('noteit-20200101-000000.db', 30)
+    const assetDir = getBackupAssetDir(dbPath)
+    fs.mkdirSync(assetDir, { recursive: true })
+    fs.writeFileSync(path.join(assetDir, `${'a'.repeat(64)}.png`), 'aset-lama')
+
+    const { deleted } = pruneBackups()
+
+    expect(deleted).toContain(dbPath)
+    expect(deleted).toContain(assetDir)
+    expect(fs.existsSync(dbPath)).toBe(false)
+    expect(fs.existsSync(assetDir)).toBe(false)
   })
 
   it('pruneBackups tidak melempar error saat folder backup belum ada', () => {

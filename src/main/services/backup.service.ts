@@ -5,6 +5,9 @@ import { getDb, getDbPath } from '../db/client'
 export interface BackupResult {
   ok: boolean
   filePath?: string
+  /** Folder aset pasangan backup ini (backups/noteit-....assets), kalau ada aset. */
+  assetDir?: string
+  assetFileCount?: number
   error?: string
 }
 
@@ -48,6 +51,47 @@ export function getBackupDir(): string {
   return path.join(path.dirname(dbPath), 'backups')
 }
 
+/** Folder aset aktif: bersaudara dengan database, sama seperti getAssetsDir di asset.service. */
+export function getAssetsSourceDir(): string {
+  const dbPath = getDbPath()
+  if (!dbPath) {
+    throw new Error('Path database belum tersedia; folder aset tidak bisa ditentukan.')
+  }
+  return path.join(path.dirname(dbPath), 'assets')
+}
+
+/** Nama folder aset pasangan sebuah backup: noteit-X.db → noteit-X.assets. */
+export function getBackupAssetDir(dbFilePath: string): string {
+  return dbFilePath.replace(/\.db$/i, '.assets')
+}
+
+/**
+ * Salin aset secara inkremental: hanya berkas yang belum ada di tujuan.
+ * Berkas yang sudah ada tidak pernah ditimpa (mtime backup lama tetap utuh),
+ * jadi menjalankan fungsi ini dua kali pada tujuan yang sama adalah no-op.
+ */
+export function copyAssetsIncremental(
+  sourceDir: string,
+  targetDir: string
+): { copied: string[] } {
+  const copied: string[] = []
+  if (!fs.existsSync(sourceDir)) return { copied }
+
+  const entries = fs.readdirSync(sourceDir, { withFileTypes: true })
+  for (const entry of entries) {
+    if (!entry.isFile()) continue
+    const targetPath = path.join(targetDir, entry.name)
+    if (fs.existsSync(targetPath)) continue
+
+    fs.mkdirSync(targetDir, { recursive: true })
+    // copyFileSync: aset biner, bukan teks utf-8.
+    fs.copyFileSync(path.join(sourceDir, entry.name), targetPath)
+    copied.push(entry.name)
+  }
+
+  return { copied }
+}
+
 function isBackupFileName(name: string): boolean {
   return (
     name.startsWith(BACKUP_PREFIX) &&
@@ -85,7 +129,16 @@ export function runBackup(): BackupResult {
 
     // VACUUM INTO menolak target yang sudah ada, jadi nama unik di atas wajib.
     db.exec(`VACUUM INTO ${quoteSqlLiteral(targetPath)}`)
-    return { ok: true, filePath: targetPath }
+
+    // Aset ikut disalin ke folder pasangan <nama backup>.assets secara inkremental.
+    const assetDir = getBackupAssetDir(targetPath)
+    const { copied } = copyAssetsIncremental(getAssetsSourceDir(), assetDir)
+
+    return {
+      ok: true,
+      filePath: targetPath,
+      ...(fs.existsSync(assetDir) ? { assetDir, assetFileCount: copied.length } : {})
+    }
   } catch (error) {
     return { ok: false, error: toErrorMessage(error) }
   }
@@ -126,6 +179,17 @@ export function pruneBackups(
         deleted.push(file.fullPath)
       } catch {
         // Berkas bisa terkunci proses lain; biarkan siklus backup berikutnya mencoba lagi.
+      }
+
+      // Folder aset pasangan tidak boleh tertinggal setelah DB-nya dirotasi.
+      const assetDir = getBackupAssetDir(file.fullPath)
+      if (fs.existsSync(assetDir)) {
+        try {
+          fs.rmSync(assetDir, { recursive: true, force: true })
+          deleted.push(assetDir)
+        } catch {
+          // Sama: best-effort, coba lagi di siklus berikutnya.
+        }
       }
     })
   } catch {
