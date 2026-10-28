@@ -272,9 +272,11 @@ function seedInitialWorkspace(db: DatabaseSync): void {
 export function rebuildAllPageLinks(db: DatabaseSync): void {
   db.exec('DELETE FROM page_links;')
 
+  // Tiebreak rowid = urutan insert SQLite: created_at bisa kembar dalam milidetik yang sama,
+  // sedangkan id sekarang UUID acak sehingga tidak deterministik sebagai penentu pemenang tie.
   const rows = db
     .prepare(
-      'SELECT id, title, blocks_json, canvas_json FROM pages ORDER BY created_at ASC, id ASC'
+      'SELECT id, title, blocks_json, canvas_json FROM pages ORDER BY created_at ASC, rowid ASC'
     )
     .all() as Array<{
     id: string
