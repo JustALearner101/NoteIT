@@ -30,9 +30,7 @@ import {
 } from '../db/repository/version.repository'
 import {
   countIndexedPages,
-  indexPage,
   listRecentPages,
-  removeFromIndex,
   searchByFts,
   searchByLike
 } from '../db/repository/search.repository'
@@ -321,7 +319,6 @@ export function createPage(input: CreatePageInput): Page {
     const plainText = extractPlainTextFromPage(page)
 
     insertPage(page, plainText)
-    indexPage(page.id, page.title, plainText, page.tags.join(' '))
     insertVersion({
       id: `ver-${page.id}-1`,
       pageId: page.id,
@@ -362,8 +359,6 @@ export function updatePage(input: UpdatePageInput): Page {
     const plainText = extractPlainTextFromPage(updated)
 
     updatePageRow(updated, plainText)
-    removeFromIndex(updated.id)
-    indexPage(updated.id, updated.title, plainText, updated.tags.join(' '))
 
     rebuildAllPageLinks(getDb())
     return updated
@@ -372,7 +367,6 @@ export function updatePage(input: UpdatePageInput): Page {
 
 export function deletePage(pageId: string): { ok: boolean } {
   return withTransaction(() => {
-    removeFromIndex(pageId)
     deletePageById(pageId)
     rebuildAllPageLinks(getDb())
     return { ok: true }

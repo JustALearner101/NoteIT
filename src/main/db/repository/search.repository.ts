@@ -7,16 +7,6 @@ export interface SearchRow extends PageRow {
   notebook_name: string
 }
 
-export function removeFromIndex(pageId: string): void {
-  getDb().prepare('DELETE FROM pages_fts WHERE page_id = ?').run(pageId)
-}
-
-export function indexPage(pageId: string, title: string, plainText: string, tags: string): void {
-  getDb()
-    .prepare('INSERT INTO pages_fts (page_id, title, plain_text, tags) VALUES (?, ?, ?, ?)')
-    .run(pageId, title, plainText, tags)
-}
-
 export function countIndexedPages(): number {
   const row = getDb().prepare('SELECT COUNT(*) as cnt FROM pages_fts').get() as { cnt: number }
   return row?.cnt ?? 0

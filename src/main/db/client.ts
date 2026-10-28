@@ -145,6 +145,22 @@ export function initDatabase(workspaceDir: string): DatabaseSync {
       plain_text,
       tags
     );
+
+    CREATE TRIGGER IF NOT EXISTS pages_fts_ai AFTER INSERT ON pages BEGIN
+      INSERT INTO pages_fts (page_id, title, plain_text, tags)
+      VALUES (new.id, new.title, new.plain_text, new.tags_json);
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS pages_fts_au
+    AFTER UPDATE OF title, plain_text, tags_json ON pages BEGIN
+      DELETE FROM pages_fts WHERE page_id = old.id;
+      INSERT INTO pages_fts (page_id, title, plain_text, tags)
+      VALUES (new.id, new.title, new.plain_text, new.tags_json);
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS pages_fts_ad AFTER DELETE ON pages BEGIN
+      DELETE FROM pages_fts WHERE page_id = old.id;
+    END;
   `)
 
   const countRow = db.prepare('SELECT COUNT(*) as cnt FROM notebooks').get() as { cnt: number }
@@ -200,11 +216,6 @@ function seedInitialWorkspace(db: DatabaseSync): void {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
-  const insertFts = db.prepare(`
-    INSERT INTO pages_fts (page_id, title, plain_text, tags)
-    VALUES (?, ?, ?, ?)
-  `)
-
   const insertVersion = db.prepare(`
     INSERT INTO page_versions (id, page_id, version_number, title, label, blocks_json, canvas_json, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -235,8 +246,6 @@ function seedInitialWorkspace(db: DatabaseSync): void {
       pg.createdAt,
       pg.updatedAt
     )
-
-    insertFts.run(pg.id, pg.title, plainText, pg.tags.join(' '))
 
     insertVersion.run(
       `ver-${pg.id}-1`,
