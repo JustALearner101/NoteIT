@@ -79,11 +79,23 @@ Empat gelombang, urut dari risiko data nol ke paling besar:
 | 0 | Gate runtime: test, typecheck, build, npm run dev, smoke 10 titik | — |
 | 1 ✅ | Chart lanjutan (line/radar/scatter) + Calendar view + pecah ProjectDatabaseBlock | Nol |
 | 2 | Graphviz DOT (@viz-js/viz) + multi-tab polish (drag, context menu, shortcut, divider split) | Nol |
-| 3 | CSP + font self-hosted, version history polish, attachment/PDF | Tinggi (disk + skema) |
+| 3 ✅ | CSP + font self-hosted, version history polish, attachment/PDF | Tinggi (disk + skema) |
 | 4 | Multi-kolom penuh (model flat) | Sedang, diketahui akan dibuang saat Tiptap |
 
 Keputusan kunci: aset = file content-addressed + tabel assets (K1); backup aset = salin folder inkremental (K2); CSP produksi + @fontsource (K3); multi-kolom model flat (K4); Graphviz @viz-js/viz (K5); tab persist localStorage (K6); restore versi pakai snapshot pengaman (K7); bulan Calendar = useState lokal (K8).
 
-Target test: 87 → ≥110 → ≥132 → ≥168 → ≥190.
+Target test: 87 → ≥110 → ≥132 → ≥168 → ≥190. Status: 271 test / 20 berkas (target gelombang 3 ≥168 terlampaui).
+
+### Gelombang 3C — Attachment/PDF (selesai)
+
+- Aset content-addressed di `workspace/assets/<sha256>.<ext>` + tabel `assets` (idempoten, aman untuk DB lama).
+- `asset.service.ts`: hash SHA-256, dedupe (isi sama → satu berkas, satu baris), impor dari dialog/path/byte, daftar, hapus, GC aset yatim.
+- Protocol `noteit-asset` (standard/secure/supportFetchAPI/stream) didaftarkan sebelum `app.whenReady()`, handler menolak path traversal dan mendukung Range untuk PDF. CSP memuat `noteit-asset:` di img-src/frame-src/object-src.
+- IPC: `assets:import`, `assets:importBytes` (paste screenshot), `assets:saveAs`, `assets:openExternal`.
+- Blok `image`/`file` + `AssetBlock.tsx`; BlockEditor menerima drop, paste gambar, dan slash entry Gambar/Berkas. `content` = nama berkas supaya ikut FTS.
+- Backup: aset disalin inkremental ke `backups/noteit-*.assets/` (tidak menimpa); rotasi menghapus folder pasangannya.
+- Ekspor: `image` → `![](assets/<hash>.<ext>)`, `file` → `[](assets/<hash>.<ext>)`; `collectPageAssets`; penyalinan biner lewat `copyFileSync`.
+- Verifikasi: `npm test` 271 hijau, `npm run typecheck`, `npm run build` hijau. Smoke manual Electron (drag PNG, paste screenshot, PDF Range, impor 120 MB ditolak) **belum dijalankan**.
+- Utang yang diketahui: GC hanya dipicu saat halaman dihapus (menghapus blok aset tidak membersihkan berkas sampai halaman dihapus); impor besar dibaca penuh ke memori setelah cek `stat`; setiap backup menyalin ulang aset ke folder pasangannya (by design, folder terpisah per backup).
 
 Aturan gate Langkah 0: kalau app gagal boot atau ada kehilangan data saat smoke, BERHENTI — perbaiki durability dulu, 7 fitur ditunda.
