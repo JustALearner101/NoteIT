@@ -8,6 +8,8 @@ export interface VersionRow {
   label: string
   blocks_json: string
   canvas_json: string
+  /** NULL = snapshot legacy yang dibuat sebelum kolom ini ada. */
+  tags_json: string | null
   created_at: number
 }
 
@@ -19,6 +21,8 @@ export interface NewVersionInput {
   label: string
   blocksJson: string
   canvasJson: string
+  /** undefined = snapshot legacy: kolom dibiarkan NULL. */
+  tagsJson?: string
   createdAt: number
 }
 
@@ -37,8 +41,8 @@ export function findVersionById(versionId: string, pageId: string): VersionRow |
 export function insertVersion(version: NewVersionInput): void {
   getDb()
     .prepare(
-      `INSERT INTO page_versions (id, page_id, version_number, title, label, blocks_json, canvas_json, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO page_versions (id, page_id, version_number, title, label, blocks_json, canvas_json, tags_json, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       version.id,
@@ -48,6 +52,7 @@ export function insertVersion(version: NewVersionInput): void {
       version.label,
       version.blocksJson,
       version.canvasJson,
+      version.tagsJson ?? null,
       version.createdAt
     )
 }

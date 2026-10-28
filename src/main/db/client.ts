@@ -170,6 +170,15 @@ export function initDatabase(workspaceDir: string): DatabaseSync {
     END;
   `)
 
+  // Migrasi aditif & idempoten: page_versions.tags_json. Kolom sengaja NULLABLE tanpa
+  // DEFAULT supaya snapshot legacy (NULL) tetap bisa dibedakan dari snapshot tanpa tag ('[]').
+  const versionColumns = db.prepare('PRAGMA table_info(page_versions)').all() as Array<{
+    name: string
+  }>
+  if (!versionColumns.some((column) => column.name === 'tags_json')) {
+    db.exec('ALTER TABLE page_versions ADD COLUMN tags_json TEXT')
+  }
+
   const countRow = db.prepare('SELECT COUNT(*) as cnt FROM notebooks').get() as { cnt: number }
   if (!countRow || countRow.cnt === 0) {
     seedInitialWorkspace(db)

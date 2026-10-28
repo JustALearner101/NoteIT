@@ -449,6 +449,8 @@ export function createPageSnapshot(pageId: string, label?: string): PageVersion 
       label: snapLabel,
       blocksJson: pageRow.blocks_json,
       canvasJson: pageRow.canvas_json,
+      // Tags halaman saat snapshot diambil; NULL hanya untuk snapshot legacy.
+      tagsJson: pageRow.tags_json,
       createdAt: now
     })
 
@@ -474,11 +476,15 @@ export function restorePageSnapshot(pageId: string, versionId: string): Page {
       throw new Error('Snapshot versi tidak ditemukan di SQLite.')
     }
 
+    // Snapshot legacy (tags_json NULL) tidak menyentuh tags halaman: perilaku lama dipertahankan.
+    const tags = verRow.tags_json === null ? undefined : JSON.parse(verRow.tags_json)
+
     return updatePage({
       id: pageId,
       title: verRow.title,
       blocks: JSON.parse(verRow.blocks_json || '[]'),
-      canvasData: JSON.parse(verRow.canvas_json || '{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}')
+      canvasData: JSON.parse(verRow.canvas_json || '{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}'),
+      ...(tags !== undefined ? { tags } : {})
     })
   })
 }

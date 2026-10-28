@@ -197,6 +197,40 @@ describe('workspace.service (integration)', () => {
     expect(persisted?.blocks[0].content).toContain('zettelkasten')
   })
 
+  it('createPageSnapshot menyimpan tags dan restore mengembalikan tags lama', () => {
+    const page = createPage({ sectionId, title: 'Halaman Tags Snapshot', mode: 'block' })
+    updatePage({ id: page.id, tags: ['lama', 'arsip'] })
+
+    const snapshot = createPageSnapshot(page.id, 'Snapshot Tags')
+    const stored = getDb()
+      .prepare('SELECT tags_json FROM page_versions WHERE id = ?')
+      .get(snapshot.id) as { tags_json: string | null }
+    expect(JSON.parse(stored.tags_json || 'null')).toEqual(['lama', 'arsip'])
+
+    updatePage({ id: page.id, tags: ['baru'] })
+    const restored = restorePageSnapshot(page.id, snapshot.id)
+
+    expect(restored.tags).toEqual(['lama', 'arsip'])
+    expect(getWorkspaceSnapshot().pages.find((p) => p.id === page.id)?.tags).toEqual([
+      'lama',
+      'arsip'
+    ])
+  })
+
+  it('restore snapshot legacy (tags_json NULL) tidak menghapus tags halaman', () => {
+    const page = createPage({ sectionId, title: 'Halaman Tags Legacy', mode: 'block' })
+    updatePage({ id: page.id, tags: ['sekarang'] })
+
+    const snapshot = createPageSnapshot(page.id, 'Snapshot Legacy')
+    // Simulasikan snapshot yang dibuat sebelum kolom tags_json ada.
+    getDb().prepare('UPDATE page_versions SET tags_json = NULL WHERE id = ?').run(snapshot.id)
+
+    updatePage({ id: page.id, tags: ['tetap'] })
+    const restored = restorePageSnapshot(page.id, snapshot.id)
+
+    expect(restored.tags).toEqual(['tetap'])
+  })
+
   it('deletePage menghapus page dan hasil search-nya', () => {
     expect(searchWorkspace('zettelkasten').some((r) => r.pageId === pageId)).toBe(true)
 
@@ -411,6 +445,22 @@ describe('page_aliases — backlink stabil saat rename', () => {
     expect(getWorkspaceSnapshot().pages.find((p) => p.id === page.id)?.title).toBe(
       'Halaman Tanpa Judul'
     )
+  })
+})
+
+describe('migrasi page_versions.tags_json', () => {
+  const versionColumns = (): string[] =>
+    (getDb().prepare('PRAGMA table_info(page_versions)').all() as Array<{ name: string }>).map(
+      (column) => column.name
+    )
+
+  it('idempoten saat database dibuka ulang', () => {
+    expect(versionColumns()).toContain('tags_json')
+
+    closeDb()
+    initDatabase(tempDir)
+
+    expect(versionColumns().filter((name) => name === 'tags_json')).toHaveLength(1)
   })
 })
 
