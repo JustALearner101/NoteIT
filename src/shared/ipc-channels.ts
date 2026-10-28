@@ -68,6 +68,9 @@ export interface NoteItAPI {
   }): Promise<{ saved: boolean; filePath?: string }>
   exportMarkdown(input: ExportMarkdownInput): Promise<ExportMarkdownResult>
 
+  // Quick Capture
+  createQuickNote(text: string): Promise<Page>
+
   // Desktop Window Controls
   windowMinimize(): Promise<void>
   windowMaximizeToggle(): Promise<boolean>

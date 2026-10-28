@@ -24,6 +24,8 @@ const noteitAPI: NoteItAPI = {
   exportContent: (input) => ipcRenderer.invoke('workspace:export', input),
   exportMarkdown: (input) => ipcRenderer.invoke('workspace:exportMarkdown', input),
 
+  createQuickNote: (text: string) => ipcRenderer.invoke('capture:save', text),
+
   windowMinimize: () => ipcRenderer.invoke('window:minimize'),
   windowMaximizeToggle: () => ipcRenderer.invoke('window:maximizeToggle'),
   windowClose: () => ipcRenderer.invoke('window:close')

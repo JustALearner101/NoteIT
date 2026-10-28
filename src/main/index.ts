@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { initDatabase } from './db/client'
@@ -7,6 +7,7 @@ import { formatTimestamp, pageToMarkdown, slugifyTitle, workspaceToMarkdownFiles
 import {
   createNotebook,
   createPage,
+  createQuickNote,
   createPageSnapshot,
   createSection,
   deletePage,
@@ -85,6 +86,80 @@ function createWindow(): void {
   }
 }
 
+let captureWindow: BrowserWindow | null = null
+
+/**
+ * Window capture memakai renderer yang sama; query param 'window=capture' membuat
+ * entry renderer hanya merender QuickCapture. Tidak ada HTML entry kedua.
+ */
+function createCaptureWindow(): BrowserWindow {
+  if (captureWindow && !captureWindow.isDestroyed()) return captureWindow
+
+  const win = new BrowserWindow({
+    width: 680,
+    height: 200,
+    frame: false,
+    resizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    show: false,
+    backgroundColor: '#111317',
+    webPreferences: {
+      preload: path.join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      sandbox: false
+    }
+  })
+
+  win.on('ready-to-show', () => {
+    win.show()
+    win.focus()
+  })
+
+  // Frameless capture window tidak punya titlebar: kehilangan fokus = selesai.
+  win.on('blur', () => {
+    if (!win.isDestroyed()) win.hide()
+  })
+
+  win.on('closed', () => {
+    captureWindow = null
+  })
+
+  if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
+    win.loadURL(process.env['ELECTRON_RENDERER_URL'] + '?window=capture')
+  } else {
+    win.loadFile(path.join(__dirname, '../renderer/index.html'), { query: { window: 'capture' } })
+  }
+
+  captureWindow = win
+  return win
+}
+
+function toggleCaptureWindow(): void {
+  const win = createCaptureWindow()
+  if (win.isVisible()) {
+    win.hide()
+    return
+  }
+  win.show()
+  win.focus()
+}
+
+/** Hotkey global bisa bentrok dengan aplikasi lain: catat, jangan pernah crash. */
+function registerGlobalShortcut(accelerator: string, handler: () => void): void {
+  try {
+    if (!globalShortcut.register(accelerator, handler)) {
+      writeLog('WARN', 'Global shortcut gagal didaftarkan: ' + accelerator)
+    }
+  } catch (error) {
+    writeLog('WARN', 'Global shortcut gagal didaftarkan: ' + accelerator, error)
+  }
+}
+
+function registerGlobalShortcuts(): void {
+  registerGlobalShortcut('CommandOrControl+Shift+Space', toggleCaptureWindow)
+}
+
 function registerIpcHandlers(): void {
   ipcMain.handle('workspace:get', () => getWorkspaceSnapshot())
   ipcMain.handle('workspace:createNotebook', (_e, input) => createNotebook(input))
@@ -103,6 +178,8 @@ function registerIpcHandlers(): void {
   )
 
   ipcMain.handle('workspace:search', (_e, query) => searchWorkspace(query))
+
+  ipcMain.handle('capture:save', (_e, text: string) => createQuickNote(text))
 
   ipcMain.handle(
     'workspace:export',
@@ -205,6 +282,7 @@ app.whenReady().then(() => {
   startBackupScheduler(undefined, writeLog)
   registerIpcHandlers()
   createWindow()
+  registerGlobalShortcuts()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -223,6 +301,10 @@ app.on('before-quit', () => {
     // Backup terakhir bersifat best-effort: kegagalan tidak boleh memblokir quit.
     writeLog('WARN', 'Backup terakhir sebelum quit gagal', error)
   }
+})
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
 })
 
 app.on('window-all-closed', () => {

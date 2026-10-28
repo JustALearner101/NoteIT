@@ -232,6 +232,43 @@ export function ensureInboxSection(): Section {
   return withTransaction(() => ensureSectionByName(INBOX_SECTION_NAME, 'slate'))
 }
 
+const QUICK_NOTE_TITLE_MAX = 80
+
+/** Potong di batas kata supaya judul tidak berakhir dengan kata yang terbelah. */
+function truncateTitle(text: string, max = QUICK_NOTE_TITLE_MAX): string {
+  if (text.length <= max) return text
+  const slice = text.slice(0, max)
+  const lastSpace = slice.lastIndexOf(' ')
+  return (lastSpace > 0 ? slice.slice(0, lastSpace) : slice).trimEnd()
+}
+
+/**
+ * Capture mentah dari window global hotkey: baris pertama jadi judul, sisanya satu
+ * paragraf. Semua tulisan tetap lewat createPage/updatePage supaya kode page, versi
+ * awal, dan rebuild link tidak diduplikasi di sini.
+ */
+export function createQuickNote(text: string): Page {
+  const clean = text.trim()
+  if (!clean) {
+    throw new Error('Catatan cepat tidak boleh kosong. Tulis sesuatu sebelum menyimpan.')
+  }
+
+  const [firstLine, ...restLines] = clean.split(/\r?\n/)
+  const title = truncateTitle(firstLine.trim())
+  const body = restLines.join('\n').trim()
+
+  return withTransaction(() => {
+    const inbox = ensureInboxSection()
+    const page = createPage({ sectionId: inbox.id, title, mode: 'block' })
+    const blocks: Page['blocks'] = body
+      ? [{ id: `blk-${page.id}-quick`, type: 'paragraph', content: body }]
+      : []
+
+    // createPage menyiapkan placeholder + tag 'draft'; capture mentah tidak butuh keduanya.
+    return updatePage({ id: page.id, blocks, tags: [] })
+  })
+}
+
 export function createPage(input: CreatePageInput): Page {
   return withTransaction(() => {
     const now = Date.now()
