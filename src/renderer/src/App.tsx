@@ -14,6 +14,7 @@ import { CommandPalette } from '@renderer/components/command/CommandPalette'
 import { SettingsView } from '@renderer/components/settings/SettingsView'
 import { AIChatView } from '@renderer/components/chat/AIChatView'
 import { InAppBrowserView } from '@renderer/components/browser/InAppBrowserView'
+import { AgentMissionControlView } from '@renderer/components/agents/AgentMissionControlView'
 import { BottomTerminalDrawer } from '@renderer/components/terminal/BottomTerminalDrawer'
 import { RepoExplorerTree } from '@renderer/components/repo/RepoExplorerTree'
 import { useTerminalStore } from '@renderer/stores/useTerminalStore'
@@ -179,6 +180,9 @@ export const App: React.FC = () => {
       } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'b') {
         e.preventDefault()
         setActiveMainView(activeMainView === 'browser' ? 'workbench' : 'browser')
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault()
+        setActiveMainView(activeMainView === 'agent-board' ? 'workbench' : 'agent-board')
       } else if ((e.ctrlKey || e.metaKey) && (e.key === '`' || e.key === '~')) {
         e.preventDefault()
         toggleTerminalDrawer()
@@ -258,6 +262,8 @@ export const App: React.FC = () => {
             <AIChatView />
           ) : activeMainView === 'browser' ? (
             <InAppBrowserView />
+          ) : activeMainView === 'agent-board' ? (
+            <AgentMissionControlView />
           ) : (
             <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden animate-view-enter">
               {/* Multi-Tab Bar with Section Drafting Marker Top Accent */}

@@ -1,4 +1,5 @@
 import type {
+  AgentSessionRecord,
   AssetRecord,
   BacklinkItem,
   BlockType,
@@ -247,4 +248,14 @@ export interface NoteItAPI {
     approvalMode: string
     customDirective?: string
   }): Promise<{ command: string; args: string[]; promptText: string }>
+
+  // ADE Pilar 3: Worktree & Agent Mission Control
+  listAgentSessions(notebookId?: string): Promise<AgentSessionRecord[]>
+  mergeWorktreeSession(
+    sessionId: string,
+    commitMessage?: string
+  ): Promise<{ ok: boolean; error?: string }>
+  discardWorktreeSession(sessionId: string): Promise<{ ok: boolean; error?: string }>
+  quickApproveSession(sessionId: string): Promise<{ ok: boolean }>
+  onAgentSessionUpdated(callback: (session: AgentSessionRecord) => void): () => void
 }

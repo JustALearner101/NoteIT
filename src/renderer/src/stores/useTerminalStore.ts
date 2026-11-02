@@ -33,6 +33,16 @@ interface TerminalState {
   }) => Promise<string | null>
   closeSession: (id: string) => Promise<void>
   setActiveTabId: (id: string) => void
+  ensureSessionTab: (session: {
+    id: string
+    title: string
+    taskCode?: string | null
+    agentPreset: string
+    worktreePath?: string | null
+    repoPath: string
+    status: TerminalSessionInfo['detectedState']
+    lastOutputTail?: string
+  }) => void
   appendBuffer: (id: string, text: string) => void
   updateDetectedState: (id: string, state: TerminalSessionInfo['detectedState']) => void
 }
@@ -116,6 +126,28 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
   },
 
   setActiveTabId: (id) => set({ activeTabId: id, isOpen: true }),
+
+  ensureSessionTab: (session) =>
+    set((state) => {
+      const exists = state.tabs.some((t) => t.id === session.id)
+      if (exists) {
+        return { activeTabId: session.id, isOpen: true }
+      }
+      const newTab: TerminalTab = {
+        id: session.id,
+        title: `${session.agentPreset.toUpperCase()}: ${session.taskCode || session.title}`,
+        cliPresetId: session.agentPreset,
+        shellType: 'conpty',
+        cwd: session.worktreePath || session.repoPath,
+        detectedState: session.status,
+        bufferText: session.lastOutputTail ? session.lastOutputTail + '\n' : ''
+      }
+      return {
+        isOpen: true,
+        tabs: [...state.tabs, newTab],
+        activeTabId: newTab.id
+      }
+    }),
 
   appendBuffer: (id, text) =>
     set((state) => ({

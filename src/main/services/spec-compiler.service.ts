@@ -12,6 +12,11 @@ import type {
 } from '@shared/types/domain'
 import { getWorkspaceSnapshot, updatePage } from './workspace.service'
 import { createTerminalSession, type TerminalEventCallback } from './terminal.service'
+import {
+  createIsolatedWorktree,
+  insertAgentSession,
+  type WorktreeCreationResult
+} from './worktree.service'
 
 /** Watcher cache agar tidak memasang watcher ganda pada folder yang sama */
 const activeWatchers = new Map<string, fs.FSWatcher>()
@@ -389,30 +394,45 @@ export function generateMissionExecutionCommand(
 /**
  * Meluncurkan misi agen: kompilasi bundel .noteit/ dan buka sesi PTY dengan prompt handoff.
  */
-export function dispatchMission(
+export async function dispatchMission(
   input: DispatchMissionInput,
   repoPath: string,
   onTerminalEvent: TerminalEventCallback
-): DispatchMissionResult {
+): Promise<DispatchMissionResult> {
   if (!fs.existsSync(repoPath)) {
     throw new Error(`Folder repositori ${repoPath} tidak ditemukan.`)
   }
 
-  // 1. Kompilasi artefak spesifikasi ke .noteit/
-  compileSpecBundle(input.pageId, repoPath)
+  const snapshot = getWorkspaceSnapshot()
+  const targetPage = snapshot.pages.find((p) => p.id === input.pageId)
+  const targetSec = snapshot.sections.find((s) => s.id === targetPage?.sectionId)
+  const notebookId = targetSec?.notebookId || snapshot.notebooks[0]?.id || ''
 
-  // 2. Susun perintah eksekusi
+  let targetCwd = repoPath
+  let worktreeInfo: WorktreeCreationResult | null = null
+
+  // 1. Jika mode worktree, buat cabang & folder terisolasi (+ auto-junction node_modules)
+  if (input.isolationMode === 'worktree') {
+    const branchName = input.worktreeBranch || `feat/${input.pageId}`
+    worktreeInfo = await createIsolatedWorktree(repoPath, branchName)
+    targetCwd = worktreeInfo.worktreePath
+  }
+
+  // 2. Kompilasi artefak spesifikasi ke .noteit/ di direktori kerja
+  compileSpecBundle(input.pageId, targetCwd)
+
+  // 3. Susun perintah eksekusi
   const { command, args, promptText } = generateMissionExecutionCommand(
     input.presetId,
     input.approvalMode,
     input.customDirective
   )
 
-  // 3. Buat sesi terminal PTY di direktori kerja
-  const sessionTitle = `${input.presetId.toUpperCase()}: ${input.pageId}`
+  // 4. Buat sesi terminal PTY di direktori kerja
+  const sessionTitle = `${input.presetId.toUpperCase()}: ${targetPage?.code || input.pageId}`
   const termRes = createTerminalSession(
     {
-      cwd: repoPath,
+      cwd: targetCwd,
       command,
       args,
       title: sessionTitle,
@@ -421,10 +441,35 @@ export function dispatchMission(
     onTerminalEvent
   )
 
+  // 5. Simpan rekaman sesi ke database SQLite agent_sessions
+  insertAgentSession({
+    id: termRes.sessionId,
+    notebookId,
+    sectionId: targetPage?.sectionId || null,
+    pageId: targetPage?.id || null,
+    taskCode: targetPage?.code || null,
+    title: targetPage?.title || input.pageId,
+    agentPreset: input.presetId,
+    command: `${command} ${args.join(' ')}`.trim(),
+    approvalMode: input.approvalMode,
+    isolationMode: input.isolationMode,
+    repoPath,
+    worktreePath: worktreeInfo?.worktreePath || null,
+    branchName: worktreeInfo?.branchName || null,
+    status: 'idle',
+    filesChanged: 0,
+    linesAdded: 0,
+    linesRemoved: 0,
+    lastOutputTail: '',
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  })
+
   return {
     ok: true,
     sessionId: termRes.sessionId,
-    cwd: repoPath,
+    cwd: targetCwd,
+    branchName: worktreeInfo?.branchName,
     commandExecuted: `${command} ${args.join(' ')}`.trim()
   }
 }

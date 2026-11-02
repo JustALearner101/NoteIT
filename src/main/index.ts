@@ -70,6 +70,14 @@ import {
   dispatchMission,
   generateMissionExecutionCommand
 } from './services/spec-compiler.service'
+import {
+  discardWorktreeSession,
+  findAgentSessionById,
+  listAgentSessions,
+  mergeWorktreeToMain,
+  pollSessionGitMetrics,
+  updateAgentSession
+} from './services/worktree.service'
 import { executeAIChatStream } from './services/ai.service'
 import type { AIChatStreamRequest } from '@shared/ipc-channels'
 
@@ -753,14 +761,43 @@ function registerIpcHandlers(): void {
             sessionId: event.sessionId,
             exitCode: event.exitCode
           })
+          updateAgentSession(event.sessionId, {
+            status: event.exitCode === 0 ? 'completed' : 'failed'
+          })
+          const updated = findAgentSessionById(event.sessionId)
+          if (updated) mainWindow.webContents.send('agent:sessionUpdated', updated)
         } else if (event.type === 'state-change') {
           mainWindow.webContents.send('terminal:stateChange', {
             sessionId: event.sessionId,
             state: event.state
           })
+          updateAgentSession(event.sessionId, { status: event.state })
+          const updated = findAgentSessionById(event.sessionId)
+          if (updated) mainWindow.webContents.send('agent:sessionUpdated', updated)
         }
       }
     })
+  })
+
+  // ADE Pilar 3: Worktree & Agent Mission Control
+  ipcMain.handle('agent:listSessions', (_e, notebookId?: string) => {
+    return listAgentSessions(notebookId)
+  })
+
+  ipcMain.handle(
+    'agent:mergeWorktree',
+    (_e, input: { sessionId: string; commitMessage?: string }) => {
+      return mergeWorktreeToMain(input.sessionId, input.commitMessage)
+    }
+  )
+
+  ipcMain.handle('agent:discardWorktree', (_e, sessionId: string) => {
+    return discardWorktreeSession(sessionId)
+  })
+
+  ipcMain.handle('agent:quickApprove', (_e, sessionId: string) => {
+    writeTerminal(sessionId, 'y\n')
+    return { ok: true }
   })
 }
 

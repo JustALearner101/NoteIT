@@ -13,11 +13,13 @@ import {
   LayoutGrid,
   MessageSquare,
   Plus,
+  Radio,
   Settings,
   Star,
   Trash2
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
+import { useAgentStore } from '@renderer/stores/useAgentStore'
 import { MARKER_COLORS, MARKER_META } from '@renderer/lib/marker-colors'
 import type { MarkerColor, Page } from '@shared/types/domain'
 
@@ -41,6 +43,12 @@ export const IndexRailSidebar: React.FC = () => {
     createPage,
     deletePage
   } = useWorkspaceStore()
+
+  const { sessions } = useAgentStore()
+  const activeMissionCount = sessions.filter((s) =>
+    ['thinking', 'running_tests', 'waiting_approval', 'idle'].includes(s.status)
+  ).length
+  const waitingApprovalCount = sessions.filter((s) => s.status === 'waiting_approval').length
 
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
   const [isNotebookMenuOpen, setIsNotebookMenuOpen] = useState(false)
@@ -533,6 +541,29 @@ export const IndexRailSidebar: React.FC = () => {
         >
           <Globe size={13} className="text-accent-amber shrink-0" />
           <span>Web</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            setActiveMainView(activeMainView === 'agent-board' ? 'workbench' : 'agent-board')
+          }
+          title="Buka / Tutup Agent Mission Control HUD (Ctrl+Shift+A)"
+          className={`h-8 px-2 rounded-[6px] border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors relative ${
+            activeMainView === 'agent-board'
+              ? 'bg-accent-teal/15 border-accent-teal/50 text-accent-teal'
+              : 'bg-surface-elevated hover:bg-surface-hover border-border-hairline text-ink-secondary hover:text-ink-primary'
+          }`}
+        >
+          <Radio size={13} className="text-accent-teal shrink-0" />
+          <span>Agents</span>
+          {activeMissionCount > 0 && (
+            <span
+              className={`w-2 h-2 rounded-full ${
+                waitingApprovalCount > 0 ? 'bg-amber-400 animate-ping' : 'bg-emerald-400 animate-pulse'
+              }`}
+            />
+          )}
         </button>
 
         <div className="flex items-center gap-1 shrink-0">

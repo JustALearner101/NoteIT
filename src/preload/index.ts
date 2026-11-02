@@ -107,7 +107,21 @@ const noteitAPI: NoteItAPI = {
   // ADE Pilar 2: Spec-to-Agent Compiler & Dispatcher
   compileSpec: (input) => ipcRenderer.invoke('agent:compileSpec', input),
   dispatchMission: (input) => ipcRenderer.invoke('agent:dispatchMission', input),
-  previewMissionPrompt: (input) => ipcRenderer.invoke('agent:previewPrompt', input)
+  previewMissionPrompt: (input) => ipcRenderer.invoke('agent:previewPrompt', input),
+
+  // ADE Pilar 3: Worktree & Agent Mission Control
+  listAgentSessions: (notebookId?: string) => ipcRenderer.invoke('agent:listSessions', notebookId),
+  mergeWorktreeSession: (sessionId: string, commitMessage?: string) =>
+    ipcRenderer.invoke('agent:mergeWorktree', { sessionId, commitMessage }),
+  discardWorktreeSession: (sessionId: string) =>
+    ipcRenderer.invoke('agent:discardWorktree', sessionId),
+  quickApproveSession: (sessionId: string) =>
+    ipcRenderer.invoke('agent:quickApprove', sessionId),
+  onAgentSessionUpdated: (callback: (session: any) => void) => {
+    const listener = (_event: IpcRendererEvent, payload: any): void => callback(payload)
+    ipcRenderer.on('agent:sessionUpdated', listener)
+    return () => ipcRenderer.removeListener('agent:sessionUpdated', listener)
+  }
 }
 
 if (process.contextIsolated) {

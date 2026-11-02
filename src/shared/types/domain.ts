@@ -297,3 +297,35 @@ export interface DispatchMissionResult {
   commandExecuted: string
   error?: string
 }
+
+export type AgentSessionStatus =
+  | 'idle'
+  | 'thinking'
+  | 'waiting_approval'
+  | 'running_tests'
+  | 'completed'
+  | 'failed'
+  | 'merged'
+
+export interface AgentSessionRecord {
+  id: string
+  notebookId: string
+  sectionId?: string | null
+  pageId?: string | null
+  taskCode?: string | null
+  title: string
+  agentPreset: string
+  command: string
+  approvalMode: 'plan-only' | 'ask-edit' | 'auto-edit'
+  isolationMode: 'direct' | 'worktree'
+  repoPath: string
+  worktreePath?: string | null
+  branchName?: string | null
+  status: AgentSessionStatus
+  filesChanged: number
+  linesAdded: number
+  linesRemoved: number
+  lastOutputTail: string
+  createdAt: number
+  updatedAt: number
+}
