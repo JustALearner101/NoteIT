@@ -46,8 +46,25 @@ import {
   openOrCreateDailyNote,
   restorePageSnapshot,
   searchWorkspace,
-  updatePage
+  updateNotebookRepo,
+  updatePage,
+  updateSectionRepo
 } from './services/workspace.service'
+import {
+  getRepoGitStatus,
+  pickRepoFolder,
+  readRepoDirectory,
+  readRepoFile
+} from './services/repo.service'
+import {
+  createTerminalSession,
+  detectInstalledClis,
+  killAllTerminalSessions,
+  killTerminal,
+  listTerminalSessions,
+  resizeTerminal,
+  writeTerminal
+} from './services/terminal.service'
 import { executeAIChatStream } from './services/ai.service'
 import type { AIChatStreamRequest } from '@shared/ipc-channels'
 
@@ -614,6 +631,68 @@ function registerIpcHandlers(): void {
     })
     return { started: true }
   })
+
+  // ADE Pilar 1: Repo Binding & Explorer
+  ipcMain.handle('workspace:updateNotebookRepo', (_e, input) => updateNotebookRepo(input))
+  ipcMain.handle('workspace:updateSectionRepo', (_e, input) => updateSectionRepo(input))
+  ipcMain.handle('repo:pickFolder', (_e, defaultPath?: string) => pickRepoFolder(mainWindow, defaultPath))
+  ipcMain.handle('repo:readDir', (_e, input: { repoPath: string; relPath?: string }) =>
+    readRepoDirectory(input.repoPath, input.relPath)
+  )
+  ipcMain.handle('repo:readFile', (_e, input: { repoPath: string; relPath: string }) =>
+    readRepoFile(input.repoPath, input.relPath)
+  )
+  ipcMain.handle('repo:getGitStatus', (_e, repoPath: string) => getRepoGitStatus(repoPath))
+
+  // ADE Pilar 1: Embedded PTY Terminal Multiplexer
+  ipcMain.handle('terminal:detectClis', () => detectInstalledClis())
+  ipcMain.handle(
+    'terminal:createSession',
+    (
+      _e,
+      input: {
+        cwd: string
+        command?: string
+        args?: string[]
+        title?: string
+        cliPresetId?: string
+        cols?: number
+        rows?: number
+      }
+    ) => {
+      return createTerminalSession(input, (event) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          if (event.type === 'data') {
+            mainWindow.webContents.send('terminal:data', {
+              sessionId: event.sessionId,
+              data: event.data
+            })
+          } else if (event.type === 'exit') {
+            mainWindow.webContents.send('terminal:exit', {
+              sessionId: event.sessionId,
+              exitCode: event.exitCode
+            })
+          } else if (event.type === 'state-change') {
+            mainWindow.webContents.send('terminal:stateChange', {
+              sessionId: event.sessionId,
+              state: event.state
+            })
+          }
+        }
+      })
+    }
+  )
+  ipcMain.handle('terminal:write', (_e, input: { sessionId: string; data: string }) => {
+    writeTerminal(input.sessionId, input.data)
+  })
+  ipcMain.handle(
+    'terminal:resize',
+    (_e, input: { sessionId: string; cols: number; rows: number }) => {
+      resizeTerminal(input.sessionId, input.cols, input.rows)
+    }
+  )
+  ipcMain.handle('terminal:kill', (_e, sessionId: string) => killTerminal(sessionId))
+  ipcMain.handle('terminal:listSessions', () => listTerminalSessions())
 }
 
 app.whenReady().then(() => {
@@ -634,6 +713,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   stopBackupScheduler()
+  killAllTerminalSessions()
 
   try {
     const result = runBackup()

@@ -7,6 +7,7 @@ export interface SectionRow {
   name: string
   code: string
   color: string
+  repo_path_override?: string | null
   sort_order: number
   created_at: number
   updated_at: number
@@ -41,8 +42,8 @@ export function getSectionCodeState(): { total: number; maxSuffix: number } {
 export function insertSection(section: Section): void {
   getDb()
     .prepare(
-      `INSERT INTO sections (id, notebook_id, name, code, color, sort_order, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO sections (id, notebook_id, name, code, color, repo_path_override, sort_order, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       section.id,
@@ -50,8 +51,25 @@ export function insertSection(section: Section): void {
       section.name,
       section.code,
       section.color,
+      section.repoPathOverride || null,
       section.sortOrder,
       section.createdAt,
       section.updatedAt
     )
+}
+
+export function findSectionById(id: string): SectionRow | undefined {
+  return getDb().prepare('SELECT * FROM sections WHERE id = ?').get(id) as unknown as
+    | SectionRow
+    | undefined
+}
+
+export function updateSectionRepoRow(id: string, repoPathOverride: string | null): void {
+  getDb()
+    .prepare(
+      `UPDATE sections
+       SET repo_path_override = ?, updated_at = ?
+       WHERE id = ?`
+    )
+    .run(repoPathOverride, Date.now(), id)
 }

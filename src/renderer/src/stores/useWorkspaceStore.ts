@@ -20,7 +20,8 @@ import {
   type WorkbenchPreferences
 } from '@renderer/lib/themes'
 
-export type MainViewMode = 'workbench' | 'settings' | 'ai-chat' | 'browser'
+export type MainViewMode = 'workbench' | 'settings' | 'ai-chat' | 'browser' | 'agent-board'
+export type RightSplitMode = 'page' | 'browser' | 'repo-explorer' | 'diff'
 
 export interface BrowserContextPayload {
   url: string
@@ -61,6 +62,7 @@ interface WorkspaceStore {
   activeMainView: MainViewMode
   activeSettingsSection: string
   isBrowserSplitOpen: boolean
+  rightSplitMode: RightSplitMode
   browserContextForAI: BrowserContextPayload | null
   theme: 'dark' | 'light'
   preferences: WorkbenchPreferences
@@ -85,6 +87,9 @@ interface WorkspaceStore {
   setActiveMainView: (view: MainViewMode, settingsSection?: string) => void
   setActiveSettingsSection: (section: string) => void
   toggleBrowserSplitPane: () => void
+  setRightSplitMode: (mode: RightSplitMode) => void
+  updateNotebookRepo: (notebookId: string, repoPath: string | null, defaultBranch?: string) => Promise<void>
+  updateSectionRepo: (sectionId: string, repoPathOverride: string | null) => Promise<void>
   setBrowserContextForAI: (ctx: BrowserContextPayload | null) => void
   toggleTheme: () => void
   setActiveTheme: (themeId: string) => void
@@ -290,6 +295,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   activeMainView: 'workbench',
   activeSettingsSection: 'appearance',
   isBrowserSplitOpen: false,
+  rightSplitMode: 'page',
   browserContextForAI: null,
   theme: initialThemeDef.colorScheme,
   preferences: initialPrefs,
@@ -504,8 +510,50 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   toggleBrowserSplitPane: () =>
     set((state) => ({
       isBrowserSplitOpen: !state.isBrowserSplitOpen,
+      rightSplitMode: !state.isBrowserSplitOpen ? 'browser' : 'page',
       splitPageId: !state.isBrowserSplitOpen ? null : state.splitPageId
     })),
+
+  setRightSplitMode: (mode) =>
+    set({
+      rightSplitMode: mode,
+      isBrowserSplitOpen: mode === 'browser'
+    }),
+
+  updateNotebookRepo: async (notebookId, repoPath, defaultBranch) => {
+    try {
+      const updated = await window.noteitAPI.updateNotebookRepo({
+        notebookId,
+        repoPath,
+        defaultBranch
+      })
+      set((state) => ({
+        notebooks: state.notebooks.map((nb) => (nb.id === notebookId ? updated : nb))
+      }))
+      get().showToast(
+        repoPath ? `Repositori dihubungkan: ${repoPath.split(/[/\\]/).pop()}` : 'Hubungan repositori dilepas'
+      )
+    } catch (e) {
+      console.error('Failed to update notebook repo:', e)
+      get().showToast('Gagal memperbarui hubungan repositori.')
+    }
+  },
+
+  updateSectionRepo: async (sectionId, repoPathOverride) => {
+    try {
+      const updated = await window.noteitAPI.updateSectionRepo({
+        sectionId,
+        repoPathOverride
+      })
+      set((state) => ({
+        sections: state.sections.map((sec) => (sec.id === sectionId ? updated : sec))
+      }))
+      get().showToast('Override repositori section diperbarui')
+    } catch (e) {
+      console.error('Failed to update section repo override:', e)
+      get().showToast('Gagal memperbarui repositori section.')
+    }
+  },
 
   setBrowserContextForAI: (ctx) => set({ browserContextForAI: ctx }),
 

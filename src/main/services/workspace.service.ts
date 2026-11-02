@@ -10,15 +10,19 @@ import {
 import { INITIAL_SEED_DBML } from '../db/seed'
 import { formatDailyTitle } from './date.util'
 import {
+  findNotebookById,
   getMaxNotebookSortOrder,
   insertNotebook,
-  listNotebooks
+  listNotebooks,
+  updateNotebookRepoRow
 } from '../db/repository/notebook.repository'
 import {
+  findSectionById,
   getMaxSectionSortOrder,
   getSectionCodeState,
   insertSection,
-  listSections
+  listSections,
+  updateSectionRepoRow
 } from '../db/repository/section.repository'
 import type { SectionRow } from '../db/repository/section.repository'
 import {
@@ -98,6 +102,7 @@ function mapRowToSection(row: SectionRow): Section {
     name: row.name,
     code: row.code,
     color: row.color as MarkerColor,
+    repoPathOverride: row.repo_path_override || undefined,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -114,6 +119,8 @@ export function getWorkspaceSnapshot(): WorkspaceSnapshot {
     name: r.name,
     icon: r.icon,
     color: r.color as MarkerColor,
+    repoPath: r.repo_path || undefined,
+    defaultBranch: r.default_branch || 'main',
     sortOrder: r.sort_order,
     createdAt: r.created_at,
     updatedAt: r.updated_at
@@ -211,6 +218,41 @@ export function createSection(input: {
     insertSection(section)
 
     return section
+  })
+}
+
+export function updateNotebookRepo(input: {
+  notebookId: string
+  repoPath: string | null
+  defaultBranch?: string
+}): Notebook {
+  return withTransaction(() => {
+    updateNotebookRepoRow(input.notebookId, input.repoPath, input.defaultBranch || 'main')
+    const row = findNotebookById(input.notebookId)
+    if (!row) throw new Error('Notebook tidak ditemukan.')
+    return {
+      id: row.id,
+      name: row.name,
+      icon: row.icon,
+      color: row.color as MarkerColor,
+      repoPath: row.repo_path || undefined,
+      defaultBranch: row.default_branch || 'main',
+      sortOrder: row.sort_order,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }
+  })
+}
+
+export function updateSectionRepo(input: {
+  sectionId: string
+  repoPathOverride: string | null
+}): Section {
+  return withTransaction(() => {
+    updateSectionRepoRow(input.sectionId, input.repoPathOverride)
+    const row = findSectionById(input.sectionId)
+    if (!row) throw new Error('Section tidak ditemukan.')
+    return mapRowToSection(row)
   })
 }
 

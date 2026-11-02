@@ -5,6 +5,7 @@ import {
   Clock,
   Download,
   FileText,
+  FolderGit2,
   GitCompare,
   History,
   LayoutGrid,
@@ -14,10 +15,12 @@ import {
   RotateCcw,
   Star,
   Tag,
+  Terminal as TerminalIcon,
   Trash2,
   X
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
+import { useTerminalStore } from '@renderer/stores/useTerminalStore'
 import { MARKER_META } from '@renderer/lib/marker-colors'
 import { diffBlockSets } from '@shared/version-diff'
 import type { BlockDiff } from '@shared/version-diff'
@@ -92,12 +95,22 @@ function buildDiffView(
 export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
   const {
     notebooks,
+    activeNotebookId,
     sections,
+    rightSplitMode,
+    setRightSplitMode,
     updatePage,
     switchPageMode,
     openPageInTab,
     showToast
   } = useWorkspaceStore()
+
+  const toggleTerminalDrawer = useTerminalStore((s) => s.toggleDrawer)
+
+  const currentNotebook = notebooks.find((nb) => nb.id === activeNotebookId) || notebooks[0]
+  const currentSection = sections.find((s) => s.id === page.sectionId)
+  const currentRepoPath = currentSection?.repoPathOverride || currentNotebook?.repoPath || ''
+  const repoBasename = currentRepoPath ? currentRepoPath.split(/[/\\]/).pop() : null
 
   const [backlinks, setBacklinks] = useState<BacklinkItem[]>([])
   const [versions, setVersions] = useState<PageVersionSummary[]>([])
@@ -449,8 +462,40 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
           </div>
         </div>
 
-        {/* Signature Mechanical Mode Caliper Switch */}
+        {/* Signature Mechanical Mode Caliper Switch & ADE Quick Controls */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* ADE Repo Explorer Toggle */}
+          <button
+            onClick={() =>
+              setRightSplitMode(rightSplitMode === 'repo-explorer' ? 'page' : 'repo-explorer')
+            }
+            title={
+              currentRepoPath
+                ? `Repositori: ${currentRepoPath} (Klik untuk toggle pohon berkas)`
+                : 'Hubungkan folder repositori git ke notebook ini'
+            }
+            className={`h-8 px-2.5 rounded-[5px] border flex items-center gap-1.5 font-mono text-[11px] transition-colors ${
+              rightSplitMode === 'repo-explorer'
+                ? 'bg-accent-cobalt/15 border-accent-cobalt text-accent-cobalt font-semibold'
+                : 'bg-surface-elevated border-border-hairline text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
+            }`}
+          >
+            <FolderGit2 size={13} className={currentRepoPath ? 'text-accent-cobalt' : 'text-ink-muted'} />
+            <span className="truncate max-w-[130px]">
+              {repoBasename || 'Bind Repo'}
+            </span>
+          </button>
+
+          {/* ADE Terminal Toggle */}
+          <button
+            onClick={() => toggleTerminalDrawer()}
+            title="Buka / Tutup Drawer Terminal ADE (Ctrl+`)"
+            className="h-8 px-2.5 rounded-[5px] border border-border-hairline bg-surface-elevated hover:bg-surface-hover text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 font-mono text-[11px] transition-colors"
+          >
+            <TerminalIcon size={13} className="text-accent-cobalt" />
+            <span>Terminal</span>
+          </button>
+
           <div className="p-0.5 rounded-[6px] bg-surface-elevated border border-border-hairline flex items-center font-mono text-[11px]">
             <button
               onClick={() => switchPageMode(page.id, 'block')}

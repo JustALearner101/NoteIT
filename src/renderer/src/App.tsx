@@ -14,6 +14,9 @@ import { CommandPalette } from '@renderer/components/command/CommandPalette'
 import { SettingsView } from '@renderer/components/settings/SettingsView'
 import { AIChatView } from '@renderer/components/chat/AIChatView'
 import { InAppBrowserView } from '@renderer/components/browser/InAppBrowserView'
+import { BottomTerminalDrawer } from '@renderer/components/terminal/BottomTerminalDrawer'
+import { RepoExplorerTree } from '@renderer/components/repo/RepoExplorerTree'
+import { useTerminalStore } from '@renderer/stores/useTerminalStore'
 import { resolveUndoTarget } from '@renderer/lib/undo-target'
 import { SPLIT_RATIO_DEFAULT, nextTabId } from '@renderer/lib/tabs'
 import type { Page } from '@shared/types/domain'
@@ -64,6 +67,8 @@ export const App: React.FC = () => {
     activeMainView,
     setActiveMainView,
     isBrowserSplitOpen,
+    rightSplitMode,
+    setRightSplitMode,
     openPageInTab,
     closeTab,
     reorderTabs,
@@ -89,6 +94,7 @@ export const App: React.FC = () => {
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null)
   const [tabMenu, setTabMenu] = useState<{ pageId: string; x: number; y: number } | null>(null)
   const [isDividerDragging, setIsDividerDragging] = useState(false)
+  const toggleTerminalDrawer = useTerminalStore((s) => s.toggleDrawer)
 
   useEffect(() => {
     loadWorkspace()
@@ -173,6 +179,9 @@ export const App: React.FC = () => {
       } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'b') {
         e.preventDefault()
         setActiveMainView(activeMainView === 'browser' ? 'workbench' : 'browser')
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === '`' || e.key === '~')) {
+        e.preventDefault()
+        toggleTerminalDrawer()
       } else if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
         e.preventDefault()
         toggleSidebar()
@@ -386,13 +395,13 @@ export const App: React.FC = () => {
             )}
           </div>
 
-          {/* Primary & Optional Split-Pane Work Area (Supports Page Split OR In-App Browser Split) */}
+          {/* Primary & Optional Split-Pane Work Area (Supports Page Split OR In-App Browser Split OR Repo Explorer) */}
           <div ref={workAreaRef} className="flex-1 flex min-h-0 overflow-hidden">
             {activePage && (
               <div
                 className="flex flex-col min-w-0 h-full overflow-hidden"
                 style={
-                  splitPage || isBrowserSplitOpen
+                  splitPage || isBrowserSplitOpen || rightSplitMode === 'repo-explorer'
                     ? {
                         flexBasis: `${splitRatio * 100}%`,
                         flexGrow: 0,
@@ -404,7 +413,7 @@ export const App: React.FC = () => {
                 <WorkbenchPane page={activePage} onActivate={() => setFocusedPane('primary')} />
               </div>
             )}
-            {(splitPage || isBrowserSplitOpen) && (
+            {(splitPage || isBrowserSplitOpen || rightSplitMode === 'repo-explorer') && (
               <>
                 {/* Divider split: pointer events (bukan drag HTML5) supaya
                     pergerakan mengikuti kursor tanpa ghost image. */}
@@ -437,6 +446,8 @@ export const App: React.FC = () => {
                 <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
                   {isBrowserSplitOpen ? (
                     <InAppBrowserView isSplitMode />
+                  ) : rightSplitMode === 'repo-explorer' ? (
+                    <RepoExplorerTree isSplitMode />
                   ) : splitPage ? (
                     <WorkbenchPane
                       page={splitPage}
@@ -452,6 +463,9 @@ export const App: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Embedded ConPTY / Subprocess Terminal Drawer (Ctrl+`) */}
+      <BottomTerminalDrawer />
 
       {/* Bottom Monospace Telemetry Status Bar */}
       <TelemetryStatusBar />

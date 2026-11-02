@@ -66,6 +66,42 @@ const noteitAPI: NoteItAPI = {
       callback(payload)
     ipcRenderer.on('ai:streamEvent', listener)
     return () => ipcRenderer.removeListener('ai:streamEvent', listener)
+  },
+
+  // ADE Pilar 1: Repo Binding & Local File Explorer
+  updateNotebookRepo: (input) => ipcRenderer.invoke('workspace:updateNotebookRepo', input),
+  updateSectionRepo: (input) => ipcRenderer.invoke('workspace:updateSectionRepo', input),
+  pickRepoFolder: (defaultPath?: string) => ipcRenderer.invoke('repo:pickFolder', defaultPath),
+  readRepoDir: (input) => ipcRenderer.invoke('repo:readDir', input),
+  readRepoFile: (input) => ipcRenderer.invoke('repo:readFile', input),
+  getRepoGitStatus: (repoPath: string) => ipcRenderer.invoke('repo:getGitStatus', repoPath),
+
+  // ADE Pilar 1: Embedded PTY Terminal Multiplexer
+  detectCliPresets: () => ipcRenderer.invoke('terminal:detectClis'),
+  createTerminalSession: (input) => ipcRenderer.invoke('terminal:createSession', input),
+  writeTerminal: (input) => ipcRenderer.invoke('terminal:write', input),
+  resizeTerminal: (input) => ipcRenderer.invoke('terminal:resize', input),
+  killTerminal: (sessionId: string) => ipcRenderer.invoke('terminal:kill', sessionId),
+  listTerminalSessions: () => ipcRenderer.invoke('terminal:listSessions'),
+  onTerminalData: (callback: (event: { sessionId: string; data: string }) => void) => {
+    const listener = (_event: IpcRendererEvent, payload: { sessionId: string; data: string }): void =>
+      callback(payload)
+    ipcRenderer.on('terminal:data', listener)
+    return () => ipcRenderer.removeListener('terminal:data', listener)
+  },
+  onTerminalExit: (callback: (event: { sessionId: string; exitCode: number }) => void) => {
+    const listener = (_event: IpcRendererEvent, payload: { sessionId: string; exitCode: number }): void =>
+      callback(payload)
+    ipcRenderer.on('terminal:exit', listener)
+    return () => ipcRenderer.removeListener('terminal:exit', listener)
+  },
+  onTerminalStateChange: (
+    callback: (event: { sessionId: string; state: any }) => void
+  ) => {
+    const listener = (_event: IpcRendererEvent, payload: { sessionId: string; state: any }): void =>
+      callback(payload)
+    ipcRenderer.on('terminal:stateChange', listener)
+    return () => ipcRenderer.removeListener('terminal:stateChange', listener)
   }
 }
 

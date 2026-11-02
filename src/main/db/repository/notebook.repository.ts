@@ -6,6 +6,8 @@ export interface NotebookRow {
   name: string
   icon: string
   color: string
+  repo_path?: string | null
+  default_branch?: string | null
   sort_order: number
   created_at: number
   updated_at: number
@@ -27,16 +29,38 @@ export function getMaxNotebookSortOrder(): number {
 export function insertNotebook(notebook: Notebook): void {
   getDb()
     .prepare(
-      `INSERT INTO notebooks (id, name, icon, color, sort_order, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO notebooks (id, name, icon, color, repo_path, default_branch, sort_order, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       notebook.id,
       notebook.name,
       notebook.icon,
       notebook.color,
+      notebook.repoPath || null,
+      notebook.defaultBranch || 'main',
       notebook.sortOrder,
       notebook.createdAt,
       notebook.updatedAt
     )
+}
+
+export function findNotebookById(id: string): NotebookRow | undefined {
+  return getDb().prepare('SELECT * FROM notebooks WHERE id = ?').get(id) as unknown as
+    | NotebookRow
+    | undefined
+}
+
+export function updateNotebookRepoRow(
+  id: string,
+  repoPath: string | null,
+  defaultBranch: string = 'main'
+): void {
+  getDb()
+    .prepare(
+      `UPDATE notebooks
+       SET repo_path = ?, default_branch = ?, updated_at = ?
+       WHERE id = ?`
+    )
+    .run(repoPath, defaultBranch, Date.now(), id)
 }

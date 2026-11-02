@@ -192,6 +192,57 @@ export function initDatabase(workspaceDir: string): DatabaseSync {
     db.exec('ALTER TABLE page_versions ADD COLUMN tags_json TEXT')
   }
 
+  // Migrasi aditif ADE Pilar 1: repo_path & default_branch di notebooks
+  const notebookColumns = db.prepare('PRAGMA table_info(notebooks)').all() as Array<{ name: string }>
+  if (!notebookColumns.some((col) => col.name === 'repo_path')) {
+    db.exec('ALTER TABLE notebooks ADD COLUMN repo_path TEXT DEFAULT NULL')
+  }
+  if (!notebookColumns.some((col) => col.name === 'default_branch')) {
+    db.exec("ALTER TABLE notebooks ADD COLUMN default_branch TEXT DEFAULT 'main'")
+  }
+
+  // Migrasi aditif ADE Pilar 1: repo_path_override di sections
+  const sectionColumns = db.prepare('PRAGMA table_info(sections)').all() as Array<{ name: string }>
+  if (!sectionColumns.some((col) => col.name === 'repo_path_override')) {
+    db.exec('ALTER TABLE sections ADD COLUMN repo_path_override TEXT DEFAULT NULL')
+  }
+
+  // Tabel Sesi Agen & Worktree (Agent Mission Control Persistence)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS agent_sessions (
+      id TEXT PRIMARY KEY,
+      notebook_id TEXT NOT NULL REFERENCES notebooks(id) ON DELETE CASCADE,
+      section_id TEXT REFERENCES sections(id) ON DELETE SET NULL,
+      page_id TEXT REFERENCES pages(id) ON DELETE SET NULL,
+      task_code TEXT DEFAULT NULL,
+      title TEXT NOT NULL,
+      agent_preset TEXT NOT NULL,
+      command TEXT NOT NULL,
+      approval_mode TEXT NOT NULL,
+      isolation_mode TEXT NOT NULL,
+      repo_path TEXT NOT NULL,
+      worktree_path TEXT DEFAULT NULL,
+      branch_name TEXT DEFAULT NULL,
+      status TEXT NOT NULL DEFAULT 'idle',
+      files_changed INTEGER NOT NULL DEFAULT 0,
+      lines_added INTEGER NOT NULL DEFAULT 0,
+      lines_removed INTEGER NOT NULL DEFAULT 0,
+      last_output_tail TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_messages (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      tool_calls_json TEXT DEFAULT '[]',
+      proposal_json TEXT DEFAULT NULL,
+      created_at INTEGER NOT NULL
+    );
+  `)
+
   const countRow = db.prepare('SELECT COUNT(*) as cnt FROM notebooks').get() as { cnt: number }
   if (!countRow || countRow.cnt === 0) {
     seedInitialWorkspace(db)

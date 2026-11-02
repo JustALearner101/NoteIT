@@ -7,6 +7,8 @@ export interface Notebook {
   name: string
   icon: string
   color: MarkerColor
+  repoPath?: string
+  defaultBranch?: string
   sortOrder: number
   createdAt: number
   updatedAt: number
@@ -18,6 +20,7 @@ export interface Section {
   name: string
   code: string // e.g. "SEC-01"
   color: MarkerColor
+  repoPathOverride?: string
   sortOrder: number
   createdAt: number
   updatedAt: number
@@ -216,4 +219,44 @@ export interface WorkspaceSnapshot {
     ftsIndexedPages: number
     dbPath: string
   }
+}
+
+export type GitFileStatus = 'modified' | 'added' | 'untracked' | 'deleted' | 'renamed'
+
+export interface RepoEntry {
+  name: string
+  relPath: string
+  isDirectory: boolean
+  size?: number
+  gitStatus?: GitFileStatus
+}
+
+export interface RepoGitStatusSummary {
+  branch: string
+  isClean: boolean
+  changedFiles: {
+    relPath: string
+    status: GitFileStatus
+  }[]
+  linesAdded: number
+  linesRemoved: number
+}
+
+export interface DetectedCliPreset {
+  id: 'claude' | 'codex' | 'gemini' | 'aider' | 'pwsh' | 'cmd' | 'bash'
+  name: string
+  command: string
+  available: boolean
+  path?: string
+  description?: string
+}
+
+export interface TerminalSessionInfo {
+  id: string
+  title: string
+  cwd: string
+  cliPresetId?: string
+  shellType: 'conpty' | 'subprocess'
+  isActive: boolean
+  detectedState?: 'idle' | 'thinking' | 'waiting_approval' | 'running_tests' | 'completed' | 'failed'
 }

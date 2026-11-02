@@ -1,8 +1,12 @@
 import React from 'react'
+import { Terminal } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
+import { useTerminalStore } from '@renderer/stores/useTerminalStore'
 
 export const TelemetryStatusBar: React.FC = () => {
   const { pages, activePageId, stats, telemetry } = useWorkspaceStore()
+  const { isOpen, toggleDrawer, tabs, activeTabId } = useTerminalStore()
+  const activeTab = tabs.find((t) => t.id === activeTabId)
   const activePage = pages.find((p) => p.id === activePageId)
 
   const wordCount = React.useMemo(() => {
@@ -60,6 +64,21 @@ export const TelemetryStatusBar: React.FC = () => {
             <span>UTF-8 · LOCAL-FIRST</span>
           </>
         )}
+        <span className="text-border-hairline">│</span>
+        <button
+          onClick={toggleDrawer}
+          title="Toggle ADE Terminal Drawer (Ctrl+`)"
+          className={`px-1.5 py-0.5 rounded flex items-center gap-1 transition-colors ${
+            isOpen
+              ? 'bg-accent-cobalt/20 text-accent-cobalt font-semibold'
+              : 'hover:bg-surface-hover text-ink-secondary hover:text-ink-primary'
+          }`}
+        >
+          <Terminal size={11} className={isOpen ? 'text-accent-cobalt' : 'text-ink-muted'} />
+          <span>
+            {tabs.length > 0 ? `${activeTab?.title || 'TERMINAL'} (${tabs.length})` : 'CONPTY (Ctrl+`)'}
+          </span>
+        </button>
       </div>
     </footer>
   )

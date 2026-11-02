@@ -2,14 +2,18 @@ import type {
   AssetRecord,
   BacklinkItem,
   BlockType,
+  DetectedCliPreset,
   MarkerColor,
   Notebook,
   Page,
   PageMode,
   PageVersion,
   PageVersionSummary,
+  RepoEntry,
+  RepoGitStatusSummary,
   SearchResultItem,
   Section,
+  TerminalSessionInfo,
   WorkspaceSnapshot
 } from './types/domain'
 
@@ -188,4 +192,46 @@ export interface NoteItAPI {
   // Vercel AI SDK Streaming & Agentic Tools
   startAIChatStream(input: AIChatStreamRequest): Promise<{ started: boolean }>
   onAIChatStreamEvent(callback: (event: AIChatStreamEvent) => void): () => void
+
+  // ADE Pilar 1: Repo Binding & Local File Explorer
+  updateNotebookRepo(input: {
+    notebookId: string
+    repoPath: string | null
+    defaultBranch?: string
+  }): Promise<Notebook>
+  updateSectionRepo(input: {
+    sectionId: string
+    repoPathOverride: string | null
+  }): Promise<Section>
+  pickRepoFolder(defaultPath?: string): Promise<{
+    canceled: boolean
+    path?: string
+    isGitRepo: boolean
+    branch?: string
+  }>
+  readRepoDir(input: { repoPath: string; relPath?: string }): Promise<RepoEntry[]>
+  readRepoFile(input: {
+    repoPath: string
+    relPath: string
+  }): Promise<{ content: string; language: string; size: number }>
+  getRepoGitStatus(repoPath: string): Promise<RepoGitStatusSummary>
+
+  // ADE Pilar 1: Embedded PTY Terminal Multiplexer
+  detectCliPresets(): Promise<DetectedCliPreset[]>
+  createTerminalSession(input: {
+    cwd: string
+    command?: string
+    args?: string[]
+    title?: string
+    cliPresetId?: string
+  }): Promise<{ sessionId: string; shellType: 'conpty' | 'subprocess' }>
+  writeTerminal(input: { sessionId: string; data: string }): Promise<void>
+  resizeTerminal(input: { sessionId: string; cols: number; rows: number }): Promise<void>
+  killTerminal(sessionId: string): Promise<{ ok: boolean }>
+  listTerminalSessions(): Promise<TerminalSessionInfo[]>
+  onTerminalData(callback: (event: { sessionId: string; data: string }) => void): () => void
+  onTerminalExit(callback: (event: { sessionId: string; exitCode: number }) => void): () => void
+  onTerminalStateChange(
+    callback: (event: { sessionId: string; state: TerminalSessionInfo['detectedState'] }) => void
+  ): () => void
 }
