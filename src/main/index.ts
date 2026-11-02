@@ -10,6 +10,7 @@ import {
 } from 'electron'
 import fs from 'fs'
 import path from 'path'
+import { pathToFileURL } from 'url'
 import { initDatabase } from './db/client'
 import {
   copyAssetFile,
@@ -47,6 +48,8 @@ import {
   searchWorkspace,
   updatePage
 } from './services/workspace.service'
+import { executeAIChatStream } from './services/ai.service'
+import type { AIChatStreamRequest } from '@shared/ipc-channels'
 
 function writeLog(level: 'INFO' | 'WARN' | 'ERROR', message: string, detail?: unknown): void {
   try {
@@ -98,9 +101,9 @@ function buildContentSecurityPolicy(isDev: boolean): string {
       ? "script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'"
       : "script-src 'self' 'wasm-unsafe-eval'",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: noteit-asset:",
+    "img-src 'self' data: blob: https: http: noteit-asset:",
     "media-src 'self' noteit-asset:",
-    "frame-src 'self' noteit-asset:",
+    "frame-src 'self' https: http: noteit-asset:",
     "object-src 'self' noteit-asset:",
     "font-src 'self' data:",
     isDev
@@ -117,6 +120,12 @@ function installContentSecurityPolicy(): void {
   const policy = buildContentSecurityPolicy(isDev)
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    // Hanya pasang CSP ketat NoteIT pada window utama/capture milik aplikasi sendiri,
+    // jangan timpa header situs eksternal di dalam <webview>.
+    if (mainWindow && details.webContentsId && details.webContentsId !== mainWindow.webContents.id) {
+      callback({ responseHeaders: details.responseHeaders })
+      return
+    }
     const responseHeaders: Record<string, string[]> = {}
     for (const [key, value] of Object.entries(details.responseHeaders ?? {})) {
       if (key.toLowerCase() === 'content-security-policy') continue
@@ -197,7 +206,18 @@ function createWindow(): void {
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,
-      contextIsolation: true
+      contextIsolation: true,
+      webviewTag: true
+    }
+  })
+
+  // Keamanan <webview> In-App Browser: paksa isolasi konteks & matikan nodeIntegration di guest page.
+  mainWindow.webContents.on('will-attach-webview', (_event, webPreferences, params) => {
+    delete webPreferences.preload
+    webPreferences.nodeIntegration = false
+    webPreferences.contextIsolation = true
+    if (!params.src.startsWith('http://') && !params.src.startsWith('https://') && !params.src.startsWith('about:')) {
+      params.src = 'about:blank'
     }
   })
 
@@ -541,6 +561,58 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('window:close', () => {
     mainWindow?.close()
+  })
+
+  ipcMain.handle('help:openExternal', async () => {
+    try {
+      const candidates = [
+        path.join(app.getAppPath(), 'resources', 'help', 'noteit-help.html'),
+        path.join(process.cwd(), 'resources', 'help', 'noteit-help.html'),
+        path.join(process.resourcesPath || '', 'help', 'noteit-help.html'),
+        path.join(process.resourcesPath || '', 'resources', 'help', 'noteit-help.html')
+      ]
+      const found = candidates.find((p) => p && fs.existsSync(p))
+      if (!found) {
+        return { ok: false, error: 'Berkas noteit-help.html tidak ditemukan.' }
+      }
+      const fileUrl = pathToFileURL(found).toString()
+      await shell.openExternal(fileUrl)
+      return { ok: true, url: fileUrl }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      return { ok: false, error: msg }
+    }
+  })
+
+  ipcMain.handle('workspace:runBackup', () => {
+    return runBackup()
+  })
+
+  ipcMain.handle('workspace:gcAssets', () => {
+    const res = gcOrphanAssets()
+    return { deletedCount: res.deleted.length }
+  })
+
+  ipcMain.handle('workspace:openFolder', async (_e, target: 'workspace' | 'backups' | 'logs') => {
+    const userData = app.getPath('userData')
+    const folderPath =
+      target === 'logs'
+        ? path.join(userData, 'logs')
+        : target === 'backups'
+          ? path.join(userData, 'workspace', 'backups')
+          : path.join(userData, 'workspace')
+    fs.mkdirSync(folderPath, { recursive: true })
+    await shell.openPath(folderPath)
+    return { ok: true, path: folderPath }
+  })
+
+  ipcMain.handle('ai:startStream', (_e, input: AIChatStreamRequest) => {
+    void executeAIChatStream(input, (event) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('ai:streamEvent', event)
+      }
+    })
+    return { started: true }
   })
 }
 

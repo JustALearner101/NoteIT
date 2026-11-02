@@ -1,6 +1,7 @@
 import type {
   AssetRecord,
   BacklinkItem,
+  BlockType,
   MarkerColor,
   Notebook,
   Page,
@@ -11,6 +12,68 @@ import type {
   Section,
   WorkspaceSnapshot
 } from './types/domain'
+
+export interface ProposedSpecBlock {
+  type: BlockType
+  content: string
+}
+
+export interface AIApprovalProposal {
+  proposalId: string
+  targetPageId: string
+  targetPageCode: string
+  targetPageTitle: string
+  summary: string
+  blocks: ProposedSpecBlock[]
+  status: 'pending' | 'approved' | 'rejected'
+}
+
+export interface AIChatStreamRequest {
+  requestId: string
+  provider: 'gemini' | 'openai' | 'anthropic' | 'ollama'
+  modelId: string
+  apiKey?: string
+  approvalMode: 'ask' | 'auto-edit' | 'plan-only'
+  chatMode: string
+  messages: { role: 'user' | 'assistant'; content: string }[]
+  mentionedPageIds: string[]
+  activePageId?: string
+  browserContext?: {
+    url: string
+    title: string
+    excerpt: string
+  } | null
+}
+
+export type AIChatStreamEvent =
+  | { requestId: string; type: 'text-delta'; textDelta: string }
+  | {
+      requestId: string
+      type: 'tool-call'
+      toolName: string
+      argsSummary: string
+    }
+  | {
+      requestId: string
+      type: 'approval-request'
+      proposal: AIApprovalProposal
+    }
+  | {
+      requestId: string
+      type: 'auto-applied'
+      proposal: AIApprovalProposal
+    }
+  | {
+      requestId: string
+      type: 'done'
+      usedLiveSdk: boolean
+      providerLabel: string
+    }
+  | {
+      requestId: string
+      type: 'error'
+      error: string
+    }
 
 export interface CreatePageInput {
   sectionId: string
@@ -115,4 +178,14 @@ export interface NoteItAPI {
   windowMinimize(): Promise<void>
   windowMaximizeToggle(): Promise<boolean>
   windowClose(): Promise<void>
+
+  // Help Center & Maintenance Actions
+  openHelpExternal(): Promise<{ ok: boolean; url?: string; error?: string }>
+  runBackupNow(): Promise<{ ok: boolean; filePath?: string; assetFileCount?: number; error?: string }>
+  gcOrphanAssetsNow(): Promise<{ deletedCount: number }>
+  openStorageFolder(target: 'workspace' | 'backups' | 'logs'): Promise<{ ok: boolean; path?: string }>
+
+  // Vercel AI SDK Streaming & Agentic Tools
+  startAIChatStream(input: AIChatStreamRequest): Promise<{ started: boolean }>
+  onAIChatStreamEvent(callback: (event: AIChatStreamEvent) => void): () => void
 }

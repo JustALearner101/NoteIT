@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="id" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>NoteIT v2.0 — Documentation &amp; Help Center</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg-canvas: #f7f6f2;
+        --bg-chrome: #efece6;
+        --bg-elevated: #ffffff;
+        --bg-hover: #e5e1d8;
+        --border-hairline: #d8d4ca;
+        --border-subtle: #e6e3dc;
+        --text-primary: #141619;
+        --text-secondary: #525866;
+        --text-muted: #767d8c;
+        --accent-cobalt: #2563eb;
+        --accent-amber: #d97706;
+        --accent-teal: #059669;
+        --accent-violet: #7c3aed;
+        --accent-color: var(--accent-cobalt);
+        --shadow-card: 0 8px 24px rgba(20, 22, 25, 0.06);
+        accent-color: var(--accent-cobalt);
+      }
+
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --bg-canvas: #0d0f13;
+        --bg-chrome: #090b0e;
+        --bg-elevated: #151820;
+        --bg-hover: #1e232e;
+        --border-hairline: #262b38;
+        --border-subtle: #1b1f2a;
+        --text-primary: #eceef2;
+        --text-secondary: #9ca3af;
+        --text-muted: #646d7c;
+        --accent-cobalt: #3b82f6;
+        --accent-amber: #f59e0b;
+        --accent-teal: #10b981;
+        --accent-violet: #a855f7;
+        --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Plus Jakarta Sans", "Segoe UI", Roboto, sans-serif;
+        background-color: var(--bg-canvas);
+        color: var(--text-primary);
+        line-height: 1.6;
+        background-image:
+          radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.09), transparent 40%),
+          radial-gradient(circle at 15% 90%, rgba(168, 85, 247, 0.07), transparent 40%);
+        background-attachment: fixed;
+      }
+
+      code, pre, kbd, .mono {
+        font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+      }
+
+      pre, code {
+        color-scheme: dark;
+        accent-color: var(--accent-cobalt);
+      }
+
+      /* Top Header */
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        height: 60px;
+        background: color-mix(in oklab, var(--bg-chrome) 88%, transparent);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border-hairline);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        color: var(--text-primary);
+      }
+
+      .brand-mark {
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, var(--accent-cobalt), var(--accent-violet));
+        color: #fff;
+        font-weight: 700;
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 10px rgba(59, 130, 246, 0.35);
+      }
+
+      .brand-title {
+        font-weight: 700;
+        font-size: 15px;
+        letter-spacing: -0.01em;
+      }
+
+      .badge {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-hairline);
+        color: var(--accent-amber);
+      }
+
+      .search-wrap {
+        position: relative;
+        width: min(440px, 46vw);
+      }
+
+      .search-input {
+        width: 100%;
+        height: 36px;
+        padding: 0 70px 0 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border-hairline);
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.18s ease, box-shadow 0.18s ease;
+      }
+
+      .search-input:focus {
+        border-color: var(--accent-cobalt);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      }
+
+      .search-kbd {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: var(--bg-chrome);
+        border: 1px solid var(--border-hairline);
+        color: var(--text-muted);
+        pointer-events: none;
+      }
+
+      .theme-btn {
+        height: 34px;
+        padding: 0 12px;
+        border-radius: 7px;
+        border: 1px solid var(--border-hairline);
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+        font-size: 12px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
+      }
+
+      .theme-btn:hover {
+        background: var(--bg-hover);
+      }
+
+      /* Layout */
+      .layout {
+        max-width: 1320px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: calc(100vh - 60px);
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 60px;
+        height: calc(100vh - 60px);
+        overflow-y: auto;
+        padding: 24px 16px;
+        border-right: 1px solid var(--border-hairline);
+        background: color-mix(in oklab, var(--bg-chrome) 55%, transparent);
+      }
+
+      .nav-group-title {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        margin: 18px 10px 6px;
+        font-weight: 600;
+      }
+
+      .nav-group-title:first-child {
+        margin-top: 0;
+      }
+
+      .nav-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 7px 10px;
+        border-radius: 6px;
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 13px;
+        transition: background-color 0.15s ease, color 0.15s ease;
+      }
+
+      .nav-link:hover,
+      .nav-link.active {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+      }
+
+      .content {
+        padding: 36px 48px 80px;
+        max-width: 940px;
+      }
+
+      .hero {
+        padding: 28px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, color-mix(in oklab, var(--bg-elevated) 92%, var(--accent-cobalt)), var(--bg-elevated));
+        border: 1px solid var(--border-hairline);
+        box-shadow: var(--shadow-card);
+        margin-bottom: 32px;
+      }
+
+      .hero h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+      }
+
+      .hero p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 14px;
+      }
+
+      .quick-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .pill {
+        font-size: 12px;
+        padding: 5px 11px;
+        border-radius: 6px;
+        background: var(--bg-chrome);
+        border: 1px solid var(--border-hairline);
+        color: var(--text-primary);
+        text-decoration: none;
+      }
+
+      .pill:hover {
+        border-color: var(--accent-cobalt);
+        color: var(--accent-cobalt);
+      }
+
+      .doc-section {
+        margin-bottom: 36px;
+        padding: 24px;
+        border-radius: 10px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-hairline);
+        box-shadow: var(--shadow-card);
+        transition: opacity 0.2s ease, translate 0.2s ease;
+        @starting-style {
+          opacity: 0;
+          translate: 0 8px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .doc-section {
+          transition: none;
+        }
+      }
+
+      .doc-section h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .doc-section h3 {
+        margin: 18px 0 8px;
+        font-size: 14px;
+        color: var(--accent-cobalt);
+      }
+
+      .doc-section p, .doc-section li {
+        font-size: 13.5px;
+        color: var(--text-secondary);
+      }
+
+      .doc-section ul {
+        padding-left: 20px;
+        margin: 8px 0;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 14px;
+        margin-top: 12px;
+      }
+
+      .mini-card {
+        padding: 14px;
+        border-radius: 8px;
+        background: var(--bg-chrome);
+        border: 1px solid var(--border-subtle);
+      }
+
+      .mini-card strong {
+        display: block;
+        font-size: 13px;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+      }
+
+      pre {
+        background: #090b10;
+        color: #e5e7eb;
+        padding: 14px 16px;
+        border-radius: 8px;
+        border: 1px solid #222634;
+        overflow-x: auto;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 13px;
+      }
+
+      th, td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+
+      th {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        background: var(--bg-chrome);
+      }
+
+      kbd {
+        display: inline-block;
+        padding: 2px 6px;
+        font-size: 11px;
+        border-radius: 4px;
+        background: var(--bg-chrome);
+        border: 1px solid var(--border-hairline);
+        color: var(--text-primary);
+      }
+
+      .empty-search {
+        display: none;
+        padding: 32px;
+        text-align: center;
+        border-radius: 10px;
+        border: 1px dashed var(--border-hairline);
+        color: var(--text-secondary);
+      }
+
+      @media (max-width: 860px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          display: none;
+        }
+        .content {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a href="#overview" class="brand">
+        <span class="brand-mark mono">N</span>
+        <span class="brand-title">NoteIT Help Center</span>
+        <span class="badge mono">v2.0 LOCAL DOCS</span>
+      </a>
+
+      <div class="search-wrap">
+        <input
+          id="helpSearch"
+          type="search"
+          class="search-input"
+          placeholder="Cari topik: DBML, Canvas, Shortcut, Theme, AI Chat, Backup..."
+          aria-label="Cari dokumentasi NoteIT"
+        />
+        <span class="search-kbd mono">Ctrl+K</span>
+      </div>
+
+      <button id="themeToggle" class="theme-btn mono" type="button">
+        <span id="themeIcon">☀️</span>
+        <span id="themeLabel">Light Mode</span>
+      </button>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="nav-group-title mono">Mulai Cepat</div>
+        <a class="nav-link active" href="#overview">Ikhtisar Workbench</a>
+        <a class="nav-link" href="#hierarchy">Hierarki &amp; Multi-Tab</a>
+        <a class="nav-link" href="#modes">Block Doc vs Spatial Canvas</a>
+
+        <div class="nav-group-title mono">Engineering Studio</div>
+        <a class="nav-link" href="#dbml">Studio Skema DBML</a>
+        <a class="nav-link" href="#diagrams">Mermaid &amp; Graphviz DOT</a>
+        <a class="nav-link" href="#charts">Gantt Roadmap &amp; Chart</a>
+
+        <div class="nav-group-title mono">Fitur Baru v2.0</div>
+        <a class="nav-link" href="#ai-chat">AI Chat (Free Chat)</a>
+        <a class="nav-link" href="#themes">Theme Presets &amp; Custom Studio</a>
+        <a class="nav-link" href="#settings">Settings ala Orca</a>
+
+        <div class="nav-group-title mono">Referensi &amp; Keamanan Data</div>
+        <a class="nav-link" href="#shortcuts">Keyboard Shortcuts</a>
+        <a class="nav-link" href="#storage">SQLite WAL &amp; Auto-Backup</a>
+      </aside>
+
+      <main class="content">
+        <div id="overview" class="hero">
+          <h1>Panduan Resmi NoteIT Workbench v2.0</h1>
+          <p>
+            Dokumentasi lokal mandiri (100% offline). Pelajari cara memaksimalkan Block Editor, Spatial Canvas,
+            DBML Relational Studio, AI Chat Assistant, serta Theme Studio.
+          </p>
+          <div class="quick-pills mono">
+            <a class="pill" href="#shortcuts">⌨️ Daftar Shortcut</a>
+            <a class="pill" href="#dbml">🗄️ Sintaks DBML</a>
+            <a class="pill" href="#themes">🎨 Custom Theme Studio</a>
+            <a class="pill" href="#ai-chat">✨ AI Chat &amp; @Mention</a>
+            <a class="pill" href="#storage">🛡️ Backup SQLite</a>
+          </div>
+        </div>
+
+        <div id="emptySearch" class="empty-search">
+          Tidak ditemukan bagian dokumentasi yang cocok dengan kata kunci pencarian Anda.
+        </div>
+
+        <section id="hierarchy" class="doc-section" data-keywords="notebook section halaman subpage multi tab split pane">
+          <h2>📐 1. Hierarki Workspace, Multi-Tab &amp; Split-Pane</h2>
+          <p>
+            NoteIT menggunakan struktur tiga lapis yang dirancang untuk dokumentasi rekayasa perangkat lunak dan arsip pengetahuan:
+          </p>
+          <div class="grid-2">
+            <div class="mini-card">
+              <strong>1. Notebook (Level Atas)</strong>
+              <p>Wadah proyek utama (mis. <em>Core Platform</em>, <em>Semantic CMS</em>). Pilih dari dropdown di bagian atas Index Rail Sidebar.</p>
+            </div>
+            <div class="mini-card">
+              <strong>2. Section (Penanda Warna)</strong>
+              <p>Kelompok spesifikasi dengan 3px <em>Drafting Marker Strip</em> (Cobalt, Amber, Teal, Red, Violet, Slate).</p>
+            </div>
+            <div class="mini-card">
+              <strong>3. Page &amp; Sub-page</strong>
+              <p>Setiap halaman memiliki kode unik (mis. <code>ARC-01</code>) dan dapat memiliki sub-halaman bersarang.</p>
+            </div>
+            <div class="mini-card">
+              <strong>4. Split-Pane berdampingan</strong>
+              <p>Tahan <kbd>Alt</kbd> + Klik halaman di sidebar (atau klik ikon <kbd>SPLIT</kbd>) untuk membuka dua spesifikasi sekaligus.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="modes" class="doc-section" data-keywords="block editor spatial canvas mode switch crosshair grid">
+          <h2>🔀 2. Mode Ganda: Block Document vs Spatial Canvas</h2>
+          <p>
+            Setiap halaman di NoteIT dapat dialihkan kapan saja antara <strong>Block Document</strong> dan <strong>Spatial Canvas</strong>
+            menggunakan tombol di Spec Header atau shortcut <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd>.
+          </p>
+          <ul>
+            <li><strong>Block Document Mode:</strong> Editor terstruktur untuk menulis spesifikasi teknis, blok kode, tabel database/Gantt, diagram Mermaid/DOT, skema DBML, lampiran PDF, dan <code>[[WikiLinks]]</code>.</li>
+            <li><strong>Spatial Canvas Mode:</strong> Papan kanvas 2D tak terbatas dengan grid 24px presisi tempat seluruh blok halaman muncul sebagai kartu spasial yang bisa dihubungkan dan ditata bebas.</li>
+          </ul>
+        </section>
+
+        <section id="dbml" class="doc-section" data-keywords="dbml database schema sql erd diagram primary key ref">
+          <h2>🗄️ 3. Referensi Sintaks DBML (Database Markup Language)</h2>
+          <p>
+            Blok <strong>DBML Schema</strong> mem-parsing skema tabel secara instan menjadi diagram relasi (ERD) interaktif dan generator DDL SQL.
+          </p>
+          <pre><code>Table users {
+  id uuid [pk]
+  email varchar [unique, not null]
+  role varchar
+  created_at timestamp
+}
+
+Table projects {
+  id uuid [pk]
+  owner_id uuid [not null, ref: &gt; users.id]
+  name varchar [not null]
+  status varchar
+}
+
+Ref: projects.owner_id &gt; users.id</code></pre>
+          <ul>
+            <li>Gunakan atribut <code>[pk]</code> untuk Primary Key, <code>[not null]</code>, dan <code>[unique]</code>.</li>
+            <li>Relasi dapat ditulis langsung di dalam kolom <code>[ref: &gt; tabel.kolom]</code> atau sebagai baris terpisah <code>Ref: tabelA.kolom &gt; tabelB.kolom</code>.</li>
+          </ul>
+        </section>
+
+        <section id="diagrams" class="doc-section" data-keywords="mermaid graphviz dot sequence flowchart architecture">
+          <h2>📊 4. Diagram Mermaid &amp; Graphviz DOT</h2>
+          <p>
+            NoteIT merender diagram teknis secara 100% lokal menggunakan mesin Mermaid dan WebAssembly Graphviz (<code>@viz-js/viz</code>).
+          </p>
+          <div class="grid-2">
+            <div>
+              <h3>Contoh Mermaid</h3>
+              <pre><code>flowchart LR
+  Client[Desktop Renderer] --&gt;|IPC Invoke| Main[Electron Main]
+  Main --&gt;|WAL Mode| DB[(SQLite FTS5)]</code></pre>
+            </div>
+            <div>
+              <h3>Contoh Graphviz DOT</h3>
+              <pre><code>digraph Architecture {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+   Gateway -&gt; AuthService -&gt; Postgres;
+}</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="charts" class="doc-section" data-keywords="gantt chart roadmap timeline bar line pie">
+          <h2>📅 5. Gantt Roadmap &amp; Project Database Block</h2>
+          <p>
+            Tambahkan blok <strong>Project Database / Gantt</strong> untuk melacak milestone teknis, pemilik tugas, progres persen, dan visualisasi grafik (Gantt, Bar, Line, Pie) secara langsung di dalam dokumen spesifikasi.
+          </p>
+        </section>
+
+        <section id="ai-chat" class="doc-section" data-keywords="ai chat free chat orca mention halaman prompt">
+          <h2>✨ 6. AI Chat Workbench (Free Chat)</h2>
+          <p>
+            Akses halaman <strong>AI Chat</strong> melalui tombol di footer sidebar kiri atau shortcut <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd>:
+          </p>
+          <ul>
+            <li><strong>@Mention Halaman:</strong> Ketik <code>@</code> atau klik tombol <code>+</code> di kotak input untuk melampirkan halaman NoteIT aktif sebagai konteks percakapan.</li>
+            <li><strong>Mode Asisten:</strong> Pilih antara <em>Free chat</em>, <em>Spec Architect</em>, <em>DBML Schema Co-Pilot</em>, atau <em>Diagram Generator</em>.</li>
+            <li><strong>Kirim ke Dokumen:</strong> Hasil respons AI (termasuk draf spesifikasi atau blok kode DBML/Mermaid) dapat langsung disisipkan ke halaman aktif atau dibuat menjadi halaman spesifikasi baru dengan sekali klik.</li>
+          </ul>
+        </section>
+
+        <section id="themes" class="doc-section" data-keywords="theme preset custom studio warna orca carbon code zone finns nebula">
+          <h2>🎨 7. Theme Presets &amp; Custom Theme Studio</h2>
+          <p>
+            Buka <strong>Settings (⚙️) → Appearance</strong> untuk memilih dari 8+ preset tema kurasi atau merancang tema kustom Anda sendiri:
+          </p>
+          <ul>
+            <li><strong>Graphite Slate &amp; Archival Vellum:</strong> Tema gelap &amp; terang standar NoteIT.</li>
+            <li><strong>Orca Carbon:</strong> Matte carbon gelap minimalis dengan kontras tenang dan aksen hangat.</li>
+            <li><strong>Code.Zone Amber:</strong> Latar belakang <em>True OLED Black</em> dengan aksen oranye-amber khas terminal developer.</li>
+            <li><strong>Finns Cosmic Nebula:</strong> Atmosfer indigo-violet dengan <em>Ambient Aurora Backdrop Glow</em>.</li>
+            <li><strong>Custom Theme Studio:</strong> Atur warna Canvas, Chrome, Elevated Card, Border, Teks, dan Aksen secara bebas, simpan ke daftar tema, atau ekspor/impor sebagai JSON.</li>
+          </ul>
+        </section>
+
+        <section id="settings" class="doc-section" data-keywords="settings pengaturan ctrl f search shortcut">
+          <h2>⚙️ 8. Navigasi Settings ala Orca</h2>
+          <p>
+            Klik ikon roda gigi <strong>⚙️</strong> di bagian bawah sidebar (atau tekan <kbd>Ctrl</kbd> + <kbd>,</kbd>) untuk membuka tampilan penuh Settings.
+            Gunakan kolom <strong>Search settings (<kbd>Ctrl</kbd> + <kbd>F</kbd>)</strong> di kiri atas untuk menyaring pengaturan apa pun secara instan, dan klik <strong>← Back to app</strong> (atau <kbd>Esc</kbd>) untuk kembali ke editor.
+          </p>
+        </section>
+
+        <section id="shortcuts" class="doc-section" data-keywords="keyboard shortcut pintasan tombol ctrl k">
+          <h2>⌨️ 9. Daftar Lengkap Keyboard Shortcuts</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Aksi</th>
+                <th>Shortcut (Windows / Linux / macOS)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Buka Command Palette &amp; Pencarian Instan FTS5</td>
+                <td><kbd>Ctrl</kbd> + <kbd>K</kbd></td>
+              </tr>
+              <tr>
+                <td>Buka / Tutup Settings</td>
+                <td><kbd>Ctrl</kbd> + <kbd>,</kbd></td>
+              </tr>
+              <tr>
+                <td>Buka / Tutup AI Chat View</td>
+                <td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd></td>
+              </tr>
+              <tr>
+                <td>Sembunyikan / Tampilkan Index Rail Sidebar</td>
+                <td><kbd>Ctrl</kbd> + <kbd>\</kbd></td>
+              </tr>
+              <tr>
+                <td>Ganti Mode Halaman (Block Doc ↔ Spatial Canvas)</td>
+                <td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd></td>
+              </tr>
+              <tr>
+                <td>Quick Capture Global (dari aplikasi mana saja)</td>
+                <td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Space</kbd></td>
+              </tr>
+              <tr>
+                <td>Buka Daily Note Hari Ini</td>
+                <td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd></td>
+              </tr>
+              <tr>
+                <td>Tutup Tab Aktif / Buka Kembali Tab Terakhir</td>
+                <td><kbd>Ctrl</kbd> + <kbd>W</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd></td>
+              </tr>
+              <tr>
+                <td>Berpindah Antar Tab</td>
+                <td><kbd>Ctrl</kbd> + <kbd>Tab</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Tab</kbd></td>
+              </tr>
+              <tr>
+                <td>Undo / Redo Perubahan Halaman</td>
+                <td><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="storage" class="doc-section" data-keywords="sqlite wal backup otomatis export markdown">
+          <h2>🛡️ 10. Penyimpanan SQLite WAL &amp; Backup Otomatis</h2>
+          <p>
+            Seluruh catatan, diagram, dan lampiran disimpan secara lokal di komputer Anda:
+          </p>
+          <ul>
+            <li><strong>SQLite WAL + FTS5:</strong> Menjamin penulisan cepat tanpa korupsi data dan pencarian teks penuh di bawah 5 milidetik.</li>
+            <li><strong>Auto-Backup Berkala:</strong> NoteIT otomatis mencadangkan database (via <code>VACUUM INTO</code>) beserta asetnya setiap 10 menit dan saat aplikasi ditutup, menyimpan hingga 7 salinan terbaru.</li>
+            <li><strong>Manual Backup &amp; Markdown Export:</strong> Anda dapat memicu backup instan kapan saja melalui menu <strong>Settings → Storage &amp; Backup</strong>.</li>
+          </ul>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const searchInput = document.getElementById('helpSearch');
+      const sections = Array.from(document.querySelectorAll('.doc-section'));
+      const emptySearch = document.getElementById('emptySearch');
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      const themeLabel = document.getElementById('themeLabel');
+
+      function updateThemeUI(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'dark') {
+          themeIcon.textContent = '☀️';
+          themeLabel.textContent = 'Light Mode';
+        } else {
+          themeIcon.textContent = '🌙';
+          themeLabel.textContent = 'Dark Mode';
+        }
+      }
+
+      themeToggle.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        updateThemeUI(current === 'dark' ? 'light' : 'dark');
+      });
+
+      searchInput.addEventListener('input', (e) => {
+        const q = e.target.value.trim().toLowerCase();
+        let visibleCount = 0;
+        sections.forEach((sec) => {
+          const text = (sec.textContent + ' ' + (sec.dataset.keywords || '')).toLowerCase();
+          const match = !q || text.includes(q);
+          sec.style.display = match ? 'block' : 'none';
+          if (match) visibleCount++;
+        });
+        emptySearch.style.display = visibleCount === 0 ? 'block' : 'none';
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          searchInput.focus();
+          searchInput.select();
+        }
+      });
+    </script>
+  </body>
+</html>

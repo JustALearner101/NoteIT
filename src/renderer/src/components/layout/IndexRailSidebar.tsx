@@ -7,9 +7,13 @@ import {
   FilePlus,
   FolderPlus,
   GanttChart,
+  Globe,
   Hash,
+  HelpCircle,
   LayoutGrid,
+  MessageSquare,
   Plus,
+  Settings,
   Star,
   Trash2
 } from 'lucide-react'
@@ -25,10 +29,13 @@ export const IndexRailSidebar: React.FC = () => {
     tags,
     activeNotebookId,
     activePageId,
+    activeMainView,
     selectedTagFilter,
     setActiveNotebook,
     openPageInTab,
     setSelectedTagFilter,
+    setActiveMainView,
+    openHelpCenter,
     createNotebook,
     createSection,
     createPage,
@@ -209,7 +216,7 @@ export const IndexRailSidebar: React.FC = () => {
 
         {/* Notebook Dropdown Switcher */}
         {isNotebookMenuOpen && (
-          <div className="absolute left-2.5 right-2.5 top-[68px] z-30 bg-surface-elevated border border-border-hairline rounded-[6px] shadow-xl p-1 space-y-0.5">
+          <div className="absolute left-2.5 right-2.5 top-[68px] z-30 bg-surface-elevated border border-border-hairline rounded-[6px] shadow-xl p-1 space-y-0.5 animate-popover-enter">
             {notebooks.map((nb) => (
               <button
                 key={nb.id}
@@ -491,6 +498,66 @@ export const IndexRailSidebar: React.FC = () => {
               )
             })}
           </div>
+        </div>
+      </div>
+
+      {/* Pinned Bottom Footer Bar: AI Chat + In-App Browser + Settings (Gear) + Help (?) */}
+      <div className="p-2 border-t border-border-hairline bg-surface-chrome/90 flex items-center justify-between gap-1">
+        <button
+          type="button"
+          onClick={() =>
+            setActiveMainView(activeMainView === 'ai-chat' ? 'workbench' : 'ai-chat')
+          }
+          title="Buka / Tutup Halaman AI Chat (Ctrl+Shift+C)"
+          className={`flex-1 h-8 px-2 rounded-[6px] border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
+            activeMainView === 'ai-chat'
+              ? 'bg-accent-cobalt/15 border-accent-cobalt/50 text-accent-cobalt'
+              : 'bg-surface-elevated hover:bg-surface-hover border-border-hairline text-ink-secondary hover:text-ink-primary'
+          }`}
+        >
+          <MessageSquare size={13} className="text-accent-cobalt shrink-0" />
+          <span className="truncate">AI Chat</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            setActiveMainView(activeMainView === 'browser' ? 'workbench' : 'browser')
+          }
+          title="Buka / Tutup In-App Browser (Ctrl+Shift+B)"
+          className={`h-8 px-2 rounded-[6px] border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
+            activeMainView === 'browser'
+              ? 'bg-accent-cobalt/15 border-accent-cobalt/50 text-accent-cobalt'
+              : 'bg-surface-elevated hover:bg-surface-hover border-border-hairline text-ink-secondary hover:text-ink-primary'
+          }`}
+        >
+          <Globe size={13} className="text-accent-amber shrink-0" />
+          <span>Web</span>
+        </button>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveMainView('settings')}
+            title="Settings (Ctrl+,)"
+            aria-label="Buka Settings"
+            className="h-8 w-8 rounded-[6px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors group"
+          >
+            <Settings
+              size={14}
+              className="transition-transform duration-200 group-hover:rotate-45"
+            />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void openHelpCenter()}
+            title="Buka NoteIT Help Center di Browser (?)"
+            aria-label="Buka Help Center"
+            className="h-8 w-8 rounded-[6px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline flex items-center justify-center text-ink-secondary hover:text-accent-cobalt transition-colors font-mono font-bold text-xs"
+          >
+            <HelpCircle size={14} />
+          </button>
         </div>
       </div>
     </aside>

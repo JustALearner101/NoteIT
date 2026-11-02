@@ -11,6 +11,22 @@ import type { CreatePageInput, UpdatePageInput } from '@shared/ipc-channels'
 import { createSaveQueue } from '@renderer/lib/save-queue'
 import { createUndoStack } from '@renderer/lib/undo-stack'
 import * as tabRules from '@renderer/lib/tabs'
+import {
+  applyThemeToDocument,
+  loadPreferences,
+  resolveThemeById,
+  savePreferences,
+  type ThemeDefinition,
+  type WorkbenchPreferences
+} from '@renderer/lib/themes'
+
+export type MainViewMode = 'workbench' | 'settings' | 'ai-chat' | 'browser'
+
+export interface BrowserContextPayload {
+  url: string
+  title: string
+  excerpt: string
+}
 
 interface TelemetryState {
   cursorX: number
@@ -42,7 +58,12 @@ interface WorkspaceStore {
   // UI Chrome State
   isSidebarCollapsed: boolean
   isCommandPaletteOpen: boolean
+  activeMainView: MainViewMode
+  activeSettingsSection: string
+  isBrowserSplitOpen: boolean
+  browserContextForAI: BrowserContextPayload | null
   theme: 'dark' | 'light'
+  preferences: WorkbenchPreferences
   telemetry: TelemetryState
 
   // Actions
@@ -61,7 +82,17 @@ interface WorkspaceStore {
 
   toggleSidebar: () => void
   setCommandPaletteOpen: (open: boolean) => void
+  setActiveMainView: (view: MainViewMode, settingsSection?: string) => void
+  setActiveSettingsSection: (section: string) => void
+  toggleBrowserSplitPane: () => void
+  setBrowserContextForAI: (ctx: BrowserContextPayload | null) => void
   toggleTheme: () => void
+  setActiveTheme: (themeId: string) => void
+  saveCustomTheme: (theme: ThemeDefinition) => void
+  deleteCustomTheme: (themeId: string) => void
+  updatePreferences: (patch: Partial<WorkbenchPreferences>) => void
+  toggleOnboardingItem: (itemId: string) => void
+  openHelpCenter: () => Promise<void>
   setTelemetry: (partial: Partial<TelemetryState>) => void
   showToast: (message: string) => void
 
@@ -227,6 +258,10 @@ const pushClosedTabs = (before: string[], after: string[], stack: string[]): str
     .reduce((acc, id) => tabRules.pushReopen(id, acc), stack)
 }
 
+const initialPrefs = loadPreferences()
+const initialThemeDef = resolveThemeById(initialPrefs.activeThemeId, initialPrefs.customThemes)
+applyThemeToDocument(initialThemeDef, initialPrefs.motionLevel, initialPrefs.fontScale)
+
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   notebooks: [],
   sections: [],
@@ -252,7 +287,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   isSidebarCollapsed: false,
   isCommandPaletteOpen: false,
-  theme: 'dark',
+  activeMainView: 'workbench',
+  activeSettingsSection: 'appearance',
+  isBrowserSplitOpen: false,
+  browserContextForAI: null,
+  theme: initialThemeDef.colorScheme,
+  preferences: initialPrefs,
   telemetry: {
     cursorX: 120,
     cursorY: 85,
@@ -344,6 +384,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
     if (inSplitPane) {
       set({
+        activeMainView: 'workbench',
         splitPageId: pageId,
         focusedPane: 'split'
       })
@@ -351,6 +392,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
 
     set((state) => ({
+      activeMainView: 'workbench',
       activeNotebookId: sec ? sec.notebookId : state.activeNotebookId,
       activePageId: pageId,
       focusedPane: 'primary',
@@ -451,16 +493,135 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   setCommandPaletteOpen: (open) => set({ isCommandPaletteOpen: open }),
 
+  setActiveMainView: (view, settingsSection) =>
+    set((state) => ({
+      activeMainView: view,
+      activeSettingsSection: settingsSection ?? state.activeSettingsSection
+    })),
+
+  setActiveSettingsSection: (section) => set({ activeSettingsSection: section }),
+
+  toggleBrowserSplitPane: () =>
+    set((state) => ({
+      isBrowserSplitOpen: !state.isBrowserSplitOpen,
+      splitPageId: !state.isBrowserSplitOpen ? null : state.splitPageId
+    })),
+
+  setBrowserContextForAI: (ctx) => set({ browserContextForAI: ctx }),
+
   toggleTheme: () => {
     set((state) => {
-      const next = state.theme === 'dark' ? 'light' : 'dark'
-      if (next === 'dark') {
-        document.documentElement.classList.add('dark')
-      } else {
-        document.documentElement.classList.remove('dark')
+      const nextScheme = state.theme === 'dark' ? 'light' : 'dark'
+      const nextThemeId = nextScheme === 'light' ? 'archival-vellum' : 'graphite-slate'
+      const nextPrefs: WorkbenchPreferences = {
+        ...state.preferences,
+        activeThemeId: nextThemeId
       }
-      return { theme: next }
+      savePreferences(nextPrefs)
+      const themeDef = resolveThemeById(nextThemeId, nextPrefs.customThemes)
+      applyThemeToDocument(themeDef, nextPrefs.motionLevel, nextPrefs.fontScale)
+      return { theme: nextScheme, preferences: nextPrefs }
     })
+  },
+
+  setActiveTheme: (themeId) => {
+    set((state) => {
+      const nextPrefs: WorkbenchPreferences = {
+        ...state.preferences,
+        activeThemeId: themeId
+      }
+      savePreferences(nextPrefs)
+      const themeDef = resolveThemeById(themeId, nextPrefs.customThemes)
+      applyThemeToDocument(themeDef, nextPrefs.motionLevel, nextPrefs.fontScale)
+      return {
+        theme: themeDef.colorScheme,
+        preferences: nextPrefs
+      }
+    })
+  },
+
+  saveCustomTheme: (customTheme) => {
+    set((state) => {
+      const filtered = state.preferences.customThemes.filter((t) => t.id !== customTheme.id)
+      const customThemes = [...filtered, { ...customTheme, isCustom: true }]
+      const nextPrefs: WorkbenchPreferences = {
+        ...state.preferences,
+        customThemes,
+        activeThemeId: customTheme.id
+      }
+      savePreferences(nextPrefs)
+      applyThemeToDocument(customTheme, nextPrefs.motionLevel, nextPrefs.fontScale)
+      return {
+        theme: customTheme.colorScheme,
+        preferences: nextPrefs
+      }
+    })
+    get().showToast(`Tema kustom '${customTheme.name}' disimpan & diterapkan`)
+  },
+
+  deleteCustomTheme: (themeId) => {
+    set((state) => {
+      const customThemes = state.preferences.customThemes.filter((t) => t.id !== themeId)
+      const activeThemeId =
+        state.preferences.activeThemeId === themeId
+          ? 'graphite-slate'
+          : state.preferences.activeThemeId
+      const nextPrefs: WorkbenchPreferences = {
+        ...state.preferences,
+        customThemes,
+        activeThemeId
+      }
+      savePreferences(nextPrefs)
+      const themeDef = resolveThemeById(activeThemeId, customThemes)
+      applyThemeToDocument(themeDef, nextPrefs.motionLevel, nextPrefs.fontScale)
+      return {
+        theme: themeDef.colorScheme,
+        preferences: nextPrefs
+      }
+    })
+    get().showToast('Tema kustom dihapus')
+  },
+
+  updatePreferences: (patch) => {
+    set((state) => {
+      const nextPrefs: WorkbenchPreferences = {
+        ...state.preferences,
+        ...patch
+      }
+      savePreferences(nextPrefs)
+      const themeDef = resolveThemeById(nextPrefs.activeThemeId, nextPrefs.customThemes)
+      applyThemeToDocument(themeDef, nextPrefs.motionLevel, nextPrefs.fontScale)
+      return {
+        theme: themeDef.colorScheme,
+        preferences: nextPrefs
+      }
+    })
+  },
+
+  toggleOnboardingItem: (itemId) => {
+    set((state) => {
+      const exists = state.preferences.onboardingDone.includes(itemId)
+      const onboardingDone = exists
+        ? state.preferences.onboardingDone.filter((id) => id !== itemId)
+        : [...state.preferences.onboardingDone, itemId]
+      const nextPrefs: WorkbenchPreferences = {
+        ...state.preferences,
+        onboardingDone
+      }
+      savePreferences(nextPrefs)
+      return { preferences: nextPrefs }
+    })
+  },
+
+  openHelpCenter: async () => {
+    if (window.noteitAPI?.openHelpExternal) {
+      const res = await window.noteitAPI.openHelpExternal()
+      if (res.ok) {
+        get().showToast('Membuka NoteIT Help Center di browser...')
+      } else {
+        get().showToast(res.error || 'Gagal membuka Help Center')
+      }
+    }
   },
 
   setTelemetry: (partial) =>

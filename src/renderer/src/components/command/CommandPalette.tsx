@@ -7,9 +7,13 @@ import {
   FilePlus,
   FolderDown,
   GanttChart,
+  Globe,
+  HelpCircle,
   LayoutGrid,
+  MessageSquare,
   Moon,
   Search,
+  Settings,
   Sun,
   X
 } from 'lucide-react'
@@ -30,6 +34,8 @@ export const CommandPalette: React.FC = () => {
     toggleSplitPane,
     toggleTheme,
     theme,
+    setActiveMainView,
+    openHelpCenter,
     showToast
   } = useWorkspaceStore()
 
@@ -111,7 +117,7 @@ export const CommandPalette: React.FC = () => {
       <div
         data-command-palette
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl rounded-[8px] bg-surface-elevated border border-border-hairline shadow-2xl overflow-hidden"
+        className="w-full max-w-2xl rounded-[8px] bg-surface-elevated border border-border-hairline shadow-2xl overflow-hidden animate-popover-enter"
       >
         {/* Top Search Input */}
         <div className="px-4 py-3 bg-surface-chrome border-b border-border-hairline flex items-center gap-3">
@@ -210,6 +216,46 @@ export const CommandPalette: React.FC = () => {
             >
               <FolderDown size={13} className="text-[#10B981]" />
               <span>Export seluruh workspace (Markdown)</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveMainView('ai-chat')
+                setCommandPaletteOpen(false)
+              }}
+              className="px-2.5 py-1.5 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs text-ink-primary flex items-center gap-2"
+            >
+              <MessageSquare size={13} className="text-accent-cobalt" />
+              <span>Buka AI Chat (Free chat)</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveMainView('browser')
+                setCommandPaletteOpen(false)
+              }}
+              className="px-2.5 py-1.5 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs text-ink-primary flex items-center gap-2"
+            >
+              <Globe size={13} className="text-[#10B981]" />
+              <span>Buka In-App Browser</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveMainView('settings', 'appearance')
+                setCommandPaletteOpen(false)
+              }}
+              className="px-2.5 py-1.5 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs text-ink-primary flex items-center gap-2"
+            >
+              <Settings size={13} className="text-accent-amber" />
+              <span>Buka Settings &amp; Theme Studio</span>
+            </button>
+            <button
+              onClick={() => {
+                void openHelpCenter()
+                setCommandPaletteOpen(false)
+              }}
+              className="px-2.5 py-1.5 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs text-ink-primary flex items-center gap-2"
+            >
+              <HelpCircle size={13} className="text-[#8B5CF6]" />
+              <span>Buka Help Center HTML (?)</span>
             </button>
           </div>
         </div>

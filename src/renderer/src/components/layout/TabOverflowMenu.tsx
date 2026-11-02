@@ -44,7 +44,7 @@ export const TabOverflowMenu: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-7 z-50 w-64 max-h-80 overflow-y-auto py-1 rounded-[6px] bg-surface-elevated border border-border-hairline shadow-2xl">
+        <div className="absolute right-0 top-7 z-50 w-64 max-h-80 overflow-y-auto py-1 rounded-[6px] bg-surface-elevated border border-border-hairline shadow-2xl animate-popover-enter">
           {openTabIds.map((tabId) => {
             const tabPage = pages.find((p) => p.id === tabId)
             if (!tabPage) return null

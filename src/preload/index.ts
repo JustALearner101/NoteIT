@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
-import type { NoteItAPI, CreatePageInput, UpdatePageInput } from '@shared/ipc-channels'
+import type {
+  NoteItAPI,
+  CreatePageInput,
+  UpdatePageInput,
+  AIChatStreamRequest,
+  AIChatStreamEvent
+} from '@shared/ipc-channels'
 import type { MarkerColor } from '@shared/types/domain'
 
 const noteitAPI: NoteItAPI = {
@@ -46,7 +52,21 @@ const noteitAPI: NoteItAPI = {
 
   windowMinimize: () => ipcRenderer.invoke('window:minimize'),
   windowMaximizeToggle: () => ipcRenderer.invoke('window:maximizeToggle'),
-  windowClose: () => ipcRenderer.invoke('window:close')
+  windowClose: () => ipcRenderer.invoke('window:close'),
+
+  openHelpExternal: () => ipcRenderer.invoke('help:openExternal'),
+  runBackupNow: () => ipcRenderer.invoke('workspace:runBackup'),
+  gcOrphanAssetsNow: () => ipcRenderer.invoke('workspace:gcAssets'),
+  openStorageFolder: (target: 'workspace' | 'backups' | 'logs') =>
+    ipcRenderer.invoke('workspace:openFolder', target),
+
+  startAIChatStream: (input: AIChatStreamRequest) => ipcRenderer.invoke('ai:startStream', input),
+  onAIChatStreamEvent: (callback: (event: AIChatStreamEvent) => void) => {
+    const listener = (_event: IpcRendererEvent, payload: AIChatStreamEvent): void =>
+      callback(payload)
+    ipcRenderer.on('ai:streamEvent', listener)
+    return () => ipcRenderer.removeListener('ai:streamEvent', listener)
+  }
 }
 
 if (process.contextIsolated) {

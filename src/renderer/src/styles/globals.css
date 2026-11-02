@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light dark;
+  accent-color: var(--accent-cobalt);
+
+  /* Motion Tokens */
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-fast: 150ms;
+  --motion-normal: 220ms;
+
   /* Light Mode: Archival Vellum */
   --bg-canvas-primary: #F7F6F2;
   --bg-surface-chrome: #EFECE6;
@@ -19,6 +27,9 @@
   --accent-cobalt: #2563EB;
   --accent-amber: #D97706;
 
+  --glow-primary: rgba(37, 99, 235, 0.12);
+  --glow-secondary: rgba(217, 119, 6, 0.08);
+
   /* Drafting Markers (Light) */
   --marker-cobalt: #2563EB;
   --marker-amber: #D97706;
@@ -32,6 +43,9 @@
 }
 
 .dark {
+  color-scheme: dark;
+  accent-color: var(--accent-cobalt);
+
   /* Dark Mode: Graphite Slate (Default) */
   --bg-canvas-primary: #111317;
   --bg-surface-chrome: #0C0E12;
@@ -48,6 +62,9 @@
   --accent-cobalt: #3B82F6;
   --accent-amber: #F59E0B;
 
+  --glow-primary: rgba(59, 130, 246, 0.16);
+  --glow-secondary: rgba(168, 85, 247, 0.14);
+
   /* Drafting Markers (Dark) */
   --marker-cobalt: #3B82F6;
   --marker-amber: #F59E0B;
@@ -58,6 +75,24 @@
 
   --grid-dot: rgba(236, 238, 242, 0.08);
   --grid-major: rgba(59, 130, 246, 0.08);
+}
+
+html[data-motion="subtle"] {
+  --motion-fast: 90ms;
+  --motion-normal: 130ms;
+}
+
+html[data-motion="off"] {
+  --motion-fast: 0ms;
+  --motion-normal: 0ms;
+}
+
+html[data-font-scale="compact"] {
+  font-size: 15px;
+}
+
+html[data-font-scale="comfortable"] {
+  font-size: 17px;
 }
 
 * {
@@ -71,6 +106,16 @@ body {
   margin: 0;
   padding: 0;
   user-select: none;
+  transition:
+    background-color var(--motion-normal) var(--ease-out-expo),
+    color var(--motion-fast) ease;
+}
+
+/* Ambient Aurora Glow Backdrop (Finns Cosmic Nebula & Glow Themes) */
+html[data-ambient-glow="true"] .ambient-aurora-host {
+  background-image:
+    radial-gradient(ellipse 65% 45% at 50% -8%, var(--glow-primary), transparent 70%),
+    radial-gradient(ellipse 55% 40% at 85% 105%, var(--glow-secondary), transparent 70%);
 }
 
 /* Allow text selection inside editors and inputs */
@@ -82,8 +127,83 @@ code,
   user-select: text;
 }
 
+pre,
+code {
+  color-scheme: dark;
+  accent-color: var(--accent-cobalt);
+}
+
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Compositor-Friendly View & Popover Animations with @starting-style */
+.animate-view-enter {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  transition:
+    opacity var(--motion-normal) var(--ease-out-expo),
+    translate var(--motion-normal) var(--ease-out-expo),
+    scale var(--motion-normal) var(--ease-out-expo);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 6px;
+    scale: 0.992;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity 100ms ease;
+    translate: none;
+    scale: none;
+  }
+}
+
+.animate-popover-enter {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  transition:
+    opacity var(--motion-fast) var(--ease-out-expo),
+    translate var(--motion-fast) var(--ease-out-expo),
+    scale var(--motion-fast) var(--ease-out-expo);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 -4px;
+    scale: 0.97;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity 80ms ease;
+    translate: none;
+    scale: none;
+  }
+}
+
+.animate-toast-enter {
+  opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity var(--motion-normal) var(--ease-out-expo),
+    translate var(--motion-normal) var(--ease-out-expo);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 10px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity 80ms ease;
+    translate: none;
+  }
+}
+
+html[data-motion="off"] .animate-view-enter,
+html[data-motion="off"] .animate-popover-enter,
+html[data-motion="off"] .animate-toast-enter {
+  transition: none !important;
 }
 
 /* Architectural Crosshair & Micro-Dot Drafting Grid */
@@ -119,23 +239,32 @@ code,
   -webkit-app-region: no-drag;
 }
 
-/* Precision Thin Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Precision Thin Scrollbars with modern scrollbar-color + legacy WebKit fallback */
+@supports (scrollbar-color: auto) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-hairline) transparent;
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
 
-::-webkit-scrollbar-thumb {
-  background: var(--border-hairline);
-  border-radius: 3px;
-}
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-hairline);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
 }
 
 /* ReactFlow overrides to match Precision Drafting Workbench */

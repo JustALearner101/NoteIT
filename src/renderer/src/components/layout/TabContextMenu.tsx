@@ -66,7 +66,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({ pageId, x, y, on
       role="menu"
       data-tab-context-menu
       style={{ left, top }}
-      className="fixed z-50 w-52 py-1 rounded-[6px] bg-surface-elevated border border-border-hairline shadow-2xl select-none"
+      className="fixed z-50 w-52 py-1 rounded-[6px] bg-surface-elevated border border-border-hairline shadow-2xl select-none animate-popover-enter"
       onContextMenu={(e) => e.preventDefault()}
     >
       <button
