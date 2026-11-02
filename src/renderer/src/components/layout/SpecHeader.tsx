@@ -17,10 +17,12 @@ import {
   Tag,
   Terminal as TerminalIcon,
   Trash2,
-  X
+  X,
+  Zap
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { useTerminalStore } from '@renderer/stores/useTerminalStore'
+import { MissionBriefingDrawer } from '@renderer/components/agents/MissionBriefingDrawer'
 import { MARKER_META } from '@renderer/lib/marker-colors'
 import { diffBlockSets } from '@shared/version-diff'
 import type { BlockDiff } from '@shared/version-diff'
@@ -112,6 +114,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
   const currentRepoPath = currentSection?.repoPathOverride || currentNotebook?.repoPath || ''
   const repoBasename = currentRepoPath ? currentRepoPath.split(/[/\\]/).pop() : null
 
+  const [isMissionDrawerOpen, setIsMissionDrawerOpen] = useState(false)
   const [backlinks, setBacklinks] = useState<BacklinkItem[]>([])
   const [versions, setVersions] = useState<PageVersionSummary[]>([])
   const [versionsLoading, setVersionsLoading] = useState(false)
@@ -175,6 +178,17 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
     },
     []
   )
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault()
+        setIsMissionDrawerOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   /** Satu timer untuk restore/hapus: hanya satu tombol yang bisa dalam mode konfirmasi. */
   const armConfirm = (kind: 'restore' | 'delete', versionId: string): void => {
@@ -464,6 +478,16 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
 
         {/* Signature Mechanical Mode Caliper Switch & ADE Quick Controls */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* ADE 1-Click Dispatch Spec to Agent */}
+          <button
+            onClick={() => setIsMissionDrawerOpen(true)}
+            title="Kompilasi spesifikasi & buka Mission Briefing command deck (Ctrl+Shift+D)"
+            className="h-8 px-2.5 rounded-[5px] bg-accent-cobalt hover:bg-accent-cobalt/90 text-white font-mono text-[11px] font-medium flex items-center gap-1.5 shadow-sm transition-colors"
+          >
+            <Zap size={12} className="text-amber-300 fill-amber-300" />
+            <span>Dispatch Spec</span>
+          </button>
+
           {/* ADE Repo Explorer Toggle */}
           <button
             onClick={() =>
@@ -798,6 +822,13 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
           </div>
         </div>
       )}
+
+      {/* Slide-over Mission Briefing Command Deck */}
+      <MissionBriefingDrawer
+        page={page}
+        isOpen={isMissionDrawerOpen}
+        onClose={() => setIsMissionDrawerOpen(false)}
+      />
     </div>
   )
 }

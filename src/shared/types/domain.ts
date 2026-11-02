@@ -260,3 +260,40 @@ export interface TerminalSessionInfo {
   isActive: boolean
   detectedState?: 'idle' | 'thinking' | 'waiting_approval' | 'running_tests' | 'completed' | 'failed'
 }
+
+// ADE Pilar 1 & 2: Spec-to-Agent Compiler & Dispatcher
+export interface SpecBundleFile {
+  filename: string
+  relPath: string
+  size: number
+  description: string
+}
+
+export interface SpecBundleSummary {
+  pageId: string
+  pageCode: string
+  pageTitle: string
+  targetDir: string
+  files: SpecBundleFile[]
+  taskCount: number
+  dbmlTableCount: number
+  diagramCount: number
+}
+
+export interface DispatchMissionInput {
+  pageId: string
+  presetId: 'claude' | 'codex' | 'gemini' | 'aider' | 'in-app' | 'pwsh' | 'cmd' | 'bash'
+  isolationMode: 'direct' | 'worktree'
+  approvalMode: 'plan-only' | 'ask-edit' | 'auto-edit'
+  customDirective?: string
+  worktreeBranch?: string
+}
+
+export interface DispatchMissionResult {
+  ok: boolean
+  sessionId: string
+  cwd: string
+  branchName?: string
+  commandExecuted: string
+  error?: string
+}

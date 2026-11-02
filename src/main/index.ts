@@ -65,6 +65,11 @@ import {
   resizeTerminal,
   writeTerminal
 } from './services/terminal.service'
+import {
+  compileSpecBundle,
+  dispatchMission,
+  generateMissionExecutionCommand
+} from './services/spec-compiler.service'
 import { executeAIChatStream } from './services/ai.service'
 import type { AIChatStreamRequest } from '@shared/ipc-channels'
 
@@ -693,6 +698,70 @@ function registerIpcHandlers(): void {
   )
   ipcMain.handle('terminal:kill', (_e, sessionId: string) => killTerminal(sessionId))
   ipcMain.handle('terminal:listSessions', () => listTerminalSessions())
+
+  // ADE Pilar 2: Spec-to-Agent Compiler & Dispatcher
+  ipcMain.handle(
+    'agent:compileSpec',
+    (_e, input: { pageId: string; targetCwd?: string }) => {
+      const snap = getWorkspaceSnapshot()
+      const targetPage = snap.pages.find((p) => p.id === input.pageId)
+      const targetSec = snap.sections.find((s) => s.id === targetPage?.sectionId)
+      const targetNb = snap.notebooks.find((n) => n.id === targetSec?.notebookId)
+      const cwd = input.targetCwd || targetSec?.repoPathOverride || targetNb?.repoPath || process.cwd()
+      return compileSpecBundle(input.pageId, cwd)
+    }
+  )
+
+  ipcMain.handle(
+    'agent:previewPrompt',
+    (
+      _e,
+      input: {
+        pageId: string
+        presetId: any
+        approvalMode: any
+        customDirective?: string
+      }
+    ) => {
+      return generateMissionExecutionCommand(
+        input.presetId,
+        input.approvalMode,
+        input.customDirective
+      )
+    }
+  )
+
+  ipcMain.handle('agent:dispatchMission', (_e, input) => {
+    const snap = getWorkspaceSnapshot()
+    const targetPage = snap.pages.find((p) => p.id === input.pageId)
+    const targetSec = snap.sections.find((s) => s.id === targetPage?.sectionId)
+    const targetNb = snap.notebooks.find((n) => n.id === targetSec?.notebookId)
+    const repoPath = targetSec?.repoPathOverride || targetNb?.repoPath
+    if (!repoPath) {
+      throw new Error('Notebook atau Section belum dihubungkan ke folder repositori.')
+    }
+
+    return dispatchMission(input, repoPath, (event) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        if (event.type === 'data') {
+          mainWindow.webContents.send('terminal:data', {
+            sessionId: event.sessionId,
+            data: event.data
+          })
+        } else if (event.type === 'exit') {
+          mainWindow.webContents.send('terminal:exit', {
+            sessionId: event.sessionId,
+            exitCode: event.exitCode
+          })
+        } else if (event.type === 'state-change') {
+          mainWindow.webContents.send('terminal:stateChange', {
+            sessionId: event.sessionId,
+            state: event.state
+          })
+        }
+      }
+    })
+  })
 }
 
 app.whenReady().then(() => {

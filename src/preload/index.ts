@@ -102,7 +102,12 @@ const noteitAPI: NoteItAPI = {
       callback(payload)
     ipcRenderer.on('terminal:stateChange', listener)
     return () => ipcRenderer.removeListener('terminal:stateChange', listener)
-  }
+  },
+
+  // ADE Pilar 2: Spec-to-Agent Compiler & Dispatcher
+  compileSpec: (input) => ipcRenderer.invoke('agent:compileSpec', input),
+  dispatchMission: (input) => ipcRenderer.invoke('agent:dispatchMission', input),
+  previewMissionPrompt: (input) => ipcRenderer.invoke('agent:previewPrompt', input)
 }
 
 if (process.contextIsolated) {

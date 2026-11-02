@@ -3,6 +3,8 @@ import type {
   BacklinkItem,
   BlockType,
   DetectedCliPreset,
+  DispatchMissionInput,
+  DispatchMissionResult,
   MarkerColor,
   Notebook,
   Page,
@@ -13,6 +15,7 @@ import type {
   RepoGitStatusSummary,
   SearchResultItem,
   Section,
+  SpecBundleSummary,
   TerminalSessionInfo,
   WorkspaceSnapshot
 } from './types/domain'
@@ -234,4 +237,14 @@ export interface NoteItAPI {
   onTerminalStateChange(
     callback: (event: { sessionId: string; state: TerminalSessionInfo['detectedState'] }) => void
   ): () => void
+
+  // ADE Pilar 2: Spec-to-Agent Compiler & Dispatcher
+  compileSpec(input: { pageId: string; targetCwd?: string }): Promise<SpecBundleSummary>
+  dispatchMission(input: DispatchMissionInput): Promise<DispatchMissionResult>
+  previewMissionPrompt(input: {
+    pageId: string
+    presetId: string
+    approvalMode: string
+    customDirective?: string
+  }): Promise<{ command: string; args: string[]; promptText: string }>
 }
