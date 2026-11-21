@@ -9,6 +9,7 @@ import {
   FolderOpen,
   FolderPlus,
   GitBranch,
+  GitCompare,
   RefreshCw,
   Search,
   Unlink
@@ -282,6 +283,7 @@ export const RepoExplorerTree: React.FC<{ isSplitMode?: boolean }> = () => {
     activePageId,
     pages,
     updateNotebookRepo,
+    openCodeInDiffInspector,
     showToast
   } = useWorkspaceStore()
 
@@ -352,7 +354,11 @@ export const RepoExplorerTree: React.FC<{ isSplitMode?: boolean }> = () => {
     const wikiRef = `[[${entry.relPath}]]`
     void navigator.clipboard.writeText(wikiRef)
     setCopiedPath(entry.relPath)
-    showToast(`Copied ${wikiRef} to clipboard!`)
+    openCodeInDiffInspector({
+      repoPath,
+      relPath: entry.relPath
+    })
+    showToast(`Opened ${entry.relPath} in Diff Inspector & copied ${wikiRef}`)
     setTimeout(() => setCopiedPath(null), 2000)
   }
 
@@ -419,6 +425,20 @@ export const RepoExplorerTree: React.FC<{ isSplitMode?: boolean }> = () => {
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() =>
+                openCodeInDiffInspector({
+                  repoPath,
+                  relPath: selectedPath || gitStatus?.changedFiles[0]?.relPath || ''
+                })
+              }
+              title="Open Diff & Quick-Edit Inspector"
+              aria-label="Open Diff and Quick-Edit Inspector"
+              className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-muted hover:text-accent-cobalt transition-colors"
+            >
+              <GitCompare size={12} aria-hidden="true" />
+            </button>
             <button
               type="button"
               onClick={() => void loadRepoData(repoPath)}

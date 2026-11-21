@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { DatabaseSync } from 'node:sqlite'
 import { getSeedData } from './seed'
+import { parseCodeWikiLink } from '@shared/code-wikilink'
 import type { Page } from '@shared/types/domain'
 
 let dbInstance: DatabaseSync | null = null
@@ -48,7 +49,7 @@ export function extractWikiLinkTitles(page: Pick<Page, 'blocks' | 'canvasData'>)
     let match: RegExpExecArray | null
     while ((match = regex.exec(text)) !== null) {
       const targetTitle = match[1].trim()
-      if (targetTitle) {
+      if (targetTitle && parseCodeWikiLink(targetTitle) === null) {
         found.push({
           targetTitle,
           snippet: text.length > 140 ? text.slice(0, 140) + '...' : text
@@ -240,6 +241,20 @@ export function initDatabase(workspaceDir: string): DatabaseSync {
       tool_calls_json TEXT DEFAULT '[]',
       proposal_json TEXT DEFAULT NULL,
       created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS mcp_servers (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      transport TEXT NOT NULL DEFAULT 'stdio',
+      command TEXT NOT NULL DEFAULT '',
+      args_json TEXT NOT NULL DEFAULT '[]',
+      url TEXT NOT NULL DEFAULT '',
+      env_keys_json TEXT NOT NULL DEFAULT '{}',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      require_approval INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
     );
   `)
 

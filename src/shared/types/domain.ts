@@ -242,6 +242,54 @@ export interface RepoGitStatusSummary {
   linesRemoved: number
 }
 
+export interface RepoFileDiffResult {
+  relPath: string
+  headContent: string
+  workingContent: string
+  language: string
+  isBinary: boolean
+  status: GitFileStatus | 'clean'
+  additions: number
+  deletions: number
+}
+
+export type McpTransportType = 'stdio' | 'streamable-http' | 'sse'
+
+export interface McpServerConfig {
+  id: string
+  name: string
+  transport: McpTransportType
+  command: string
+  args: string[]
+  url: string
+  envVars: Record<string, string>
+  enabled: boolean
+  requireApproval: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+export interface McpDiscoveredTool {
+  name: string
+  description?: string
+  inputSchema?: Record<string, unknown>
+}
+
+export interface McpConnectionTestResult {
+  ok: boolean
+  latencyMs: number
+  serverVersion?: string
+  tools: McpDiscoveredTool[]
+  error?: string
+}
+
+export interface RepoSearchMatch {
+  relPath: string
+  line: number
+  column: number
+  preview: string
+}
+
 export interface DetectedCliPreset {
   id: 'claude' | 'codex' | 'gemini' | 'aider' | 'pwsh' | 'cmd' | 'bash'
   name: string

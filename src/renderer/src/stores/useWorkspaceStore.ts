@@ -23,6 +23,13 @@ import {
 export type MainViewMode = 'workbench' | 'settings' | 'ai-chat' | 'browser' | 'agent-board'
 export type RightSplitMode = 'page' | 'browser' | 'repo-explorer' | 'diff'
 
+export interface DiffInspectorTarget {
+  repoPath: string
+  relPath: string
+  startLine?: number
+  endLine?: number
+}
+
 export interface BrowserContextPayload {
   url: string
   title: string
@@ -66,6 +73,7 @@ interface WorkspaceStore {
   activeSettingsSection: string
   isBrowserSplitOpen: boolean
   rightSplitMode: RightSplitMode
+  diffTarget: DiffInspectorTarget | null
   browserContextForAI: BrowserContextPayload | null
   theme: 'dark' | 'light'
   preferences: WorkbenchPreferences
@@ -95,6 +103,7 @@ interface WorkspaceStore {
   setActiveSettingsSection: (section: string) => void
   toggleBrowserSplitPane: () => void
   setRightSplitMode: (mode: RightSplitMode) => void
+  openCodeInDiffInspector: (target: DiffInspectorTarget) => void
   updateNotebookRepo: (notebookId: string, repoPath: string | null, defaultBranch?: string) => Promise<void>
   updateSectionRepo: (sectionId: string, repoPathOverride: string | null) => Promise<void>
   setBrowserContextForAI: (ctx: BrowserContextPayload | null) => void
@@ -306,6 +315,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   activeSettingsSection: 'appearance',
   isBrowserSplitOpen: false,
   rightSplitMode: 'page',
+  diffTarget: null,
   browserContextForAI: null,
   theme: initialThemeDef.colorScheme,
   preferences: initialPrefs,
@@ -558,6 +568,15 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       focusedPane: 'primary',
       splitPageId: mode === 'page' ? state.splitPageId : null
     })),
+
+  openCodeInDiffInspector: (target) =>
+    set({
+      activeMainView: 'workbench',
+      rightSplitMode: 'diff',
+      isBrowserSplitOpen: false,
+      splitPageId: null,
+      diffTarget: target
+    }),
 
   updateNotebookRepo: async (notebookId, repoPath, defaultBranch) => {
     try {

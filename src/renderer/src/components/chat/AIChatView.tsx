@@ -4,11 +4,14 @@ import {
   Check,
   ChevronDown,
   Clock,
+  FileCode,
   FilePlus2,
   FileText,
+  GitCompare,
   Globe,
   Hand,
   MessageSquarePlus,
+  Plug,
   Plus,
   Sparkles,
   Terminal,
@@ -90,6 +93,7 @@ export const AIChatView: React.FC = () => {
     updatePage,
     createPage,
     openPageInTab,
+    openCodeInDiffInspector,
     loadWorkspace,
     preferences,
     updatePreferences,
@@ -347,22 +351,38 @@ export const AIChatView: React.FC = () => {
     messageId: string,
     proposal: AIApprovalProposal
   ): Promise<void> => {
-    const targetPage =
-      pages.find((p) => p.id === proposal.targetPageId) || activePage
-    if (!targetPage) {
-      showToast('Target page not found')
-      return
-    }
+    const kind = proposal.kind ?? 'spec-blocks'
+    let executionResultText: string | undefined
 
-    const appendedBlocks = [
-      ...targetPage.blocks,
-      ...proposal.blocks.map((b, idx) => ({
-        id: `blk-approved-${Date.now()}-${idx}`,
-        type: b.type,
-        content: b.content
-      }))
-    ]
-    await updatePage({ id: targetPage.id, blocks: appendedBlocks })
+    if (kind === 'spec-blocks') {
+      const targetPage =
+        pages.find((p) => p.id === proposal.targetPageId) || activePage
+      if (!targetPage) {
+        showToast('Target page not found', 'error')
+        return
+      }
+
+      const appendedBlocks = [
+        ...targetPage.blocks,
+        ...proposal.blocks.map((b, idx) => ({
+          id: `blk-approved-${Date.now()}-${idx}`,
+          type: b.type,
+          content: b.content
+        }))
+      ]
+      await updatePage({ id: targetPage.id, blocks: appendedBlocks })
+      executionResultText = `Inserted ${proposal.blocks.length} block(s) into ${targetPage.code}`
+      showToast(`Approved: ${proposal.blocks.length} blocks added to ${targetPage.code}`)
+    } else if (window.noteitAPI?.executeApprovedProposal) {
+      const res = await window.noteitAPI.executeApprovedProposal(proposal)
+      if (!res.ok) {
+        showToast(res.error || 'Failed to execute approved proposal', 'error')
+        return
+      }
+      executionResultText = res.output || 'Executed successfully'
+      await loadWorkspace()
+      showToast(`Approved: ${proposal.summary}`)
+    }
 
     setSessions((prev) =>
       prev.map((s) =>
@@ -375,7 +395,11 @@ export const AIChatView: React.FC = () => {
                       ...m,
                       proposals: m.proposals?.map((p) =>
                         p.proposalId === proposal.proposalId
-                          ? { ...p, status: 'approved' }
+                          ? {
+                              ...p,
+                              status: 'approved',
+                              executionResult: executionResultText
+                            }
                           : p
                       )
                     }
@@ -385,7 +409,6 @@ export const AIChatView: React.FC = () => {
           : s
       )
     )
-    showToast(`Approved: ${proposal.blocks.length} blocks added to ${targetPage.code}`)
   }
 
   const handleRejectProposal = (messageId: string, proposalId: string): void => {
@@ -859,66 +882,175 @@ export const AIChatView: React.FC = () => {
                     {msg.content || (msg.isStreaming ? 'Drafting response...' : '')}
                   </div>
 
-                  {/* Orca-Style Approval Gate Cards for Proposed Blocks */}
+                  {/* Orca-Style Approval Gate Cards for Proposed Blocks & ADE Repo Tools */}
                   {msg.proposals &&
-                    msg.proposals.map((prop) => (
-                      <div
-                        key={prop.proposalId}
-                        className="mt-3 p-3 rounded-lg bg-surface-chrome border border-border-hairline space-y-2.5"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 text-xs font-medium text-ink-primary">
-                            <Hand size={13} className="text-accent-amber shrink-0" />
-                            <span>{prop.summary}</span>
-                          </div>
-                          <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-surface-elevated border border-border-hairline text-accent-cobalt shrink-0">
-                            Target: {prop.targetPageCode}
-                          </span>
-                        </div>
-
-                        {prop.blocks.map((blk, idx) => (
-                          <div key={idx} className="space-y-1">
-                            <div className="font-mono text-[10px] text-ink-muted uppercase">
-                              BLOCK [{blk.type.toUpperCase()}]
+                    msg.proposals.map((prop) => {
+                      const kind = prop.kind ?? 'spec-blocks'
+                      return (
+                        <div
+                          key={prop.proposalId}
+                          className="mt-3 p-3 rounded-lg bg-surface-chrome border border-border-hairline space-y-2.5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 text-xs font-medium text-ink-primary">
+                              <Hand size={13} className="text-accent-amber shrink-0" aria-hidden="true" />
+                              <span>{prop.summary}</span>
                             </div>
-                            <pre className="p-3 rounded-[8px] bg-canvas-primary border border-border-hairline font-mono text-[11px] text-ink-primary overflow-x-auto selectable-text">
-                              <code>{blk.content}</code>
-                            </pre>
+                            <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-surface-elevated border border-border-hairline text-accent-cobalt shrink-0">
+                              {kind === 'repo-file-edit' && prop.repoFileEdit
+                                ? `File: ${prop.repoFileEdit.relPath}`
+                                : kind === 'repo-command' && prop.repoCommand
+                                  ? `CWD: ${prop.repoCommand.cwd.split(/[/\\]/).pop()}`
+                                  : kind === 'mcp-tool' && prop.mcpToolCall
+                                    ? `MCP: ${prop.mcpToolCall.serverName}`
+                                    : `Target: ${prop.targetPageCode}`}
+                            </span>
                           </div>
-                        ))}
 
-                        <div className="flex items-center justify-between pt-1">
-                          {prop.status === 'pending' ? (
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={() => void handleApproveProposal(msg.id, prop)}
-                              >
-                                <Check size={12} />
-                                <span>Approve &amp; Insert to {prop.targetPageCode}</span>
-                              </Button>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => handleRejectProposal(msg.id, prop.proposalId)}
-                              >
-                                Reject
-                              </Button>
+                          {/* Spec Blocks Preview */}
+                          {prop.blocks.map((blk, idx) => (
+                            <div key={idx} className="space-y-1">
+                              <div className="font-mono text-[10px] text-ink-muted uppercase">
+                                BLOCK [{blk.type.toUpperCase()}]
+                              </div>
+                              <pre className="p-3 rounded-[8px] bg-canvas-primary border border-border-hairline font-mono text-[11px] text-ink-primary overflow-x-auto selectable-text">
+                                <code>{blk.content}</code>
+                              </pre>
                             </div>
-                          ) : (
-                            <Badge
-                              tone={prop.status === 'approved' ? 'teal' : 'neutral'}
-                              size="sm"
-                            >
-                              {prop.status === 'approved'
-                                ? `Approved & inserted into ${prop.targetPageCode}`
-                                : 'Rejected'}
-                            </Badge>
+                          ))}
+
+                          {/* Repo File Edit Preview */}
+                          {kind === 'repo-file-edit' && prop.repoFileEdit && (
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between font-mono text-[10px] text-ink-muted">
+                                <span className="flex items-center gap-1">
+                                  <FileCode size={11} className="text-accent-cobalt" aria-hidden="true" />
+                                  <span>{prop.repoFileEdit.relPath}</span>
+                                </span>
+                                <span>{prop.repoFileEdit.language}</span>
+                              </div>
+                              <pre className="p-3 max-h-48 rounded-[8px] bg-canvas-primary border border-border-hairline font-mono text-[11px] text-ink-primary overflow-auto selectable-text">
+                                <code>{prop.repoFileEdit.newContent}</code>
+                              </pre>
+                            </div>
                           )}
+
+                          {/* Repo Command Preview */}
+                          {kind === 'repo-command' && prop.repoCommand && (
+                            <div className="p-2.5 rounded-[8px] bg-canvas-primary border border-border-hairline font-mono text-[11px] text-ink-primary space-y-1">
+                              <div className="text-[10px] text-ink-muted">
+                                Directory: {prop.repoCommand.cwd}
+                              </div>
+                              <div className="text-accent-amber font-semibold">
+                                $ {prop.repoCommand.command} {prop.repoCommand.args.join(' ')}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Spec Task Update Preview */}
+                          {kind === 'spec-task-status' && prop.specTaskUpdate && (
+                            <div className="p-2.5 rounded-[8px] bg-canvas-primary border border-border-hairline font-mono text-[11px] text-ink-secondary">
+                              Task: <strong className="text-ink-primary">{prop.specTaskUpdate.taskCodeOrText}</strong>
+                              {prop.specTaskUpdate.status && ` → ${prop.specTaskUpdate.status}`}
+                              {prop.specTaskUpdate.progress !== undefined &&
+                                ` (${prop.specTaskUpdate.progress}%)`}
+                            </div>
+                          )}
+
+                          {/* MCP Tool Call Preview */}
+                          {kind === 'mcp-tool' && prop.mcpToolCall && (
+                            <div className="space-y-1">
+                              <div className="font-mono text-[10px] text-ink-muted flex items-center gap-1">
+                                <Plug size={11} className="text-accent-cobalt" aria-hidden="true" />
+                                <span>
+                                  {prop.mcpToolCall.serverName} · {prop.mcpToolCall.toolName}
+                                </span>
+                              </div>
+                              <pre className="p-2.5 rounded-[8px] bg-canvas-primary border border-border-hairline font-mono text-[11px] text-ink-primary overflow-x-auto">
+                                <code>{JSON.stringify(prop.mcpToolCall.args, null, 2)}</code>
+                              </pre>
+                            </div>
+                          )}
+
+                          {prop.executionResult && (
+                            <pre className="p-2.5 rounded-[8px] bg-surface-elevated border border-border-hairline font-mono text-[10.5px] text-ink-secondary overflow-x-auto">
+                              <code>{prop.executionResult}</code>
+                            </pre>
+                          )}
+
+                          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                            {prop.status === 'pending' ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() => void handleApproveProposal(msg.id, prop)}
+                                >
+                                  <Check size={12} aria-hidden="true" />
+                                  <span>
+                                    {kind === 'spec-blocks'
+                                      ? `Approve & Insert to ${prop.targetPageCode}`
+                                      : 'Approve & Apply'}
+                                  </span>
+                                </Button>
+
+                                {kind === 'repo-file-edit' && prop.repoFileEdit && (
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() =>
+                                      openCodeInDiffInspector({
+                                        repoPath: prop.repoFileEdit!.repoPath,
+                                        relPath: prop.repoFileEdit!.relPath
+                                      })
+                                    }
+                                  >
+                                    <GitCompare size={12} aria-hidden="true" />
+                                    <span>Review in Diff Inspector</span>
+                                  </Button>
+                                )}
+
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleRejectProposal(msg.id, prop.proposalId)}
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  tone={prop.status === 'approved' ? 'teal' : 'neutral'}
+                                  size="sm"
+                                >
+                                  {prop.status === 'approved'
+                                    ? kind === 'spec-blocks'
+                                      ? `Approved & inserted into ${prop.targetPageCode}`
+                                      : 'Approved & executed'
+                                    : 'Rejected'}
+                                </Badge>
+                                {kind === 'repo-file-edit' && prop.repoFileEdit && (
+                                  <Button
+                                    variant="ghost"
+                                    size="xs"
+                                    onClick={() =>
+                                      openCodeInDiffInspector({
+                                        repoPath: prop.repoFileEdit!.repoPath,
+                                        relPath: prop.repoFileEdit!.relPath
+                                      })
+                                    }
+                                  >
+                                    <GitCompare size={11} aria-hidden="true" />
+                                    <span>Inspect Diff</span>
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
 
                   {msg.role === 'assistant' && !msg.isStreaming && (
                     <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2.5 border-t border-border-subtle">

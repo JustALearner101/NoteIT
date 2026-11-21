@@ -67,6 +67,8 @@ const noteitAPI: NoteItAPI = {
     ipcRenderer.on('ai:streamEvent', listener)
     return () => ipcRenderer.removeListener('ai:streamEvent', listener)
   },
+  executeApprovedProposal: (proposal) =>
+    ipcRenderer.invoke('ai:executeApprovedProposal', proposal),
 
   // ADE Pilar 1: Repo Binding & Local File Explorer
   updateNotebookRepo: (input) => ipcRenderer.invoke('workspace:updateNotebookRepo', input),
@@ -75,6 +77,17 @@ const noteitAPI: NoteItAPI = {
   readRepoDir: (input) => ipcRenderer.invoke('repo:readDir', input),
   readRepoFile: (input) => ipcRenderer.invoke('repo:readFile', input),
   getRepoGitStatus: (repoPath: string) => ipcRenderer.invoke('repo:getGitStatus', repoPath),
+  getRepoFileDiff: (input) => ipcRenderer.invoke('repo:getFileDiff', input),
+  writeRepoFile: (input) => ipcRenderer.invoke('repo:writeFile', input),
+  discardRepoFileChanges: (input) => ipcRenderer.invoke('repo:discardChanges', input),
+  applyRepoFilePatch: (input) => ipcRenderer.invoke('repo:applyPatch', input),
+
+  // Universal MCP Client
+  listMcpServers: () => ipcRenderer.invoke('mcp:listServers'),
+  upsertMcpServer: (input) => ipcRenderer.invoke('mcp:upsertServer', input),
+  deleteMcpServer: (id: string) => ipcRenderer.invoke('mcp:deleteServer', id),
+  testMcpConnection: (serverIdOrConfig) =>
+    ipcRenderer.invoke('mcp:testConnection', serverIdOrConfig),
 
   // ADE Pilar 1: Embedded PTY Terminal Multiplexer
   detectCliPresets: () => ipcRenderer.invoke('terminal:detectClis'),

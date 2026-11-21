@@ -9,6 +9,7 @@ import {
   FileCode2,
   FolderGit2,
   GitBranch,
+  GitCompare,
   GitMerge,
   Radio,
   RefreshCw,
@@ -144,7 +145,8 @@ export const AgentMissionControlView: React.FC = () => {
   } = useAgentStore()
 
   const { ensureSessionTab } = useTerminalStore()
-  const { openPageInTab, setActiveMainView, activeNotebookId } = useWorkspaceStore()
+  const { openPageInTab, setActiveMainView, activeNotebookId, openCodeInDiffInspector } =
+    useWorkspaceStore()
 
   const [mergingSessionId, setMergingSessionId] = useState<string | null>(null)
   const [discardingSessionId, setDiscardingSessionId] = useState<string | null>(null)
@@ -510,6 +512,21 @@ export const AgentMissionControlView: React.FC = () => {
                       >
                         <Terminal size={12} className="text-accent-cobalt" aria-hidden="true" />
                         <span>Open Terminal</span>
+                      </Button>
+
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() =>
+                          openCodeInDiffInspector({
+                            repoPath: session.worktreePath || session.repoPath,
+                            relPath: ''
+                          })
+                        }
+                        title="Inspect repository diff in Split Pane"
+                      >
+                        <GitCompare size={12} className="text-accent-amber" aria-hidden="true" />
+                        <span>Review Diff</span>
                       </Button>
                     </div>
 

@@ -7,6 +7,7 @@ import {
   Columns2,
   Columns3,
   Database,
+  FileCode,
   GanttChart,
   GripVertical,
   Heading1,
@@ -27,6 +28,7 @@ import { MARKER_META } from '@renderer/lib/marker-colors'
 import { Badge, Kbd, cn } from '@renderer/components/ui'
 import { createId } from '@renderer/lib/ids'
 import { isImageMime } from '@shared/assets'
+import { parseCodeWikiLink } from '@shared/code-wikilink'
 import { AssetBlock } from '@renderer/components/editor-block/AssetBlock'
 import { DBMLStudio } from '@renderer/components/diagrams/dbml/DBMLStudio'
 import { MermaidStudio } from '@renderer/components/diagrams/mermaid/MermaidStudio'
@@ -164,7 +166,22 @@ function buildAssetBlock(asset: AssetRecord, kind: 'image' | 'file'): DocumentBl
 }
 
 export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
-  const { pages, updatePage, openPageInTab } = useWorkspaceStore()
+  const {
+    pages,
+    sections,
+    notebooks,
+    activeNotebookId,
+    updatePage,
+    openPageInTab,
+    openCodeInDiffInspector,
+    showToast
+  } = useWorkspaceStore()
+
+  const activeSection = sections.find((s) => s.id === page.sectionId)
+  const activeNotebook =
+    notebooks.find((n) => n.id === (activeSection?.notebookId || activeNotebookId)) ||
+    notebooks[0]
+  const boundRepoPath = activeSection?.repoPathOverride || activeNotebook?.repoPath || ''
   const [slashMenuForBlockId, setSlashMenuForBlockId] = useState<string | null>(null)
   const [wikiPickerForBlockId, setWikiPickerForBlockId] = useState<string | null>(null)
   // Blok baru draggable setelah pointerdown di grip: seluruh blok draggable akan
@@ -412,10 +429,37 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
     return (
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className="text-[11px] text-ink-muted flex items-center gap-1">
-          <Link2 size={11} /> Linked pages:
+          <Link2 size={11} aria-hidden="true" /> Linked references:
         </span>
         {matches.map((m, i) => {
           const targetTitle = m[1].trim()
+          const codeTarget = parseCodeWikiLink(targetTitle)
+          if (codeTarget) {
+            return (
+              <button
+                key={`code-${codeTarget.displayLabel}-${i}`}
+                type="button"
+                onClick={() => {
+                  if (!boundRepoPath) {
+                    showToast('Bind a Git repository to this notebook to open code references.', 'error')
+                    return
+                  }
+                  openCodeInDiffInspector({
+                    repoPath: boundRepoPath,
+                    relPath: codeTarget.relPath,
+                    startLine: codeTarget.startLine,
+                    endLine: codeTarget.endLine
+                  })
+                }}
+                title={`Open ${codeTarget.displayLabel} in Code & Diff Inspector`}
+                className="px-2 py-0.5 rounded-[6px] text-[11.5px] font-mono font-medium border bg-[var(--pill-teal-bg)] border-[var(--pill-teal-border)] text-[var(--pill-teal-text)] hover:brightness-110 flex items-center gap-1.5 transition-colors"
+              >
+                <FileCode size={11.5} aria-hidden="true" />
+                <span>{codeTarget.displayLabel}</span>
+              </button>
+            )
+          }
+
           const targetPage = pages.find(
             (p) => p.title.toLowerCase() === targetTitle.toLowerCase()
           )

@@ -51,11 +51,22 @@ import {
   updateSectionRepo
 } from './services/workspace.service'
 import {
+  applyFilePatch,
+  discardRepoFileChanges,
+  getFileGitDiff,
   getRepoGitStatus,
   pickRepoFolder,
   readRepoDirectory,
-  readRepoFile
+  readRepoFile,
+  writeRepoFile
 } from './services/repo.service'
+import {
+  deleteMcpServer,
+  disconnectAllMcpServers,
+  listMcpServers,
+  testMcpConnection,
+  upsertMcpServer
+} from './services/mcp.service'
 import {
   createTerminalSession,
   detectInstalledClis,
@@ -78,8 +89,8 @@ import {
   pollSessionGitMetrics,
   updateAgentSession
 } from './services/worktree.service'
-import { executeAIChatStream } from './services/ai.service'
-import type { AIChatStreamRequest } from '@shared/ipc-channels'
+import { executeAIChatStream, executeApprovedProposal } from './services/ai.service'
+import type { AIApprovalProposal, AIChatStreamRequest } from '@shared/ipc-channels'
 
 function writeLog(level: 'INFO' | 'WARN' | 'ERROR', message: string, detail?: unknown): void {
   try {
@@ -644,6 +655,9 @@ function registerIpcHandlers(): void {
     })
     return { started: true }
   })
+  ipcMain.handle('ai:executeApprovedProposal', (_e, proposal: AIApprovalProposal) =>
+    executeApprovedProposal(proposal)
+  )
 
   // ADE Pilar 1: Repo Binding & Explorer
   ipcMain.handle('workspace:updateNotebookRepo', (_e, input) => updateNotebookRepo(input))
@@ -652,10 +666,39 @@ function registerIpcHandlers(): void {
   ipcMain.handle('repo:readDir', (_e, input: { repoPath: string; relPath?: string }) =>
     readRepoDirectory(input.repoPath, input.relPath)
   )
-  ipcMain.handle('repo:readFile', (_e, input: { repoPath: string; relPath: string }) =>
-    readRepoFile(input.repoPath, input.relPath)
+  ipcMain.handle(
+    'repo:readFile',
+    (_e, input: { repoPath: string; relPath: string; startLine?: number; endLine?: number }) =>
+      readRepoFile(input.repoPath, input.relPath, {
+        startLine: input.startLine,
+        endLine: input.endLine
+      })
   )
   ipcMain.handle('repo:getGitStatus', (_e, repoPath: string) => getRepoGitStatus(repoPath))
+  ipcMain.handle('repo:getFileDiff', (_e, input: { repoPath: string; relPath: string }) =>
+    getFileGitDiff(input.repoPath, input.relPath)
+  )
+  ipcMain.handle(
+    'repo:writeFile',
+    (_e, input: { repoPath: string; relPath: string; content: string }) =>
+      writeRepoFile(input.repoPath, input.relPath, input.content)
+  )
+  ipcMain.handle('repo:discardChanges', (_e, input: { repoPath: string; relPath: string }) =>
+    discardRepoFileChanges(input.repoPath, input.relPath)
+  )
+  ipcMain.handle(
+    'repo:applyPatch',
+    (_e, input: { repoPath: string; relPath: string; patchContent: string }) =>
+      applyFilePatch(input.repoPath, input.relPath, input.patchContent)
+  )
+
+  // Universal MCP Client
+  ipcMain.handle('mcp:listServers', () => listMcpServers())
+  ipcMain.handle('mcp:upsertServer', (_e, input) => upsertMcpServer(input))
+  ipcMain.handle('mcp:deleteServer', (_e, id: string) => deleteMcpServer(id))
+  ipcMain.handle('mcp:testConnection', (_e, serverIdOrConfig) =>
+    testMcpConnection(serverIdOrConfig)
+  )
 
   // ADE Pilar 1: Embedded PTY Terminal Multiplexer
   ipcMain.handle('terminal:detectClis', () => detectInstalledClis())
@@ -820,6 +863,7 @@ app.whenReady().then(() => {
 app.on('before-quit', () => {
   stopBackupScheduler()
   killAllTerminalSessions()
+  void disconnectAllMcpServers()
 
   try {
     const result = runBackup()

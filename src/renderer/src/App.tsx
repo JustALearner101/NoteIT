@@ -21,6 +21,7 @@ import { AgentMissionControlView } from '@renderer/components/agents/AgentMissio
 import { MissionBriefingDrawer } from '@renderer/components/agents/MissionBriefingDrawer'
 import { BottomTerminalDrawer } from '@renderer/components/terminal/BottomTerminalDrawer'
 import { RepoExplorerTree } from '@renderer/components/repo/RepoExplorerTree'
+import { RepoDiffInspectorPane } from '@renderer/components/repo/RepoDiffInspectorPane'
 import { useTerminalStore } from '@renderer/stores/useTerminalStore'
 import { resolveUndoTarget } from '@renderer/lib/undo-target'
 import { SPLIT_RATIO_DEFAULT, nextTabId } from '@renderer/lib/tabs'
@@ -556,7 +557,10 @@ export const App: React.FC = () => {
                     <div
                       className="flex flex-col min-w-0 h-full overflow-hidden"
                       style={
-                        splitPage || isBrowserSplitOpen || rightSplitMode === 'repo-explorer'
+                        splitPage ||
+                        isBrowserSplitOpen ||
+                        rightSplitMode === 'repo-explorer' ||
+                        rightSplitMode === 'diff'
                           ? {
                               flexBasis: `${splitRatio * 100}%`,
                               flexGrow: 0,
@@ -568,7 +572,10 @@ export const App: React.FC = () => {
                       <WorkbenchPane page={activePage} onActivate={() => setFocusedPane('primary')} />
                     </div>
                   )}
-                  {(splitPage || isBrowserSplitOpen || rightSplitMode === 'repo-explorer') && (
+                  {(splitPage ||
+                    isBrowserSplitOpen ||
+                    rightSplitMode === 'repo-explorer' ||
+                    rightSplitMode === 'diff') && (
                     <>
                       <div
                         role="separator"
@@ -626,6 +633,8 @@ export const App: React.FC = () => {
                           <InAppBrowserView isSplitMode />
                         ) : rightSplitMode === 'repo-explorer' ? (
                           <RepoExplorerTree isSplitMode />
+                        ) : rightSplitMode === 'diff' ? (
+                          <RepoDiffInspectorPane />
                         ) : splitPage ? (
                           <WorkbenchPane
                             page={splitPage}

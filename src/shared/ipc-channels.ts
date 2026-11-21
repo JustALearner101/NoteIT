@@ -7,16 +7,21 @@ import type {
   DispatchMissionInput,
   DispatchMissionResult,
   MarkerColor,
+  McpConnectionTestResult,
+  McpServerConfig,
+  McpTransportType,
   Notebook,
   Page,
   PageMode,
   PageVersion,
   PageVersionSummary,
   RepoEntry,
+  RepoFileDiffResult,
   RepoGitStatusSummary,
   SearchResultItem,
   Section,
   SpecBundleSummary,
+  TaskStatus,
   TerminalSessionInfo,
   WorkspaceSnapshot
 } from './types/domain'
@@ -26,14 +31,57 @@ export interface ProposedSpecBlock {
   content: string
 }
 
+export type AIProposalKind =
+  | 'spec-blocks'
+  | 'repo-file-edit'
+  | 'repo-command'
+  | 'spec-task-status'
+  | 'spawn-agent'
+  | 'mcp-tool'
+
 export interface AIApprovalProposal {
   proposalId: string
+  kind?: AIProposalKind
   targetPageId: string
   targetPageCode: string
   targetPageTitle: string
   summary: string
   blocks: ProposedSpecBlock[]
   status: 'pending' | 'approved' | 'rejected'
+  repoFileEdit?: {
+    repoPath: string
+    relPath: string
+    originalContent: string
+    newContent: string
+    language: string
+  }
+  repoCommand?: {
+    cwd: string
+    command: string
+    args: string[]
+    timeoutMs?: number
+  }
+  specTaskUpdate?: {
+    pageId: string
+    taskCodeOrText: string
+    status?: TaskStatus
+    checked?: boolean
+    progress?: number
+  }
+  spawnAgent?: {
+    pageId: string
+    presetId: DispatchMissionInput['presetId']
+    isolationMode: DispatchMissionInput['isolationMode']
+    approvalMode: DispatchMissionInput['approvalMode']
+    customDirective?: string
+  }
+  mcpToolCall?: {
+    serverId: string
+    serverName: string
+    toolName: string
+    args: Record<string, unknown>
+  }
+  executionResult?: string
 }
 
 export interface AIChatStreamRequest {
@@ -196,6 +244,9 @@ export interface NoteItAPI {
   // Vercel AI SDK Streaming & Agentic Tools
   startAIChatStream(input: AIChatStreamRequest): Promise<{ started: boolean }>
   onAIChatStreamEvent(callback: (event: AIChatStreamEvent) => void): () => void
+  executeApprovedProposal(
+    proposal: AIApprovalProposal
+  ): Promise<{ ok: boolean; output?: string; error?: string }>
 
   // ADE Pilar 1: Repo Binding & Local File Explorer
   updateNotebookRepo(input: {
@@ -217,8 +268,49 @@ export interface NoteItAPI {
   readRepoFile(input: {
     repoPath: string
     relPath: string
-  }): Promise<{ content: string; language: string; size: number }>
+    startLine?: number
+    endLine?: number
+  }): Promise<{ content: string; language: string; size: number; totalLines?: number }>
   getRepoGitStatus(repoPath: string): Promise<RepoGitStatusSummary>
+  getRepoFileDiff(input: { repoPath: string; relPath: string }): Promise<RepoFileDiffResult>
+  writeRepoFile(input: {
+    repoPath: string
+    relPath: string
+    content: string
+  }): Promise<{ ok: boolean; relPath: string; size: number }>
+  discardRepoFileChanges(input: {
+    repoPath: string
+    relPath: string
+  }): Promise<{ ok: boolean; relPath: string }>
+  applyRepoFilePatch(input: {
+    repoPath: string
+    relPath: string
+    patchContent: string
+  }): Promise<{ ok: boolean; relPath: string }>
+
+  // Universal MCP Client
+  listMcpServers(): Promise<McpServerConfig[]>
+  upsertMcpServer(input: {
+    id?: string
+    name: string
+    transport: McpTransportType
+    command?: string
+    args?: string[]
+    url?: string
+    envVars?: Record<string, string>
+    enabled?: boolean
+    requireApproval?: boolean
+  }): Promise<McpServerConfig>
+  deleteMcpServer(id: string): Promise<{ ok: boolean }>
+  testMcpConnection(serverIdOrConfig: string | {
+    id: string
+    name: string
+    transport: McpTransportType
+    command: string
+    args: string[]
+    url: string
+    envVars: Record<string, string>
+  }): Promise<McpConnectionTestResult>
 
   // ADE Pilar 1: Embedded PTY Terminal Multiplexer
   detectCliPresets(): Promise<DetectedCliPreset[]>
