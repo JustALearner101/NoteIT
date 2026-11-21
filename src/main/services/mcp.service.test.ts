@@ -2,10 +2,12 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { closeDb, initDatabase } from '../db/client'
+import { closeDb, getDb, initDatabase } from '../db/client'
 import {
+  MASKED_MCP_ENV_VALUE,
   deleteMcpServer,
   disconnectAllMcpServers,
+  getMcpServerWithSecrets,
   jsonSchemaToZod,
   listMcpServers,
   testMcpConnection,
@@ -98,16 +100,26 @@ describe('mcp.service', () => {
     expect(created.id).toMatch(/^mcp-/)
     expect(created.name).toBe('Local Docs Server')
     expect(created.args).toEqual(['server.js'])
-    expect(created.envVars).toEqual({ API_TOKEN: 'secret-123' })
+    // IPC-facing config masks secret values; raw secret is encrypted in secrets table
+    expect(created.envVars).toEqual({ API_TOKEN: MASKED_MCP_ENV_VALUE })
+    expect(getMcpServerWithSecrets(created.id)?.envVars).toEqual({ API_TOKEN: 'secret-123' })
+
+    const rawRow = getDb()
+      .prepare('SELECT env_keys_json FROM mcp_servers WHERE id = ?')
+      .get(created.id) as { env_keys_json: string }
+    expect(rawRow.env_keys_json).not.toContain('secret-123')
+    expect(JSON.parse(rawRow.env_keys_json)).toEqual(['API_TOKEN'])
 
     const list = listMcpServers()
     expect(list.length).toBe(1)
+    expect(list[0].envVars).toEqual({ API_TOKEN: MASKED_MCP_ENV_VALUE })
 
     const updated = await upsertMcpServer({
       id: created.id,
       name: 'HTTP Docs Server',
       transport: 'streamable-http',
       url: 'http://localhost:8080/mcp',
+      envVars: { API_TOKEN: MASKED_MCP_ENV_VALUE },
       enabled: false,
       requireApproval: false
     })
@@ -115,9 +127,12 @@ describe('mcp.service', () => {
     expect(updated.transport).toBe('streamable-http')
     expect(updated.enabled).toBe(false)
     expect(updated.requireApproval).toBe(false)
+    // Preserves encrypted secret when masked placeholder is submitted unchanged
+    expect(getMcpServerWithSecrets(created.id)?.envVars).toEqual({ API_TOKEN: 'secret-123' })
 
     await deleteMcpServer(created.id)
     expect(listMcpServers().length).toBe(0)
+    expect(getMcpServerWithSecrets(created.id)).toBeNull()
   })
 
   it('connects via transport, discovers tools, and closes cleanly on testMcpConnection', async () => {

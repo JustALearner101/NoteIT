@@ -156,4 +156,24 @@ describe('ai.service (Vercel AI SDK + Local Agentic Fallback + ADE Repo Tools)',
     const afterApprove = fs.readFileSync(path.join(tempRepoDir, 'src', 'config.ts'), 'utf-8')
     expect(afterApprove).toBe('export const PORT = 8080\n')
   })
+
+  it('rejects repo-command proposals targeting a cwd outside bound repositories', async () => {
+    const res = await executeApprovedProposal({
+      proposalId: 'prop-cmd-escape',
+      kind: 'repo-command',
+      targetPageId: '',
+      targetPageCode: 'CMD',
+      targetPageTitle: 'Escape test',
+      summary: 'Attempt command outside bound repo',
+      blocks: [],
+      status: 'approved',
+      repoCommand: {
+        cwd: os.tmpdir(),
+        command: 'node',
+        args: ['-e', 'console.log(1)']
+      }
+    })
+    expect(res.ok).toBe(false)
+    expect(res.error).toMatch(/bound repository/i)
+  })
 })

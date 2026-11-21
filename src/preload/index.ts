@@ -80,7 +80,6 @@ const noteitAPI: NoteItAPI = {
   getRepoFileDiff: (input) => ipcRenderer.invoke('repo:getFileDiff', input),
   writeRepoFile: (input) => ipcRenderer.invoke('repo:writeFile', input),
   discardRepoFileChanges: (input) => ipcRenderer.invoke('repo:discardChanges', input),
-  applyRepoFilePatch: (input) => ipcRenderer.invoke('repo:applyPatch', input),
 
   // Universal MCP Client
   listMcpServers: () => ipcRenderer.invoke('mcp:listServers'),

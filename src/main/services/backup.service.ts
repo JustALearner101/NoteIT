@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { formatLocalTimestamp } from '@shared/date'
 import { getDb, getDbPath } from '../db/client'
 
 export interface BackupResult {
@@ -27,18 +28,7 @@ let backupLogger: BackupLogger | null = null
 /**
  * Timestamp lokal YYYYMMDD-HHmmss untuk nama berkas backup.
  */
-export function formatBackupTimestamp(date: Date = new Date()): string {
-  const pad = (value: number): string => String(value).padStart(2, '0')
-  return (
-    [
-      date.getFullYear(),
-      pad(date.getMonth() + 1),
-      pad(date.getDate())
-    ].join('') +
-    '-' +
-    [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())].join('')
-  )
-}
+export const formatBackupTimestamp = formatLocalTimestamp
 
 /**
  * Folder backup selalu bersaudara dengan berkas database: <dir db>/backups.

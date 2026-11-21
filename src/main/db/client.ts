@@ -234,16 +234,6 @@ export function initDatabase(workspaceDir: string): DatabaseSync {
       updated_at INTEGER NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS agent_messages (
-      id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
-      role TEXT NOT NULL,
-      content TEXT NOT NULL,
-      tool_calls_json TEXT DEFAULT '[]',
-      proposal_json TEXT DEFAULT NULL,
-      created_at INTEGER NOT NULL
-    );
-
     CREATE TABLE IF NOT EXISTS mcp_servers (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -416,6 +406,56 @@ export function rebuildAllPageLinks(db: DatabaseSync): void {
       if (targetId && targetId !== r.id) {
         insertLink.run(r.id, targetId, ref.snippet)
       }
+    }
+  }
+}
+
+/**
+ * Incremental outgoing WikiLink rebuild for a single page (avoids O(N) full-table JSON
+ * parsing on every debounced editor save when page titles/aliases have not changed).
+ */
+export function rebuildPageLinksForPage(db: DatabaseSync, pageId: string): void {
+  db.prepare('DELETE FROM page_links WHERE source_page_id = ?').run(pageId)
+
+  const pageRow = db
+    .prepare('SELECT id, blocks_json, canvas_json FROM pages WHERE id = ?')
+    .get(pageId) as { id: string; blocks_json: string; canvas_json: string } | undefined
+  if (!pageRow) return
+
+  const blocks = JSON.parse(pageRow.blocks_json || '[]')
+  const canvasData = JSON.parse(pageRow.canvas_json || '{"nodes":[],"edges":[]}')
+  const refs = extractWikiLinkTitles({ blocks, canvasData })
+  if (refs.length === 0) return
+
+  const titleRows = db
+    .prepare('SELECT id, title FROM pages ORDER BY created_at ASC, rowid ASC')
+    .all() as Array<{ id: string; title: string }>
+  const titleToId = new Map<string, string>()
+  for (const r of titleRows) {
+    const key = r.title.toLowerCase().trim()
+    if (key && !titleToId.has(key)) titleToId.set(key, r.id)
+  }
+
+  const aliasRows = db
+    .prepare('SELECT alias, page_id FROM page_aliases ORDER BY created_at ASC, alias ASC')
+    .all() as Array<{ alias: string; page_id: string }>
+  const aliasToId = new Map<string, string>()
+  for (const a of aliasRows) {
+    const key = a.alias.toLowerCase().trim()
+    if (!key || titleToId.has(key) || aliasToId.has(key)) continue
+    aliasToId.set(key, a.page_id)
+  }
+
+  const insertLink = db.prepare(`
+    INSERT OR REPLACE INTO page_links (source_page_id, target_page_id, context_snippet)
+    VALUES (?, ?, ?)
+  `)
+
+  for (const ref of refs) {
+    const key = ref.targetTitle.toLowerCase().trim()
+    const targetId = titleToId.get(key) ?? aliasToId.get(key)
+    if (targetId && targetId !== pageId) {
+      insertLink.run(pageId, targetId, ref.snippet)
     }
   }
 }

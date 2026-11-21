@@ -3,6 +3,8 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { execFile } from 'node:child_process'
+import fs from 'node:fs'
+import path from 'node:path'
 import { promisify } from 'node:util'
 import { z } from 'zod'
 import type {
@@ -65,6 +67,37 @@ export function resolveActiveRepoPath(activePage?: Page): string | null {
   }
   const anyBoundNb = snap.notebooks.find((n) => Boolean(n.repoPath))
   return anyBoundNb?.repoPath || null
+}
+
+function isPathWithinBoundRepos(candidatePath: string): boolean {
+  if (!candidatePath || !candidatePath.trim()) return false
+  let candidateReal: string
+  try {
+    candidateReal = fs.realpathSync(candidatePath)
+  } catch {
+    return false
+  }
+
+  const snap = getWorkspaceSnapshot()
+  const roots = new Set<string>()
+  for (const nb of snap.notebooks) {
+    if (nb.repoPath) roots.add(nb.repoPath)
+  }
+  for (const sec of snap.sections) {
+    if (sec.repoPathOverride) roots.add(sec.repoPathOverride)
+  }
+
+  for (const root of roots) {
+    try {
+      const rootReal = fs.realpathSync(root)
+      if (candidateReal === rootReal || candidateReal.startsWith(rootReal + path.sep)) {
+        return true
+      }
+    } catch {
+      // Ignore unbound or missing roots
+    }
+  }
+  return false
 }
 
 function applySpecTaskStatusMutation(
@@ -160,6 +193,12 @@ export async function executeApprovedProposal(
 
     if (kind === 'repo-file-edit' && proposal.repoFileEdit) {
       const { repoPath, relPath, newContent } = proposal.repoFileEdit
+      if (!isPathWithinBoundRepos(repoPath)) {
+        return {
+          ok: false,
+          error: 'Target repository path is not bound to any notebook or section.'
+        }
+      }
       await writeRepoFile(repoPath, relPath, newContent)
       return {
         ok: true,
@@ -169,6 +208,12 @@ export async function executeApprovedProposal(
 
     if (kind === 'repo-command' && proposal.repoCommand) {
       const { cwd, command, args, timeoutMs = 15000 } = proposal.repoCommand
+      if (!isPathWithinBoundRepos(cwd)) {
+        return {
+          ok: false,
+          error: 'Command working directory must be inside a bound repository.'
+        }
+      }
       const { stdout, stderr } = await execFileAsync(command, args, {
         cwd,
         timeout: Math.min(Math.max(timeoutMs, 1000), 60000),
@@ -372,7 +417,8 @@ async function handleProposalEmission(
     }
   }
 
-  if (req.approvalMode === 'auto-edit') {
+  // Repository commands always require explicit human approval even in auto-edit mode.
+  if (req.approvalMode === 'auto-edit' && proposal.kind !== 'repo-command') {
     const execRes = await executeApprovedProposal(proposal)
     const appliedProposal: AIApprovalProposal = {
       ...proposal,

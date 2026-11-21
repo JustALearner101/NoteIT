@@ -189,10 +189,15 @@ export function setupTwoWaySyncWatcher(
   targetCwd: string,
   onSyncUpdated?: (page: Page) => void
 ): void {
-  const statusFile = path.join(targetCwd, '.noteit', 'status-update.json')
+  const noteitDir = path.join(targetCwd, '.noteit')
+  const statusFile = path.join(noteitDir, 'status-update.json')
   if (activeWatchers.has(statusFile)) return
 
   try {
+    if (!fs.existsSync(statusFile)) {
+      fs.mkdirSync(noteitDir, { recursive: true })
+      fs.writeFileSync(statusFile, JSON.stringify({ tasks: [], agentNotes: '' }, null, 2), 'utf-8')
+    }
     const watcher = fs.watch(statusFile, { persistent: false }, () => {
       try {
         if (!fs.existsSync(statusFile)) return
@@ -238,6 +243,17 @@ export function setupTwoWaySyncWatcher(
   } catch {
     // Best-effort watcher
   }
+}
+
+export function closeAllSpecWatchers(): void {
+  for (const watcher of activeWatchers.values()) {
+    try {
+      watcher.close()
+    } catch {
+      // Best-effort cleanup
+    }
+  }
+  activeWatchers.clear()
 }
 
 /**

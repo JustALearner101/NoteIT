@@ -9,7 +9,7 @@ import {
   getWorkspaceSnapshot,
   openOrCreateDailyNote
 } from './workspace.service'
-import { formatDailyTitle } from './date.util'
+import { toLocalIsoDate } from '@shared/date'
 
 let tempDir: string
 
@@ -132,7 +132,7 @@ describe('openOrCreateDailyNote', () => {
     const page = openOrCreateDailyNote()
     const section = getWorkspaceSnapshot().sections.find((item) => item.id === page.sectionId)
 
-    expect(page.title).toBe(formatDailyTitle(new Date()))
+    expect(page.title).toBe(toLocalIsoDate(new Date()))
     expect(page.title).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(section?.name.trim().toLowerCase()).toBe('daily')
     expect(section?.color).toBe('cobalt')

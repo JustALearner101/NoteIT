@@ -26,15 +26,6 @@ export {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuLabel,
-  DropdownMenuGroup,
-  DropdownMenuShortcut,
   type DropdownMenuItemProps
 } from './DropdownMenu'
-export {
-  TooltipProvider,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  type TooltipContentProps
-} from './Tooltip'
 export { Popover, PopoverTrigger, PopoverAnchor, PopoverContent } from './Popover'

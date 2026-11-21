@@ -51,7 +51,6 @@ import {
   updateSectionRepo
 } from './services/workspace.service'
 import {
-  applyFilePatch,
   discardRepoFileChanges,
   getFileGitDiff,
   getRepoGitStatus,
@@ -77,6 +76,7 @@ import {
   writeTerminal
 } from './services/terminal.service'
 import {
+  closeAllSpecWatchers,
   compileSpecBundle,
   dispatchMission,
   generateMissionExecutionCommand
@@ -86,7 +86,6 @@ import {
   findAgentSessionById,
   listAgentSessions,
   mergeWorktreeToMain,
-  pollSessionGitMetrics,
   updateAgentSession
 } from './services/worktree.service'
 import { executeAIChatStream, executeApprovedProposal } from './services/ai.service'
@@ -252,7 +251,7 @@ function createWindow(): void {
     title: 'NoteIT — Obsidian Studio Workbench',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      sandbox: true,
       contextIsolation: true,
       webviewTag: true
     }
@@ -313,7 +312,7 @@ function createCaptureWindow(): BrowserWindow {
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
-      sandbox: false
+      sandbox: true
     }
   })
 
@@ -692,11 +691,6 @@ function registerIpcHandlers(): void {
   ipcMain.handle('repo:discardChanges', (_e, input: { repoPath: string; relPath: string }) =>
     discardRepoFileChanges(input.repoPath, input.relPath)
   )
-  ipcMain.handle(
-    'repo:applyPatch',
-    (_e, input: { repoPath: string; relPath: string; patchContent: string }) =>
-      applyFilePatch(input.repoPath, input.relPath, input.patchContent)
-  )
 
   // Universal MCP Client
   ipcMain.handle('mcp:listServers', () => listMcpServers())
@@ -862,6 +856,26 @@ function registerIpcHandlers(): void {
   })
 }
 
+app.on('web-contents-created', (_event, contents) => {
+  if (contents.getType() === 'webview') {
+    contents.on('will-navigate', (navEvent, targetUrl) => {
+      if (
+        !targetUrl.startsWith('http://') &&
+        !targetUrl.startsWith('https://') &&
+        !targetUrl.startsWith('about:')
+      ) {
+        navEvent.preventDefault()
+      }
+    })
+    contents.setWindowOpenHandler(({ url }) => {
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        void shell.openExternal(url)
+      }
+      return { action: 'deny' }
+    })
+  }
+})
+
 app.whenReady().then(() => {
   installContentSecurityPolicy()
 
@@ -880,6 +894,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   stopBackupScheduler()
+  closeAllSpecWatchers()
   killAllTerminalSessions()
   void disconnectAllMcpServers()
 

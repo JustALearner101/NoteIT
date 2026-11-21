@@ -38,12 +38,6 @@ export interface VersionSummaryRow {
   created_at: number
 }
 
-export function listVersionsByPage(pageId: string): VersionRow[] {
-  return getDb()
-    .prepare('SELECT * FROM page_versions WHERE page_id = ? ORDER BY version_number DESC')
-    .all(pageId) as unknown as VersionRow[]
-}
-
 /**
  * Metadata-only: blocks_json/canvas_json tidak pernah dikirim ke renderer saat listing.
  * block_count dihitung SQLite supaya payload tetap kecil walau snapshot berisi diagram besar.

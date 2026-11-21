@@ -28,56 +28,41 @@ const IGNORED_DIR_NAMES = new Set([
   '.cache'
 ])
 
+const EXTENSION_TO_LANGUAGE: Record<string, string> = {
+  ts: 'typescript',
+  tsx: 'typescript',
+  mts: 'typescript',
+  cts: 'typescript',
+  js: 'javascript',
+  jsx: 'javascript',
+  mjs: 'javascript',
+  cjs: 'javascript',
+  json: 'json',
+  md: 'markdown',
+  markdown: 'markdown',
+  css: 'css',
+  scss: 'css',
+  sass: 'css',
+  less: 'css',
+  html: 'html',
+  htm: 'html',
+  sql: 'sql',
+  dbml: 'sql',
+  py: 'python',
+  rs: 'rust',
+  go: 'go',
+  sh: 'shell',
+  bash: 'shell',
+  zsh: 'shell',
+  ps1: 'powershell',
+  psm1: 'powershell',
+  yaml: 'yaml',
+  yml: 'yaml',
+  toml: 'toml'
+}
+
 export function mapExtensionToLanguage(ext: string): string {
-  const normalized = ext.toLowerCase().replace(/^\./, '')
-  switch (normalized) {
-    case 'ts':
-    case 'tsx':
-    case 'mts':
-    case 'cts':
-      return 'typescript'
-    case 'js':
-    case 'jsx':
-    case 'mjs':
-    case 'cjs':
-      return 'javascript'
-    case 'json':
-      return 'json'
-    case 'md':
-    case 'markdown':
-      return 'markdown'
-    case 'css':
-    case 'scss':
-    case 'sass':
-    case 'less':
-      return 'css'
-    case 'html':
-    case 'htm':
-      return 'html'
-    case 'sql':
-    case 'dbml':
-      return 'sql'
-    case 'py':
-      return 'python'
-    case 'rs':
-      return 'rust'
-    case 'go':
-      return 'go'
-    case 'sh':
-    case 'bash':
-    case 'zsh':
-      return 'shell'
-    case 'ps1':
-    case 'psm1':
-      return 'powershell'
-    case 'yaml':
-    case 'yml':
-      return 'yaml'
-    case 'toml':
-      return 'toml'
-    default:
-      return 'plaintext'
-  }
+  return EXTENSION_TO_LANGUAGE[ext.toLowerCase().replace(/^\./, '')] ?? 'plaintext'
 }
 
 /**
@@ -590,49 +575,6 @@ export async function discardRepoFileChanges(
   }
 
   return { ok: true, relPath: normalizedRelPath }
-}
-
-/**
- * Applies either a unified git patch or direct full-file replacement to `relPath`.
- */
-export async function applyFilePatch(
-  repoPath: string,
-  relPath: string,
-  patchOrContent: string
-): Promise<{ ok: boolean; relPath: string }> {
-  const { rootReal, targetPath: fullPath, normalizedRelPath } = resolveSafeRepoFilePath(
-    repoPath,
-    relPath
-  )
-
-  const looksLikeUnifiedDiff =
-    patchOrContent.includes('@@ ') &&
-    (patchOrContent.includes('--- ') || patchOrContent.includes('+++ '))
-
-  if (looksLikeUnifiedDiff) {
-    const tempPatchFile = path.join(
-      rootReal,
-      `.noteit-patch-${process.pid}-${Date.now()}.patch`
-    )
-    try {
-      fs.writeFileSync(tempPatchFile, patchOrContent, 'utf-8')
-      const applyRes = await runGitCommand(['apply', '--whitespace=nowarn', tempPatchFile], rootReal)
-      if (applyRes.exitCode === 0) {
-        return { ok: true, relPath: normalizedRelPath }
-      }
-    } finally {
-      if (fs.existsSync(tempPatchFile)) {
-        fs.rmSync(tempPatchFile, { force: true })
-      }
-    }
-  }
-
-  // Fallback / direct full-content replacement
-  await writeRepoFile(repoPath, normalizedRelPath, patchOrContent)
-  return {
-    ok: fs.existsSync(fullPath),
-    relPath: normalizedRelPath
-  }
 }
 
 /**

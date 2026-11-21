@@ -4,7 +4,6 @@ import { cn } from './cn'
 
 export const DropdownMenu = RadixMenu.Root
 export const DropdownMenuTrigger = RadixMenu.Trigger
-export const DropdownMenuGroup = RadixMenu.Group
 
 export const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof RadixMenu.Content>,
@@ -74,13 +73,3 @@ export const DropdownMenuSeparator = React.forwardRef<
     />
   )
 })
-
-export const DropdownMenuShortcut: React.FC<React.HTMLAttributes<HTMLSpanElement>> = ({
-  className,
-  ...props
-}) => (
-  <span
-    className={cn('ml-auto font-mono text-[10px] text-ink-muted tracking-wide', className)}
-    {...props}
-  />
-)

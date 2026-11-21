@@ -24,6 +24,7 @@ import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { useTerminalStore } from '@renderer/stores/useTerminalStore'
 import { MARKER_META } from '@renderer/lib/marker-colors'
 import { Badge, Button, SegmentedControl, cn } from '@renderer/components/ui'
+import { formatRelativeTime } from '@shared/date'
 import { diffBlockSets } from '@shared/version-diff'
 import type { BlockDiff } from '@shared/version-diff'
 import type { BacklinkItem, DocumentBlock, Page, PageVersionSummary } from '@shared/types/domain'
@@ -44,19 +45,6 @@ const SNIPPET_MAX = 80
 function errorMessage(error: unknown): string {
   if (!(error instanceof Error)) return 'Action failed.'
   return error.message.split('Error: ').pop() || error.message
-}
-
-function formatRelativeTime(timestamp: number): string {
-  const elapsed = Date.now() - timestamp
-  if (elapsed < 60_000) return 'just now'
-  if (elapsed < 3_600_000) return `${Math.floor(elapsed / 60_000)}m ago`
-  if (elapsed < 86_400_000) return `${Math.floor(elapsed / 3_600_000)}h ago`
-  if (elapsed < 7 * 86_400_000) return `${Math.floor(elapsed / 86_400_000)}d ago`
-  return new Date(timestamp).toLocaleDateString('en-US', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  })
 }
 
 /** Potongan 80 karakter pertama supaya daftar diff tetap terbaca. */

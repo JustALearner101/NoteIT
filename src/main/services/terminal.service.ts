@@ -255,14 +255,14 @@ export function createTerminalSession(
     }
   }
 
-  // Graceful Fallback: subprocess spawn
+  // Graceful Fallback: subprocess spawn (shell: false prevents metacharacter injection)
   const child = spawn(execCommand, execArgs, {
     cwd: targetCwd,
     env: {
       ...process.env,
       TERM: 'xterm-256color'
     },
-    shell: true
+    shell: false
   })
 
   const session: ActivePtySession = {

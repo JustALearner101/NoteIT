@@ -315,34 +315,3 @@ export async function discardWorktreeSession(
   deleteAgentSession(sessionId)
   return { ok: true }
 }
-
-/**
- * Membaca delta perubahan berkas (+lines / -lines) di folder worktree / repo.
- */
-export async function pollSessionGitMetrics(targetPath: string): Promise<{
-  filesChanged: number
-  linesAdded: number
-  linesRemoved: number
-}> {
-  if (!fs.existsSync(targetPath)) {
-    return { filesChanged: 0, linesAdded: 0, linesRemoved: 0 }
-  }
-
-  let filesChanged = 0
-  const statusRes = await runGitCommand(['status', '--porcelain'], targetPath)
-  if (statusRes.stdout.trim()) {
-    filesChanged = statusRes.stdout.trim().split('\n').length
-  }
-
-  let linesAdded = 0
-  let linesRemoved = 0
-  const diffRes = await runGitCommand(['diff', '--shortstat', 'HEAD'], targetPath)
-  if (diffRes.stdout.trim()) {
-    const addMatch = /(\d+)\s+insertion/.exec(diffRes.stdout)
-    const delMatch = /(\d+)\s+deletion/.exec(diffRes.stdout)
-    if (addMatch) linesAdded = parseInt(addMatch[1], 10)
-    if (delMatch) linesRemoved = parseInt(delMatch[1], 10)
-  }
-
-  return { filesChanged, linesAdded, linesRemoved }
-}

@@ -458,7 +458,6 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
             }}
             src={tab.url}
             partition="persist:noteit-browser"
-            allowpopups={true}
             className={`w-full h-full border-0 ${
               tab.id === activeTab.id ? 'flex' : 'hidden'
             }`}

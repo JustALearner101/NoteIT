@@ -5,10 +5,11 @@ import {
   getDbPath,
   getJournalMode,
   rebuildAllPageLinks,
+  rebuildPageLinksForPage,
   withTransaction
 } from '../db/client'
 import { INITIAL_SEED_DBML } from '../db/seed'
-import { formatDailyTitle } from './date.util'
+import { toLocalIsoDate } from '@shared/date'
 import {
   findNotebookById,
   getMaxNotebookSortOrder,
@@ -328,7 +329,7 @@ export function createQuickNote(text: string): Page {
  * YYYY-MM-DD waktu lokal. Idempoten per hari, jadi hotkey boleh ditekan berkali-kali.
  */
 export function openOrCreateDailyNote(): Page {
-  const title = formatDailyTitle(new Date())
+  const title = toLocalIsoDate(new Date())
 
   return withTransaction(() => {
     const section = ensureSectionByName(DAILY_SECTION_NAME, 'cobalt')
@@ -538,15 +539,16 @@ export function updatePage(input: UpdatePageInput): Page {
     updatePageRow(updated, plainText)
 
     // Rename: judul lama disimpan sebagai alias supaya [[judul lama]] tetap menunjuk page ini.
-    if (
-      nextTitle !== current.title &&
-      isAliasWorthyTitle(current.title) &&
-      isAliasWorthyTitle(nextTitle)
-    ) {
+    const titleChanged = nextTitle !== current.title
+    if (titleChanged && isAliasWorthyTitle(current.title) && isAliasWorthyTitle(nextTitle)) {
       insertAlias(current.title, updated.id, updated.updatedAt)
     }
 
-    rebuildAllPageLinks(getDb())
+    if (titleChanged) {
+      rebuildAllPageLinks(getDb())
+    } else {
+      rebuildPageLinksForPage(getDb(), updated.id)
+    }
     return updated
   })
 }

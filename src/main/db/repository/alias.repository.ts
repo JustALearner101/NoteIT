@@ -18,15 +18,3 @@ export function insertAlias(alias: string, pageId: string, createdAt: number): v
     .prepare('INSERT OR IGNORE INTO page_aliases (alias, page_id, created_at) VALUES (?, ?, ?)')
     .run(normalized, pageId, createdAt)
 }
-
-export function listAliases(): AliasRow[] {
-  return getDb()
-    .prepare(
-      'SELECT alias, page_id, created_at FROM page_aliases ORDER BY created_at ASC, alias ASC'
-    )
-    .all() as unknown as AliasRow[]
-}
-
-export function deleteAliasesForPage(pageId: string): void {
-  getDb().prepare('DELETE FROM page_aliases WHERE page_id = ?').run(pageId)
-}

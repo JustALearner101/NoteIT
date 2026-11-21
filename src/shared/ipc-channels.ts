@@ -276,11 +276,6 @@ export interface NoteItAPI {
     repoPath: string
     relPath: string
   }): Promise<{ ok: boolean; relPath: string }>
-  applyRepoFilePatch(input: {
-    repoPath: string
-    relPath: string
-    patchContent: string
-  }): Promise<{ ok: boolean; relPath: string }>
 
   // Universal MCP Client
   listMcpServers(): Promise<McpServerConfig[]>

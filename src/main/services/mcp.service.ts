@@ -8,12 +8,19 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import { z, type ZodTypeAny } from 'zod'
 import { getDb } from '../db/client'
+import { deleteSecret, getSecret, setSecret } from './secret.service'
 import type {
   McpConnectionTestResult,
   McpDiscoveredTool,
   McpServerConfig,
   McpTransportType
 } from '@shared/types/domain'
+
+export const MASKED_MCP_ENV_VALUE = '••••••••'
+
+function getMcpEnvSecretKey(serverId: string): string {
+  return `mcp.server.${serverId}.env`
+}
 
 interface McpServerRow {
   id: string
@@ -47,7 +54,39 @@ function parseJsonSafe<T>(raw: string, fallback: T): T {
   }
 }
 
-function rowToMcpServerConfig(row: McpServerRow): McpServerConfig {
+function loadDecryptedEnvVars(row: McpServerRow): Record<string, string> {
+  const secretRaw = getSecret(getMcpEnvSecretKey(row.id))
+  if (secretRaw) {
+    const parsed = parseJsonSafe<unknown>(secretRaw, null)
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, string>
+    }
+  }
+
+  // Legacy plaintext fallback for rows saved before secret.service encryption
+  const legacyParsed = parseJsonSafe<unknown>(row.env_keys_json, null)
+  if (legacyParsed && typeof legacyParsed === 'object' && !Array.isArray(legacyParsed)) {
+    return legacyParsed as Record<string, string>
+  }
+  return {}
+}
+
+function buildMaskedEnvVars(row: McpServerRow): Record<string, string> {
+  const keysParsed = parseJsonSafe<unknown>(row.env_keys_json, [])
+  const keys: string[] = Array.isArray(keysParsed)
+    ? keysParsed.filter((k): k is string => typeof k === 'string' && k.length > 0)
+    : keysParsed && typeof keysParsed === 'object'
+      ? Object.keys(keysParsed as Record<string, unknown>)
+      : []
+
+  const masked: Record<string, string> = {}
+  for (const key of keys) {
+    masked[key] = MASKED_MCP_ENV_VALUE
+  }
+  return masked
+}
+
+function rowToMcpServerConfig(row: McpServerRow, maskSecrets = true): McpServerConfig {
   const transport: McpTransportType =
     row.transport === 'streamable-http' || row.transport === 'sse' ? row.transport : 'stdio'
   return {
@@ -57,7 +96,7 @@ function rowToMcpServerConfig(row: McpServerRow): McpServerConfig {
     command: row.command || '',
     args: parseJsonSafe<string[]>(row.args_json, []),
     url: row.url || '',
-    envVars: parseJsonSafe<Record<string, string>>(row.env_keys_json, {}),
+    envVars: maskSecrets ? buildMaskedEnvVars(row) : loadDecryptedEnvVars(row),
     enabled: Boolean(row.enabled),
     requireApproval: Boolean(row.require_approval),
     createdAt: row.created_at,
@@ -70,7 +109,7 @@ export function listMcpServers(): McpServerConfig[] {
   const rows = db
     .prepare('SELECT * FROM mcp_servers ORDER BY created_at ASC')
     .all() as unknown as McpServerRow[]
-  return rows.map(rowToMcpServerConfig)
+  return rows.map((row) => rowToMcpServerConfig(row, true))
 }
 
 export function getMcpServerById(id: string): McpServerConfig | null {
@@ -78,7 +117,19 @@ export function getMcpServerById(id: string): McpServerConfig | null {
   const row = db
     .prepare('SELECT * FROM mcp_servers WHERE id = ?')
     .get(id) as unknown as McpServerRow | undefined
-  return row ? rowToMcpServerConfig(row) : null
+  return row ? rowToMcpServerConfig(row, true) : null
+}
+
+/**
+ * Main-process-only helper that returns decrypted MCP envVars for spawning transports.
+ * NEVER expose directly over IPC.
+ */
+export function getMcpServerWithSecrets(id: string): McpServerConfig | null {
+  const db = getDb()
+  const row = db
+    .prepare('SELECT * FROM mcp_servers WHERE id = ?')
+    .get(id) as unknown as McpServerRow | undefined
+  return row ? rowToMcpServerConfig(row, false) : null
 }
 
 export interface UpsertMcpServerInput {
@@ -97,16 +148,37 @@ export async function upsertMcpServer(input: UpsertMcpServerInput): Promise<McpS
   const db = getDb()
   const now = Date.now()
   const id = input.id?.trim() || `mcp-${now}-${Math.random().toString(36).slice(2, 7)}`
-  const existing = getMcpServerById(id)
+  const existing = getMcpServerWithSecrets(id)
 
   const name = input.name.trim() || 'MCP Server'
   const transport: McpTransportType = input.transport || 'stdio'
   const command = (input.command ?? existing?.command ?? '').trim()
   const args = input.args ?? existing?.args ?? []
   const url = (input.url ?? existing?.url ?? '').trim()
-  const envVars = input.envVars ?? existing?.envVars ?? {}
+  const existingEnv = existing?.envVars ?? {}
+  let envVars: Record<string, string>
+  if (input.envVars !== undefined) {
+    envVars = {}
+    for (const [key, value] of Object.entries(input.envVars)) {
+      if (value === MASKED_MCP_ENV_VALUE && key in existingEnv) {
+        envVars[key] = existingEnv[key]
+      } else {
+        envVars[key] = value
+      }
+    }
+  } else {
+    envVars = existingEnv
+  }
+  const envKeysJson = JSON.stringify(Object.keys(envVars))
   const enabled = input.enabled ?? existing?.enabled ?? true
   const requireApproval = input.requireApproval ?? existing?.requireApproval ?? true
+
+  // Persist raw envVars values encrypted in safeStorage/secrets table
+  if (Object.keys(envVars).length > 0) {
+    setSecret(getMcpEnvSecretKey(id), JSON.stringify(envVars))
+  } else {
+    deleteSecret(getMcpEnvSecretKey(id))
+  }
 
   // Disconnect existing active session if configuration changed
   await disconnectMcpServer(id)
@@ -123,7 +195,7 @@ export async function upsertMcpServer(input: UpsertMcpServerInput): Promise<McpS
       command,
       JSON.stringify(args),
       url,
-      JSON.stringify(envVars),
+      envKeysJson,
       enabled ? 1 : 0,
       requireApproval ? 1 : 0,
       now,
@@ -142,7 +214,7 @@ export async function upsertMcpServer(input: UpsertMcpServerInput): Promise<McpS
       command,
       JSON.stringify(args),
       url,
-      JSON.stringify(envVars),
+      envKeysJson,
       enabled ? 1 : 0,
       requireApproval ? 1 : 0,
       now,
@@ -155,6 +227,7 @@ export async function upsertMcpServer(input: UpsertMcpServerInput): Promise<McpS
 
 export async function deleteMcpServer(id: string): Promise<{ ok: boolean }> {
   await disconnectMcpServer(id)
+  deleteSecret(getMcpEnvSecretKey(id))
   const db = getDb()
   db.prepare('DELETE FROM mcp_servers WHERE id = ?').run(id)
   return { ok: true }
@@ -230,7 +303,7 @@ export async function testMcpConnection(
 ): Promise<McpConnectionTestResult> {
   const startedAt = Date.now()
   const config =
-    typeof serverOrId === 'string' ? getMcpServerById(serverOrId) : serverOrId
+    typeof serverOrId === 'string' ? getMcpServerWithSecrets(serverOrId) : serverOrId
 
   if (!config) {
     return {
@@ -337,7 +410,7 @@ export async function callMcpTool(
     cfg: Pick<McpServerConfig, 'transport' | 'command' | 'args' | 'url' | 'envVars'>
   ) => Transport
 ): Promise<{ ok: boolean; content: unknown; isError?: boolean }> {
-  const config = getMcpServerById(serverId)
+  const config = getMcpServerWithSecrets(serverId)
   if (!config) {
     throw new Error(`MCP server not found: ${serverId}`)
   }
@@ -361,7 +434,11 @@ export async function discoverEnabledMcpServerTools(): Promise<
     tool: McpDiscoveredTool
   }>
 > {
-  const servers = listMcpServers().filter((s) => s.enabled)
+  const db = getDb()
+  const rows = db
+    .prepare('SELECT * FROM mcp_servers WHERE enabled = 1 ORDER BY created_at ASC')
+    .all() as unknown as McpServerRow[]
+  const servers = rows.map((row) => rowToMcpServerConfig(row, false))
   const discovered: Array<{ server: McpServerConfig; tool: McpDiscoveredTool }> = []
 
   for (const server of servers) {

@@ -3,7 +3,6 @@ import { Columns2, Plus, X } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { MARKER_META } from '@renderer/lib/marker-colors'
 import { matchesShortcutEvent } from '@renderer/lib/shortcuts'
-import { TooltipProvider } from '@renderer/components/ui'
 import { Titlebar } from '@renderer/components/layout/Titlebar'
 import { IndexRailSidebar } from '@renderer/components/layout/IndexRailSidebar'
 import { SpecHeader } from '@renderer/components/layout/SpecHeader'
@@ -409,7 +408,6 @@ export const App: React.FC = () => {
   }
 
   return (
-    <TooltipProvider>
       <div className="h-screen w-screen flex flex-col bg-canvas-primary text-ink-primary overflow-hidden ambient-aurora-host">
         {/* Custom Precision Titlebar */}
         <Titlebar />
@@ -771,6 +769,5 @@ export const App: React.FC = () => {
           )}
         </div>
       </div>
-    </TooltipProvider>
   )
 }

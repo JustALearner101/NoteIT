@@ -1,4 +1,5 @@
 import { assetRelativePath } from '@shared/assets'
+import { formatLocalTimestamp } from '@shared/date'
 import type { DocumentBlock, Page, WorkspaceSnapshot } from '@shared/types/domain'
 
 const MAX_SLUG_LENGTH = 60
@@ -18,14 +19,7 @@ export function slugifyTitle(input: string): string {
 /**
  * Timestamp lokal YYYYMMDD-HHmmss untuk nama berkas/folder ekspor.
  */
-export function formatTimestamp(date: Date = new Date()): string {
-  const pad = (value: number): string => String(value).padStart(2, '0')
-  return [
-    date.getFullYear(),
-    pad(date.getMonth() + 1),
-    pad(date.getDate())
-  ].join('') + '-' + [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())].join('')
-}
+export const formatTimestamp = formatLocalTimestamp
 
 function yamlString(value: string): string {
   // JSON string literal adalah YAML double-quoted yang valid, jadi aman untuk tanda kutip dan newline.

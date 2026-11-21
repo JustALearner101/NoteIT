@@ -28,17 +28,11 @@ import {
   SegmentedControl,
   cn
 } from '@renderer/components/ui'
+import { formatRelativeTime } from '@shared/date'
 import type { AgentSessionRecord, AgentSessionStatus } from '@shared/types/domain'
 
-function formatTimeAgo(timestamp: number): string {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000)
-  if (seconds < 60) return `${Math.max(1, seconds)}s ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
-}
+const formatTimeAgo = (timestamp: number): string =>
+  formatRelativeTime(timestamp, { showSeconds: true })
 
 function renderStatusBadge(status: AgentSessionStatus): React.ReactNode {
   switch (status) {
