@@ -46,7 +46,7 @@ export function createTask(items: ProjectTaskItem[], todayIso: string): ProjectT
   return {
     id: createId('tsk'),
     code: 'TSK-' + String(nextNum).padStart(2, '0'),
-    title: 'Spesifikasi Task Engineering Baru',
+    title: 'New engineering task specification',
     category: 'Engineering',
     color: MARKER_COLORS[nextNum % MARKER_COLORS.length],
     status: 'backlog',
@@ -70,4 +70,48 @@ export function sortByStartDate(items: ProjectTaskItem[]): ProjectTaskItem[] {
     if (bMs === null) return -1
     return aMs - bMs
   })
+}
+
+/**
+ * Patch for moving a task to another stage (Kanban drop / stage select).
+ * Returns null when the stage is unchanged. Completed always implies 100% progress.
+ */
+export function stagePatch(
+  task: Pick<ProjectTaskItem, 'status' | 'progress'>,
+  nextStatus: ProjectTaskItem['status']
+): Partial<ProjectTaskItem> | null {
+  if (task.status === nextStatus) return null
+  return { status: nextStatus, progress: nextStatus === 'done' ? 100 : task.progress }
+}
+
+export type GanttDragMode = 'move' | 'resize-start' | 'resize-end'
+
+/**
+ * New dates after dragging a Gantt bar by deltaDays. Resizing keeps at least a one-day
+ * duration (start <= end). Invalid input dates are returned unchanged.
+ */
+export function computeGanttBarDragDates(
+  task: Pick<ProjectTaskItem, 'startDate' | 'endDate'>,
+  mode: GanttDragMode,
+  deltaDays: number
+): { startDate: string; endDate: string } {
+  const startMs = parseIsoDate(task.startDate)
+  const endMs = parseIsoDate(task.endDate)
+  if (startMs === null || endMs === null) {
+    return { startDate: task.startDate, endDate: task.endDate }
+  }
+  if (mode === 'move') {
+    return {
+      startDate: addDays(task.startDate, deltaDays),
+      endDate: addDays(task.endDate, deltaDays)
+    }
+  }
+  if (mode === 'resize-start') {
+    const nextStart = addDays(task.startDate, deltaDays)
+    const clamped = (parseIsoDate(nextStart) ?? startMs) > endMs ? task.endDate : nextStart
+    return { startDate: clamped, endDate: task.endDate }
+  }
+  const nextEnd = addDays(task.endDate, deltaDays)
+  const clampedEnd = (parseIsoDate(nextEnd) ?? endMs) < startMs ? task.startDate : nextEnd
+  return { startDate: task.startDate, endDate: clampedEnd }
 }

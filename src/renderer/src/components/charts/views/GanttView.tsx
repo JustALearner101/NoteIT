@@ -1,13 +1,24 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { MARKER_META } from '@renderer/lib/marker-colors'
 import { DAY_MS, formatIsoDate, parseIsoDate, todayIso } from '@renderer/lib/database/dates'
+import { computeGanttBarDragDates, type GanttDragMode } from '@renderer/lib/database/tasks'
 import type { DatabaseViewProps } from './types'
 
 const DAY_COL_WIDTH = 34
 const ROW_HEIGHT = 40
 
+interface BarDrag {
+  taskId: string
+  mode: GanttDragMode
+  startX: number
+  deltaDays: number
+}
+
 export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shiftTask }) => {
+  const [drag, setDrag] = useState<BarDrag | null>(null)
+  const dragRef = useRef<BarDrag | null>(null)
+
   // Compute timeline window for Gantt Chart
   const timelineWindow = useMemo(() => {
     const starts = items
@@ -36,7 +47,7 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
         ms,
         iso: formatIsoDate(ms),
         dayNum: String(d.getUTCDate()).padStart(2, '0'),
-        monthShort: d.toLocaleDateString('id-ID', { month: 'short', timeZone: 'UTC' }).toUpperCase(),
+        monthShort: d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }).toUpperCase(),
         isWeekend: d.getUTCDay() === 0 || d.getUTCDay() === 6
       }
     })
@@ -47,6 +58,48 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
 
   /** Tanggal tidak valid jatuh ke awal timeline supaya tidak menghasilkan NaN. */
   const toMs = (iso: string): number => parseIsoDate(iso) ?? timelineWindow.startMs
+
+  const startBarDrag = (e: React.PointerEvent<HTMLElement>, taskId: string, mode: GanttDragMode): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    const next = { taskId, mode, startX: e.clientX, deltaDays: 0 }
+    dragRef.current = next
+    setDrag(next)
+  }
+
+  const moveBarDrag = (e: React.PointerEvent<HTMLElement>): void => {
+    const current = dragRef.current
+    if (!current) return
+    const deltaDays = Math.round((e.clientX - current.startX) / DAY_COL_WIDTH)
+    if (deltaDays === current.deltaDays) return
+    const next = { ...current, deltaDays }
+    dragRef.current = next
+    setDrag(next)
+  }
+
+  /** Commit once on pointerup so a whole drag is a single undo step. */
+  const endBarDrag = (e: React.PointerEvent<HTMLElement>, cancelled = false): void => {
+    const current = dragRef.current
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+    dragRef.current = null
+    setDrag(null)
+    if (!current || cancelled || current.deltaDays === 0) return
+    const task = items.find((i) => i.id === current.taskId)
+    if (task) updateTask(task.id, computeGanttBarDragDates(task, current.mode, current.deltaDays))
+  }
+
+  const nudgeBar = (e: React.KeyboardEvent<HTMLElement>, taskId: string): void => {
+    const task = items.find((i) => i.id === taskId)
+    if (!task) return
+    const dir = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0
+    if (!dir) return
+    e.preventDefault()
+    const mode: GanttDragMode = e.shiftKey ? 'resize-end' : 'move'
+    updateTask(task.id, computeGanttBarDragDates(task, mode, dir))
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 bg-canvas-primary">
@@ -73,6 +126,7 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
                   </span>
                   <input
                     type="text"
+                    aria-label={`Title for ${task.code}`}
                     value={task.title}
                     onChange={(e) => updateTask(task.id, { title: e.target.value })}
                     className="bg-transparent text-[12.5px] font-medium text-ink-primary truncate focus:outline-none focus:border-b focus:border-accent-cobalt w-full"
@@ -85,6 +139,7 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
                     min={0}
                     max={100}
                     step={5}
+                    aria-label={`Progress for ${task.title}`}
                     value={task.progress}
                     onChange={(e) =>
                       updateTask(task.id, { progress: Number(e.target.value) })
@@ -96,18 +151,20 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
                   <button
                     type="button"
                     onClick={() => shiftTask(task, -1)}
-                    title="Majukan 1 Hari"
+                    title="Move 1 day earlier"
+                    aria-label={`Move ${task.title} 1 day earlier`}
                     className="p-0.5 rounded-[5px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary"
                   >
-                    <ChevronLeft size={11} />
+                    <ChevronLeft size={11} aria-hidden="true" />
                   </button>
                   <button
                     type="button"
                     onClick={() => shiftTask(task, 1)}
-                    title="Mundurkan 1 Hari"
+                    title="Move 1 day later"
+                    aria-label={`Move ${task.title} 1 day later`}
                     className="p-0.5 rounded-[5px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary"
                   >
-                    <ChevronRight size={11} />
+                    <ChevronRight size={11} aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -214,13 +271,17 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
 
             {/* Task Rows & Soft Rounded Timeline Bars */}
             {items.map((task) => {
+              const eff =
+                drag && drag.taskId === task.id
+                  ? computeGanttBarDragDates(task, drag.mode, drag.deltaDays)
+                  : task
               const startOffset = Math.max(
                 0,
-                Math.round((toMs(task.startDate) - timelineWindow.startMs) / DAY_MS)
+                Math.round((toMs(eff.startDate) - timelineWindow.startMs) / DAY_MS)
               )
               const durationDays = Math.max(
                 1,
-                Math.round((toMs(task.endDate) - toMs(task.startDate)) / DAY_MS) + 1
+                Math.round((toMs(eff.endDate) - toMs(eff.startDate)) / DAY_MS) + 1
               )
               const leftPx = startOffset * DAY_COL_WIDTH
               const widthPx = durationDays * DAY_COL_WIDTH
@@ -247,17 +308,45 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
                     </div>
                   ) : (
                     <div
+                      role="group"
+                      tabIndex={0}
+                      aria-label={`${task.code} ${task.title}: ${eff.startDate} to ${eff.endDate}. Arrow keys move, Shift+arrows resize.`}
+                      onKeyDown={(e) => nudgeBar(e, task.id)}
                       style={{ left: `${leftPx + 2}px`, width: `${Math.max(28, widthPx - 4)}px` }}
-                      className={`absolute h-[24px] rounded-[6px] border ${marker.border} hatched-pattern bg-surface-elevated overflow-hidden flex items-center z-20`}
+                      className={`absolute h-[24px] rounded-[6px] border ${marker.border} hatched-pattern bg-surface-elevated overflow-hidden flex items-center z-20 focus-visible:ring-2 focus-visible:ring-accent-cobalt`}
                     >
                       <div
                         style={{ width: `${task.progress}%` }}
                         className={`h-full ${marker.bgStrip} opacity-80 transition-all`}
                       />
-                      <span className="absolute inset-0 px-2 flex items-center justify-between font-mono text-[10px] text-white drop-shadow">
+                      <span
+                        onPointerDown={(e) => startBarDrag(e, task.id, 'move')}
+                        onPointerMove={moveBarDrag}
+                        onPointerUp={(e) => endBarDrag(e)}
+                        onPointerCancel={(e) => endBarDrag(e, true)}
+                        className="absolute inset-0 px-2 flex items-center justify-between font-mono text-[10px] text-white drop-shadow cursor-grab active:cursor-grabbing touch-none"
+                      >
                         <span className="truncate font-medium">{task.code}</span>
                         <span className="tabular-nums">{task.progress}%</span>
                       </span>
+                      <span
+                        aria-hidden="true"
+                        title="Drag to change start date"
+                        onPointerDown={(e) => startBarDrag(e, task.id, 'resize-start')}
+                        onPointerMove={moveBarDrag}
+                        onPointerUp={(e) => endBarDrag(e)}
+                        onPointerCancel={(e) => endBarDrag(e, true)}
+                        className="absolute left-0 top-0 h-full w-1.5 cursor-ew-resize touch-none hover:bg-white/30"
+                      />
+                      <span
+                        aria-hidden="true"
+                        title="Drag to change end date"
+                        onPointerDown={(e) => startBarDrag(e, task.id, 'resize-end')}
+                        onPointerMove={moveBarDrag}
+                        onPointerUp={(e) => endBarDrag(e)}
+                        onPointerCancel={(e) => endBarDrag(e, true)}
+                        className="absolute right-0 top-0 h-full w-1.5 cursor-ew-resize touch-none hover:bg-white/30"
+                      />
                     </div>
                   )}
                 </div>

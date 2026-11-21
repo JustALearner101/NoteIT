@@ -38,6 +38,7 @@ export const TableView: React.FC<DatabaseViewProps> = ({
               <th className="py-2.5 px-3 font-medium">Code</th>
               <th className="py-2.5 px-3 font-medium">Stage</th>
               <th className="py-2.5 px-3 font-medium">Tag</th>
+              <th className="py-2.5 px-3 font-medium">Assignee</th>
               <th className="py-2.5 px-3 font-medium min-w-[155px]">Progress</th>
               <th className="py-2.5 px-3 font-medium">Schedule</th>
               <th className="py-2.5 px-3 font-medium text-right">Est.</th>
@@ -56,7 +57,7 @@ export const TableView: React.FC<DatabaseViewProps> = ({
                 <React.Fragment key={group.id}>
                   {/* Grouped Stage Header Row (mirrors Reference Image 1: Discovery 2 ... $551K) */}
                   <tr className="bg-surface-chrome/45 border-y border-border-subtle">
-                    <td colSpan={6} className="py-2 px-4">
+                    <td colSpan={7} className="py-2 px-4">
                       <div className="flex items-center gap-2">
                         <Badge tone={group.tone} dot size="sm">
                           {group.label}
@@ -92,6 +93,7 @@ export const TableView: React.FC<DatabaseViewProps> = ({
                             />
                             <input
                               type="text"
+                              aria-label={`Title for ${item.code}`}
                               value={item.title}
                               onChange={(e) => updateTask(item.id, { title: e.target.value })}
                               className="w-full bg-transparent text-[13px] font-medium text-ink-primary focus:outline-none focus:border-b focus:border-accent-cobalt truncate"
@@ -103,6 +105,7 @@ export const TableView: React.FC<DatabaseViewProps> = ({
                         <td className="py-1.5 px-3">
                           <input
                             type="text"
+                            aria-label={`Code for ${item.title}`}
                             value={item.code}
                             onChange={(e) => updateTask(item.id, { code: e.target.value })}
                             className="w-16 px-1.5 py-0.5 rounded-[5px] bg-surface-elevated border border-border-hairline font-mono text-[11px] text-ink-secondary focus:outline-none focus:border-accent-cobalt"
@@ -113,6 +116,7 @@ export const TableView: React.FC<DatabaseViewProps> = ({
                         <td className="py-1.5 px-3">
                           <select
                             value={item.status}
+                            aria-label={`Stage for ${item.title}`}
                             onChange={(e) =>
                               updateTask(item.id, {
                                 status: e.target.value as TaskStatus,
@@ -132,6 +136,7 @@ export const TableView: React.FC<DatabaseViewProps> = ({
                         <td className="py-1.5 px-3">
                           <select
                             value={item.color}
+                            aria-label={`Tag color for ${item.title}`}
                             onChange={(e) =>
                               updateTask(item.id, { color: e.target.value as MarkerColor })
                             }
@@ -152,6 +157,18 @@ export const TableView: React.FC<DatabaseViewProps> = ({
                           </select>
                         </td>
 
+                        {/* Assignee */}
+                        <td className="py-1.5 px-3">
+                          <input
+                            type="text"
+                            aria-label={`Assignee for ${item.title}`}
+                            value={item.assignee || ''}
+                            placeholder="Unassigned"
+                            onChange={(e) => updateTask(item.id, { assignee: e.target.value })}
+                            className="w-24 px-1.5 py-0.5 rounded-[5px] bg-transparent hover:bg-surface-elevated border border-transparent hover:border-border-hairline text-[11.5px] text-ink-secondary focus:bg-surface-elevated focus:border-accent-cobalt focus:text-ink-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-cobalt"
+                          />
+                        </td>
+
                         {/* Hairline Emerald Progress Bar + Inline Percentage Input (Image 1 signature!) */}
                         <td className="py-1.5 px-3">
                           <div className="flex items-center gap-2">
@@ -165,6 +182,7 @@ export const TableView: React.FC<DatabaseViewProps> = ({
                                 type="number"
                                 min={0}
                                 max={100}
+                                aria-label={`Progress percent for ${item.title}`}
                                 value={item.progress}
                                 onChange={(e) =>
                                   updateTask(item.id, { progress: Number(e.target.value) })
@@ -181,6 +199,7 @@ export const TableView: React.FC<DatabaseViewProps> = ({
                           <div className="flex items-center gap-1 font-mono text-[11px] text-ink-secondary tabular-nums">
                             <input
                               type="date"
+                              aria-label={`Start date for ${item.title}`}
                               value={item.startDate}
                               onChange={(e) =>
                                 updateTask(item.id, { startDate: e.target.value })
@@ -190,6 +209,7 @@ export const TableView: React.FC<DatabaseViewProps> = ({
                             <span className="text-ink-muted">→</span>
                             <input
                               type="date"
+                              aria-label={`End date for ${item.title}`}
                               value={item.endDate}
                               onChange={(e) =>
                                 updateTask(item.id, { endDate: e.target.value })
@@ -205,6 +225,7 @@ export const TableView: React.FC<DatabaseViewProps> = ({
                             <input
                               type="number"
                               min={1}
+                              aria-label={`Estimate hours for ${item.title}`}
                               value={item.estimateHours}
                               onChange={(e) =>
                                 updateTask(item.id, { estimateHours: Number(e.target.value) })
@@ -222,7 +243,9 @@ export const TableView: React.FC<DatabaseViewProps> = ({
                             onClick={() =>
                               updateTask(item.id, { isMilestone: !item.isMilestone })
                             }
-                            title="Toggle Milestone"
+                            title="Toggle milestone"
+                            aria-label={`Toggle milestone for ${item.title}`}
+                            aria-pressed={item.isMilestone}
                             className={cn(
                               'p-1 rounded-[6px] border transition-colors',
                               item.isMilestone
@@ -239,7 +262,8 @@ export const TableView: React.FC<DatabaseViewProps> = ({
                           <button
                             type="button"
                             onClick={() => handleDeleteTask(item.id)}
-                            title="Hapus Task"
+                            title="Delete task"
+                            aria-label={`Delete ${item.title}`}
                             className="p-1 rounded-[6px] opacity-0 group-hover:opacity-100 hover:bg-[var(--pill-red-bg)] text-ink-muted hover:text-[var(--pill-red-text)] transition-all"
                           >
                             <Trash2 size={12.5} />

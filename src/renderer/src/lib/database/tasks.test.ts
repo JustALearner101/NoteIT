@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { ProjectTaskItem } from '@shared/types/domain'
-import { createTask, deleteTask, shiftTask, sortByStartDate, updateTask } from './tasks'
+import {
+  computeGanttBarDragDates,
+  createTask,
+  deleteTask,
+  shiftTask,
+  sortByStartDate,
+  stagePatch,
+  updateTask
+} from './tasks'
 
 function makeTask(overrides: Partial<ProjectTaskItem> = {}): ProjectTaskItem {
   return {
@@ -141,5 +149,55 @@ describe('sortByStartDate', () => {
     ]
 
     expect(sortByStartDate(items).map((item) => item.id)).toEqual(['ok', 'bad'])
+  })
+})
+
+describe('stagePatch', () => {
+  it('returns null when the stage is unchanged', () => {
+    expect(stagePatch(makeTask(), 'backlog')).toBeNull()
+  })
+
+  it('sets progress to 100 when moved to done', () => {
+    expect(stagePatch(makeTask({ progress: 30 }), 'done')).toEqual({ status: 'done', progress: 100 })
+  })
+
+  it('keeps progress for other stages', () => {
+    expect(stagePatch(makeTask({ progress: 30 }), 'review')).toEqual({ status: 'review', progress: 30 })
+  })
+})
+
+describe('computeGanttBarDragDates', () => {
+  const task = { startDate: '2026-10-27', endDate: '2026-10-31' }
+
+  it('moves both dates and keeps duration', () => {
+    expect(computeGanttBarDragDates(task, 'move', 3)).toEqual({
+      startDate: '2026-10-30',
+      endDate: '2026-11-03'
+    })
+    expect(computeGanttBarDragDates(task, 'move', -2)).toEqual({
+      startDate: '2026-10-25',
+      endDate: '2026-10-29'
+    })
+  })
+
+  it('resizes the start edge and clamps at the end date', () => {
+    expect(computeGanttBarDragDates(task, 'resize-start', -2).startDate).toBe('2026-10-25')
+    expect(computeGanttBarDragDates(task, 'resize-start', 10)).toEqual({
+      startDate: '2026-10-31',
+      endDate: '2026-10-31'
+    })
+  })
+
+  it('resizes the end edge and clamps at the start date', () => {
+    expect(computeGanttBarDragDates(task, 'resize-end', 2).endDate).toBe('2026-11-02')
+    expect(computeGanttBarDragDates(task, 'resize-end', -10)).toEqual({
+      startDate: '2026-10-27',
+      endDate: '2026-10-27'
+    })
+  })
+
+  it('returns invalid input unchanged', () => {
+    const bad = { startDate: 'nope', endDate: '2026-10-31' }
+    expect(computeGanttBarDragDates(bad, 'move', 2)).toEqual(bad)
   })
 })
