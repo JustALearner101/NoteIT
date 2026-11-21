@@ -247,8 +247,13 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
     showToast(`Konteks '${info.title}' dikirim ke Vercel AI SDK Chat`)
   }
 
+  const RootTag = isSplitMode ? 'section' : 'main'
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-canvas-primary animate-view-enter">
+    <RootTag
+      aria-label="In-app browser"
+      className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-canvas-primary animate-view-enter"
+    >
       {/* Top Browser Tab Bar */}
       <div className="h-[38px] px-2.5 bg-surface-chrome border-b border-border-hairline flex items-center justify-between gap-2 select-none shrink-0">
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 min-w-0">
@@ -442,6 +447,6 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
           />
         ))}
       </div>
-    </div>
+    </RootTag>
   )
 }

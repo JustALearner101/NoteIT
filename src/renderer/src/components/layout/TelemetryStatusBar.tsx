@@ -18,12 +18,17 @@ export const TelemetryStatusBar: React.FC = () => {
   }, [activePage])
 
   return (
-    <footer className="h-[28px] bg-surface-chrome border-t border-border-hairline px-3 flex items-center justify-between text-[11px] text-ink-muted select-none shrink-0 tabular-nums">
+    <footer
+      aria-label="Workspace status bar"
+      className="h-[28px] bg-surface-chrome border-t border-border-hairline px-3 flex items-center justify-between text-[11px] text-ink-muted select-none shrink-0 tabular-nums"
+    >
       {/* Left: Terminal & Active Spec Indicator (mirrors Image 3 footer left: Run log / Code) */}
       <div className="flex items-center gap-3 min-w-0">
         <button
           type="button"
           onClick={toggleDrawer}
+          aria-expanded={isOpen}
+          aria-controls="ade-terminal-drawer"
           title="Toggle ADE Terminal Drawer (Ctrl+`)"
           className={cn(
             'h-5 px-2 rounded-[5px] flex items-center gap-1.5 transition-colors font-medium',
@@ -32,7 +37,11 @@ export const TelemetryStatusBar: React.FC = () => {
               : 'hover:bg-surface-hover text-ink-secondary hover:text-ink-primary'
           )}
         >
-          <Terminal size={11.5} className={isOpen ? 'text-accent-cobalt' : 'text-ink-muted'} />
+          <Terminal
+            size={11.5}
+            aria-hidden="true"
+            className={isOpen ? 'text-accent-cobalt' : 'text-ink-muted'}
+          />
           <span>
             {tabs.length > 0 ? `${activeTab?.title || 'Terminal'} (${tabs.length})` : 'Terminal'}
           </span>

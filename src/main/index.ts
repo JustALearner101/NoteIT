@@ -362,7 +362,7 @@ function focusDailyNote(): void {
 
 function registerGlobalShortcuts(): void {
   registerGlobalShortcut('CommandOrControl+Shift+Space', toggleCaptureWindow)
-  registerGlobalShortcut('CommandOrControl+Shift+D', focusDailyNote)
+  registerGlobalShortcut('CommandOrControl+Alt+D', focusDailyNote)
 }
 
 function registerIpcHandlers(): void {

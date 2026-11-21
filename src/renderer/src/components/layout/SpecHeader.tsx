@@ -22,7 +22,6 @@ import {
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { useTerminalStore } from '@renderer/stores/useTerminalStore'
-import { MissionBriefingDrawer } from '@renderer/components/agents/MissionBriefingDrawer'
 import { MARKER_META } from '@renderer/lib/marker-colors'
 import { Badge, Button, SegmentedControl, cn } from '@renderer/components/ui'
 import { diffBlockSets } from '@shared/version-diff'
@@ -102,6 +101,8 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
     sections,
     rightSplitMode,
     setRightSplitMode,
+    missionBriefingPageId,
+    openMissionBriefing,
     updatePage,
     switchPageMode,
     openPageInTab,
@@ -115,7 +116,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
   const currentRepoPath = currentSection?.repoPathOverride || currentNotebook?.repoPath || ''
   const repoBasename = currentRepoPath ? currentRepoPath.split(/[/\\]/).pop() : null
 
-  const [isMissionDrawerOpen, setIsMissionDrawerOpen] = useState(false)
+  const isMissionDrawerOpen = missionBriefingPageId === page.id
   const [backlinks, setBacklinks] = useState<BacklinkItem[]>([])
   const [versions, setVersions] = useState<PageVersionSummary[]>([])
   const [versionsLoading, setVersionsLoading] = useState(false)
@@ -179,17 +180,6 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
     },
     []
   )
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'd') {
-        e.preventDefault()
-        setIsMissionDrawerOpen((prev) => !prev)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
 
   /** Satu timer untuk restore/hapus: hanya satu tombol yang bisa dalam mode konfirmasi. */
   const armConfirm = (kind: 'restore' | 'delete', versionId: string): void => {
@@ -365,6 +355,8 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
+            aria-expanded={activeDrawer === 'backlinks'}
+            aria-controls="spec-backlinks-drawer"
             onClick={() => setActiveDrawer(activeDrawer === 'backlinks' ? null : 'backlinks')}
             className={cn(
               'h-6 px-2 rounded-[6px] border text-[11.5px] font-medium flex items-center gap-1.5 transition-colors',
@@ -373,12 +365,14 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                 : 'bg-surface-elevated/80 hover:bg-surface-hover border-border-hairline text-ink-secondary hover:text-ink-primary'
             )}
           >
-            <ArrowLeftRight size={11.5} />
+            <ArrowLeftRight size={11.5} aria-hidden="true" />
             <span className="tabular-nums">{backlinks.length} Backlinks</span>
           </button>
 
           <button
             type="button"
+            aria-expanded={activeDrawer === 'versions'}
+            aria-controls="spec-versions-drawer"
             onClick={() => setActiveDrawer(activeDrawer === 'versions' ? null : 'versions')}
             className={cn(
               'h-6 px-2 rounded-[6px] border text-[11.5px] font-medium flex items-center gap-1.5 transition-colors',
@@ -387,14 +381,16 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                 : 'bg-surface-elevated/80 hover:bg-surface-hover border-border-hairline text-ink-secondary hover:text-ink-primary'
             )}
           >
-            <History size={11.5} />
+            <History size={11.5} aria-hidden="true" />
             <span className="tabular-nums">v{versions.length || page.versionCount}</span>
           </button>
 
           <button
             type="button"
             onClick={() => updatePage({ id: page.id, isFavorite: !page.isFavorite })}
-            title={page.isFavorite ? 'Hapus dari Favorites' : 'Sematkan ke Favorites'}
+            title={page.isFavorite ? 'Remove from favorites' : 'Pin to favorites'}
+            aria-label={page.isFavorite ? 'Remove from favorites' : 'Pin to favorites'}
+            aria-pressed={page.isFavorite}
             className={cn(
               'h-6 w-6 rounded-[6px] border flex items-center justify-center transition-colors',
               page.isFavorite
@@ -402,16 +398,16 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                 : 'bg-surface-elevated/80 hover:bg-surface-hover border-border-hairline text-ink-muted hover:text-ink-primary'
             )}
           >
-            <Star size={11.5} fill={page.isFavorite ? 'currentColor' : 'none'} />
+            <Star size={11.5} fill={page.isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
           </button>
 
           <button
             type="button"
             onClick={handleExportMarkdown}
-            title="Ekspor ke Markdown (.md)"
+            title="Export to Markdown (.md)"
             className="h-6 px-2 rounded-[6px] bg-surface-elevated/80 hover:bg-surface-hover border border-border-hairline text-[11.5px] font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1 transition-colors"
           >
-            <Download size={11.5} />
+            <Download size={11.5} aria-hidden="true" />
             <span>Export</span>
           </button>
         </div>
@@ -421,19 +417,20 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
       <div className="px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex-1 min-w-[260px]">
           <div className="flex items-center gap-2.5">
-            <span className="text-[22px] leading-none">{page.icon}</span>
+            <span className="text-[22px] leading-none" aria-hidden="true">{page.icon}</span>
             <input
               type="text"
+              aria-label="Page title"
               value={page.title}
               onChange={(e) => updatePage({ id: page.id, title: e.target.value })}
-              placeholder="Judul Spesifikasi Halaman..."
+              placeholder="Specification title..."
               className="w-full bg-transparent font-display font-bold text-[22px] tracking-[-0.02em] text-ink-primary placeholder:text-ink-muted focus:outline-none border-b border-transparent focus:border-accent-cobalt"
             />
           </div>
 
           {/* Tags & Timestamp Metadata Row */}
           <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11.5px]">
-            <Tag size={11.5} className="text-ink-muted mr-0.5" />
+            <Tag size={11.5} className="text-ink-muted mr-0.5" aria-hidden="true" />
             {page.tags.map((t) => (
               <span
                 key={t}
@@ -443,6 +440,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                 <button
                   type="button"
                   onClick={() => handleRemoveTag(t)}
+                  aria-label={`Remove tag ${t}`}
                   className="hover:text-accent-rose text-ink-muted ml-0.5"
                 >
                   ×
@@ -454,10 +452,11 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
               <form onSubmit={handleAddTag} className="inline-flex items-center">
                 <input
                   type="text"
+                  aria-label="New tag name"
                   value={newTagInput}
                   onChange={(e) => setNewTagInput(e.target.value)}
                   onBlur={() => setIsAddingTag(false)}
-                  placeholder="tag-baru..."
+                  placeholder="new-tag..."
                   autoFocus
                   className="w-24 px-2 py-[2px] rounded-[6px] bg-surface-elevated border border-accent-cobalt text-[11.5px] text-ink-primary focus:outline-none"
                 />
@@ -468,13 +467,13 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                 onClick={() => setIsAddingTag(true)}
                 className="px-2 py-[2px] rounded-[6px] border border-dashed border-border-hairline text-ink-muted hover:text-ink-primary hover:border-border-strong inline-flex items-center gap-0.5 transition-colors"
               >
-                <Plus size={10.5} /> Add tag
+                <Plus size={10.5} aria-hidden="true" /> Add tag
               </button>
             )}
 
             <span className="text-ink-muted mx-1">·</span>
             <span className="text-ink-muted inline-flex items-center gap-1 tabular-nums">
-              <Clock size={11.5} />
+              <Clock size={11.5} aria-hidden="true" />
               Updated{' '}
               {new Date(page.updatedAt).toLocaleTimeString('id-ID', {
                 hour: '2-digit',
@@ -487,6 +486,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
         {/* Right Controls: Recessed Mode Switcher + Utility Actions + Single Primary Periwinkle CTA */}
         <div className="flex items-center gap-2 shrink-0">
           <SegmentedControl
+            ariaLabel="Page editor mode"
             value={page.mode}
             onChange={(mode) => void switchPageMode(page.id, mode)}
             options={[
@@ -498,17 +498,19 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
           <Button
             variant={rightSplitMode === 'repo-explorer' ? 'subtle' : 'secondary'}
             size="md"
+            aria-pressed={rightSplitMode === 'repo-explorer'}
             onClick={() =>
               setRightSplitMode(rightSplitMode === 'repo-explorer' ? 'page' : 'repo-explorer')
             }
             title={
               currentRepoPath
-                ? `Repositori: ${currentRepoPath} (Klik untuk toggle pohon berkas)`
-                : 'Hubungkan folder repositori git ke notebook ini'
+                ? `Repository: ${currentRepoPath} (Click to toggle file tree)`
+                : 'Connect a git repository folder to this notebook'
             }
           >
             <FolderGit2
               size={13}
+              aria-hidden="true"
               className={currentRepoPath ? 'text-accent-cobalt' : 'text-ink-muted'}
             />
             <span className="truncate max-w-[120px]">{repoBasename || 'Bind repo'}</span>
@@ -518,19 +520,20 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
             variant="secondary"
             size="md"
             onClick={() => toggleTerminalDrawer()}
-            title="Buka / Tutup Drawer Terminal ADE (Ctrl+`)"
+            title="Toggle ADE Terminal Drawer (Ctrl+`)"
           >
-            <TerminalIcon size={13} className="text-ink-secondary" />
+            <TerminalIcon size={13} className="text-ink-secondary" aria-hidden="true" />
             <span>Terminal</span>
           </Button>
 
           <Button
             variant="primary"
             size="md"
-            onClick={() => setIsMissionDrawerOpen(true)}
-            title="Kompilasi spesifikasi & buka Mission Briefing command deck (Ctrl+Shift+D)"
+            aria-expanded={isMissionDrawerOpen}
+            onClick={() => openMissionBriefing(page.id)}
+            title="Compile spec & open Mission Briefing (Ctrl+Shift+D)"
           >
-            <Zap size={13} />
+            <Zap size={13} aria-hidden="true" />
             <span>Dispatch Spec</span>
           </Button>
         </div>
@@ -538,36 +541,43 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
 
       {/* Expandable Drawer: Bi-directional Backlinks or Local Version Snapshots */}
       {activeDrawer === 'backlinks' && (
-        <div className="px-6 py-3.5 bg-surface-chrome/70 border-t border-border-hairline animate-popover-enter">
+        <div
+          id="spec-backlinks-drawer"
+          role="region"
+          aria-label={`Backlinks to ${page.code}`}
+          className="px-6 py-3.5 bg-surface-chrome/70 border-t border-border-hairline animate-popover-enter"
+        >
           <div className="flex items-center justify-between mb-2.5">
             <span className="text-xs font-semibold text-ink-primary flex items-center gap-2">
-              <ArrowLeftRight size={13} className="text-accent-cobalt" />
-              <span>Backlinks ke {page.code}</span>
+              <ArrowLeftRight size={13} className="text-accent-cobalt" aria-hidden="true" />
+              <span>Backlinks to {page.code}</span>
             </span>
             <button
               type="button"
               onClick={() => setActiveDrawer(null)}
+              aria-label="Close backlinks drawer"
               className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary"
             >
-              <X size={14} />
+              <X size={14} aria-hidden="true" />
             </button>
           </div>
           {backlinks.length === 0 ? (
             <p className="text-xs text-ink-secondary">
-              Belum ada halaman lain yang menautkan{' '}
-              <code className="font-mono text-accent-cobalt">[[{page.title}]]</code>. Ketik{' '}
-              <code className="font-mono">[[{page.title}]]</code> di halaman mana pun untuk
-              membangun koneksi dua arah.
+              No other pages link to{' '}
+              <code className="font-mono text-accent-cobalt">[[{page.title}]]</code> yet. Type{' '}
+              <code className="font-mono">[[{page.title}]]</code> on any page to create a
+              bi-directional link.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {backlinks.map((bl) => (
-                <div
+                <button
                   key={bl.sourcePageId}
+                  type="button"
                   onClick={() => openPageInTab(bl.sourcePageId)}
-                  className="p-3 rounded-[10px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline cursor-pointer transition-colors"
+                  className="w-full text-left p-3 rounded-[10px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline cursor-pointer transition-colors"
                 >
-                  <div className="flex items-center justify-between mb-1">
+                  <span className="flex items-center justify-between mb-1">
                     <span className="text-xs font-medium text-ink-primary flex items-center gap-1.5">
                       <span>{bl.sourcePageIcon}</span>
                       <span>{bl.sourcePageTitle}</span>
@@ -575,11 +585,11 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                     <Badge tone="cobalt" className="font-mono text-[10px]">
                       {bl.sourcePageCode}
                     </Badge>
-                  </div>
-                  <p className="text-[11.5px] text-ink-secondary line-clamp-2">
+                  </span>
+                  <span className="block text-[11.5px] text-ink-secondary line-clamp-2">
                     {bl.contextSnippet}
-                  </p>
-                </div>
+                  </span>
+                </button>
               ))}
             </div>
           )}
@@ -587,31 +597,38 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
       )}
 
       {activeDrawer === 'versions' && (
-        <div className="px-6 py-3.5 bg-surface-chrome/70 border-t border-border-hairline animate-popover-enter">
+        <div
+          id="spec-versions-drawer"
+          role="region"
+          aria-label="Local snapshot history"
+          className="px-6 py-3.5 bg-surface-chrome/70 border-t border-border-hairline animate-popover-enter"
+        >
           <div className="flex items-center justify-between mb-2.5">
             <span className="text-xs font-semibold text-ink-primary flex items-center gap-2">
-              <History size={13} className="text-accent-amber" />
-              <span>Riwayat Snapshot Lokal</span>
+              <History size={13} className="text-accent-amber" aria-hidden="true" />
+              <span>Local snapshot history</span>
             </span>
             <button
               type="button"
               onClick={() => setActiveDrawer(null)}
+              aria-label="Close snapshot history drawer"
               className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary"
             >
-              <X size={14} />
+              <X size={14} aria-hidden="true" />
             </button>
           </div>
 
           <form onSubmit={handleSaveSnapshot} className="flex items-center gap-2 mb-3">
             <input
               type="text"
+              aria-label="Snapshot label"
               value={snapshotLabel}
               onChange={(e) => setSnapshotLabel(e.target.value)}
-              placeholder="Label snapshot (mis. Sebelum ubah skema order)..."
+              placeholder="Snapshot label (e.g. Before order schema refactor)..."
               className="flex-1 h-8 px-3 rounded-[7px] bg-surface-elevated border border-border-hairline text-xs text-ink-primary placeholder:text-ink-muted focus:border-accent-cobalt"
             />
             <Button type="submit" variant="primary" size="md">
-              Simpan Snapshot
+              Save Snapshot
             </Button>
           </form>
 
@@ -646,6 +663,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                       >
                         <input
                           type="text"
+                          aria-label="Rename snapshot label"
                           value={renameDraft}
                           onChange={(e) => setRenameDraft(e.target.value)}
                           onKeyDown={(e) => {
@@ -656,10 +674,11 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                         />
                         <button
                           type="submit"
-                          title="Simpan label"
+                          title="Save label"
+                          aria-label="Save snapshot label"
                           className="p-1 text-accent-cobalt hover:text-ink-primary"
                         >
-                          <Check size={12} />
+                          <Check size={12} aria-hidden="true" />
                         </button>
                       </form>
                     ) : (
@@ -707,10 +726,15 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                       variant={pendingDeleteId === ver.id ? 'danger' : 'ghost'}
                       size="xs"
                       onClick={() => handleDeleteClick(ver)}
-                      title="Hapus snapshot"
+                      title="Delete snapshot"
+                      aria-label={
+                        pendingDeleteId === ver.id
+                          ? `Confirm delete snapshot v${ver.versionNumber}`
+                          : `Delete snapshot v${ver.versionNumber}`
+                      }
                     >
-                      <Trash2 size={11} />
-                      {pendingDeleteId === ver.id && <span>Yakin?</span>}
+                      <Trash2 size={11} aria-hidden="true" />
+                      {pendingDeleteId === ver.id && <span>Confirm?</span>}
                     </Button>
                   </div>
                 </div>
@@ -721,14 +745,15 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
           {/* Panel diff inline */}
           <div className="mt-3 pt-3 border-t border-border-subtle">
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <GitCompare size={13} className="text-accent-amber" />
-              <span className="text-ink-secondary font-medium">Bandingkan</span>
+              <GitCompare size={13} className="text-accent-amber" aria-hidden="true" />
+              <span className="text-ink-secondary font-medium">Compare</span>
               <select
+                aria-label="Base snapshot version"
                 value={diffBase}
                 onChange={(e) => setDiffBase(e.target.value)}
                 className="h-7 px-2 rounded-[6px] bg-surface-elevated border border-border-hairline text-xs text-ink-primary max-w-[220px]"
               >
-                <option value="">Pilih versi...</option>
+                <option value="">Select version...</option>
                 {versions.map((ver) => (
                   <option key={ver.id} value={ver.id}>
                     v{ver.versionNumber} — {ver.label}
@@ -737,11 +762,12 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
               </select>
               <span className="text-ink-muted">→</span>
               <select
+                aria-label="Target version"
                 value={diffTarget}
                 onChange={(e) => setDiffTarget(e.target.value)}
                 className="h-7 px-2 rounded-[6px] bg-surface-elevated border border-border-hairline text-xs text-ink-primary max-w-[220px]"
               >
-                <option value="current">Kondisi sekarang</option>
+                <option value="current">Current state</option>
                 {versions.map((ver) => (
                   <option key={ver.id} value={ver.id}>
                     v{ver.versionNumber} — {ver.label}
@@ -805,13 +831,6 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
           </div>
         </div>
       )}
-
-      {/* Slide-over Mission Briefing Command Deck */}
-      <MissionBriefingDrawer
-        page={page}
-        isOpen={isMissionDrawerOpen}
-        onClose={() => setIsMissionDrawerOpen(false)}
-      />
     </div>
   )
 }

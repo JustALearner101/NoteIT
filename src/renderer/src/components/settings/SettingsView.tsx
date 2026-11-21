@@ -36,6 +36,7 @@ import {
   Zap
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
+import { getShortcutsByCategory, matchesShortcutEvent } from '@renderer/lib/shortcuts'
 import {
   applyThemeToDocument,
   BUILTIN_THEMES,
@@ -297,7 +298,9 @@ export const SettingsView: React.FC = () => {
     toggleSplitPane,
     toggleBrowserSplitPane,
     openHelpCenter,
-    showToast
+    showToast,
+    isCommandPaletteOpen,
+    isShortcutCheatsheetOpen
   } = useWorkspaceStore()
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -328,10 +331,11 @@ export const SettingsView: React.FC = () => {
     showToast(`Palet '${theme.name}' dimuat ke Custom Theme Studio`)
   }
 
-  // Shortcut Ctrl+F fokus ke Search Settings, Esc kembali ke aplikasi
+  // Shortcut Ctrl+F focuses Search Settings; Esc returns to workbench if no modal is open
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+      if (e.defaultPrevented || isCommandPaletteOpen || isShortcutCheatsheetOpen) return
+      if (matchesShortcutEvent(e, 'settings-search')) {
         e.preventDefault()
         searchInputRef.current?.focus()
         searchInputRef.current?.select()
@@ -342,7 +346,7 @@ export const SettingsView: React.FC = () => {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [setActiveMainView])
+  }, [setActiveMainView, isCommandPaletteOpen, isShortcutCheatsheetOpen])
 
   const filteredGroups = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
@@ -1149,21 +1153,7 @@ export const SettingsView: React.FC = () => {
       }
 
       case 'shortcuts': {
-        const shortcuts = [
-          ['Command Palette & FTS5 Instant Search', 'Ctrl + K'],
-          ['Buka / Tutup Settings', 'Ctrl + ,'],
-          ['Cari di dalam Settings', 'Ctrl + F'],
-          ['Buka Halaman AI Chat (Free chat)', 'Ctrl + Shift + C'],
-          ['Buka / Tutup In-App Reference Browser', 'Ctrl + Shift + B'],
-          ['Sembunyikan / Tampilkan Sidebar Kiri', 'Ctrl + \\'],
-          ['Ganti Mode Halaman (Block Doc ↔ Spatial Canvas)', 'Ctrl + Shift + M'],
-          ['Quick Capture Global Window', 'Ctrl + Shift + Space'],
-          ['Buka Daily Note Hari Ini', 'Ctrl + Shift + D'],
-          ['Tutup Tab Aktif', 'Ctrl + W'],
-          ['Buka Kembali Tab yang Baru Ditutup', 'Ctrl + Shift + T'],
-          ['Pindah Antar Tab Terbuka', 'Ctrl + Tab'],
-          ['Undo / Redo Perubahan Dokumen', 'Ctrl + Z / Ctrl + Shift + Z']
-        ]
+        const categories = getShortcutsByCategory()
         return (
           <div className="space-y-6 animate-view-enter">
             <div>
@@ -1171,19 +1161,39 @@ export const SettingsView: React.FC = () => {
                 Keyboard Shortcuts
               </h1>
               <p className="text-xs text-ink-secondary mt-1">
-                Pintasan keyboard global dan lokal untuk navigasi cepat tanpa lepas dari papan ketik.
+                Global and local keyboard shortcuts for fast navigation without leaving the keyboard.
               </p>
             </div>
 
-            <div className="rounded-[12px] bg-surface-elevated border border-border-hairline overflow-hidden divide-y divide-border-subtle">
-              {shortcuts.map(([label, keys]) => (
-                <div
-                  key={label}
-                  className="px-4 py-3 flex items-center justify-between text-xs hover:bg-surface-hover/40 transition-colors"
+            <div className="space-y-4">
+              {categories.map((group) => (
+                <section
+                  key={group.category}
+                  aria-label={group.label}
+                  className="rounded-[12px] bg-surface-elevated border border-border-hairline overflow-hidden"
                 >
-                  <span className="text-ink-primary font-medium">{label}</span>
-                  <Kbd className="px-2 py-0.5 text-[11px] text-ink-secondary">{keys}</Kbd>
-                </div>
+                  <div className="px-4 py-2.5 bg-surface-chrome/70 border-b border-border-subtle text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-muted">
+                    {group.label}
+                  </div>
+                  <div className="divide-y divide-border-subtle">
+                    {group.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="px-4 py-3 flex items-center justify-between gap-4 text-xs hover:bg-surface-hover/40 transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-ink-primary font-medium">{item.label}</div>
+                          <div className="text-[11px] text-ink-muted mt-0.5">
+                            {item.description}
+                          </div>
+                        </div>
+                        <Kbd className="px-2 py-0.5 text-[11px] text-ink-secondary shrink-0">
+                          {item.keys}
+                        </Kbd>
+                      </div>
+                    ))}
+                  </div>
+                </section>
               ))}
             </div>
           </div>
@@ -1383,7 +1393,10 @@ export const SettingsView: React.FC = () => {
   return (
     <div className="flex-1 flex min-h-0 overflow-hidden bg-canvas-primary ambient-aurora-host animate-view-enter">
       {/* Left Studio Settings Navigation Rail */}
-      <aside className="w-[252px] shrink-0 bg-surface-chrome border-r border-border-hairline flex flex-col h-full select-none">
+      <aside
+        aria-label="Settings navigation"
+        className="w-[252px] shrink-0 bg-surface-chrome border-r border-border-hairline flex flex-col h-full select-none"
+      >
         {/* Top: Back to app & Search settings (Ctrl+F) */}
         <div className="p-3 space-y-2.5 border-b border-border-hairline">
           <button
@@ -1485,9 +1498,9 @@ export const SettingsView: React.FC = () => {
       </aside>
 
       {/* Right Settings Content Host */}
-      <div className="flex-1 overflow-y-auto px-8 py-7">
+      <main aria-label="Settings" className="flex-1 overflow-y-auto px-8 py-7">
         <div className="max-w-4xl mx-auto">{renderActivePanel()}</div>
-      </div>
+      </main>
     </div>
   )
 }

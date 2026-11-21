@@ -196,10 +196,9 @@ body {
   outline-offset: 2px;
 }
 
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: none;
+:where(input, textarea, select):focus-visible {
+  outline: 2px solid var(--accent-cobalt);
+  outline-offset: 1px;
 }
 
 /* Ambient Aurora Glow Backdrop (only enabled for glow themes like Finns Cosmic Nebula) */
@@ -307,9 +306,61 @@ code {
   }
 }
 
+.animate-overlay-enter {
+  opacity: 1;
+  transition: opacity var(--motion-fast) ease;
+
+  @starting-style {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity 80ms ease;
+  }
+}
+
+.animate-dialog-enter {
+  opacity: 1;
+  scale: 1;
+  transition:
+    opacity var(--motion-fast) var(--ease-out-expo),
+    scale var(--motion-fast) var(--ease-out-expo);
+
+  @starting-style {
+    opacity: 0;
+    scale: 0.97;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity 80ms ease;
+    scale: none;
+  }
+}
+
+.animate-drawer-enter-right {
+  opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity var(--motion-normal) var(--ease-out-expo),
+    translate var(--motion-normal) var(--ease-out-expo);
+
+  @starting-style {
+    opacity: 0;
+    translate: 16px 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity 80ms ease;
+    translate: none;
+  }
+}
+
 html[data-motion="off"] .animate-view-enter,
 html[data-motion="off"] .animate-popover-enter,
-html[data-motion="off"] .animate-toast-enter {
+html[data-motion="off"] .animate-toast-enter,
+html[data-motion="off"] .animate-overlay-enter,
+html[data-motion="off"] .animate-dialog-enter,
+html[data-motion="off"] .animate-drawer-enter-right {
   transition: none !important;
 }
 

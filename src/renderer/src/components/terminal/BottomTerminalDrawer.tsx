@@ -16,6 +16,14 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 import { useTerminalStore } from '@renderer/stores/useTerminalStore'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@renderer/components/ui'
 import type { BlockType, DocumentBlock } from '@shared/types/domain'
 
 export const BottomTerminalDrawer: React.FC = () => {
@@ -39,6 +47,10 @@ export const BottomTerminalDrawer: React.FC = () => {
     useWorkspaceStore()
 
   const containerRef = useRef<HTMLDivElement>(null)
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const skipTermFocusRef = useRef(false)
+  const tabsRef = useRef(tabs)
+  tabsRef.current = tabs
   const termInstanceRef = useRef<{
     term: Terminal
     fit: FitAddon
@@ -47,7 +59,6 @@ export const BottomTerminalDrawer: React.FC = () => {
 
   const [isResizing, setIsResizing] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
-  const [isPresetMenuOpen, setIsPresetMenuOpen] = useState(false)
 
   // Ambil CWD saat ini berdasarkan notebook yang aktif
   const currentNotebook = notebooks.find((nb) => nb.id === activeNotebookId) || notebooks[0]
@@ -60,8 +71,34 @@ export const BottomTerminalDrawer: React.FC = () => {
   }, [loadPresets])
 
   // Inisialisasi xterm instance tunggal yang di-reuse antar tab
+  // Background PTY listeners live independently of the drawer so output keeps buffering while closed.
   useEffect(() => {
-    if (!containerRef.current) return
+    const unsubData = window.noteitAPI.onTerminalData(({ sessionId, data }) => {
+      appendBuffer(sessionId, data)
+      const inst = termInstanceRef.current
+      if (inst && useTerminalStore.getState().activeTabId === sessionId) {
+        inst.term.write(data)
+      }
+    })
+    const unsubExit = window.noteitAPI.onTerminalExit(({ sessionId, exitCode }) => {
+      const inst = termInstanceRef.current
+      if (inst && useTerminalStore.getState().activeTabId === sessionId) {
+        inst.term.write(`\r\n\x1b[90m[Process exited with code ${exitCode}]\x1b[0m\r\n`)
+      }
+    })
+    const unsubState = window.noteitAPI.onTerminalStateChange(({ sessionId, state }) => {
+      updateDetectedState(sessionId, state)
+    })
+    return () => {
+      unsubData()
+      unsubExit()
+      unsubState()
+    }
+  }, [appendBuffer, updateDetectedState])
+
+  // The xterm instance is created when the drawer opens and disposed when it closes.
+  useEffect(() => {
+    if (!isOpen || !containerRef.current) return
 
     const term = new Terminal({
       theme: {
@@ -144,64 +181,68 @@ export const BottomTerminalDrawer: React.FC = () => {
 
     resizeObserver.observe(containerRef.current)
 
-    // Listener IPC data stream dari backend PTY
-    const unsubData = window.noteitAPI.onTerminalData(({ sessionId, data }) => {
-      appendBuffer(sessionId, data)
-      if (useTerminalStore.getState().activeTabId === sessionId) {
-        term.write(data)
-      }
-    })
-
-    const unsubExit = window.noteitAPI.onTerminalExit(({ sessionId, exitCode }) => {
-      if (useTerminalStore.getState().activeTabId === sessionId) {
-        term.write(`\r\n\x1b[90m[Proses selesai dengan kode keluar ${exitCode}]\x1b[0m\r\n`)
-      }
-    })
-
-    const unsubState = window.noteitAPI.onTerminalStateChange(({ sessionId, state }) => {
-      updateDetectedState(sessionId, state)
-    })
-
-    return () => {
-      resizeObserver.disconnect()
-      unsubData()
-      unsubExit()
-      unsubState()
-      term.dispose()
-      termInstanceRef.current = null
-    }
-  }, [appendBuffer, updateDetectedState])
-
-  // Saat activeTabId berubah, muat ulang buffer teks ke xterm
-  useEffect(() => {
-    const inst = termInstanceRef.current
-    if (!inst) return
-
-    inst.sessionId = activeTabId
-    inst.term.reset()
-
-    if (activeTabId) {
-      const activeTab = tabs.find((t) => t.id === activeTabId)
-      if (activeTab && activeTab.bufferText) {
-        inst.term.write(activeTab.bufferText)
-      }
+    // Replay the active tab's buffer into the freshly created terminal.
+    const currentActive = useTerminalStore.getState().activeTabId
+    if (currentActive) {
+      termInstanceRef.current.sessionId = currentActive
+      const tab = tabsRef.current.find((t) => t.id === currentActive)
+      if (tab?.bufferText) term.write(tab.bufferText)
       setTimeout(() => {
         try {
-          inst.fit.fit()
-          inst.term.focus()
-          if (inst.term.cols > 0 && inst.term.rows > 0) {
-            window.noteitAPI.resizeTerminal({
-              sessionId: activeTabId,
-              cols: inst.term.cols,
-              rows: inst.term.rows
-            })
-          }
+          fitAddon.fit()
+          if (skipTermFocusRef.current) skipTermFocusRef.current = false
+          else term.focus()
         } catch {
           // Ignored
         }
       }, 50)
     }
-  }, [activeTabId, tabs])
+
+    return () => {
+      resizeObserver.disconnect()
+      term.dispose()
+      termInstanceRef.current = null
+    }
+  }, [isOpen])
+
+  // Saat activeTabId berubah, muat ulang buffer teks ke xterm
+  useEffect(() => {
+    const inst = termInstanceRef.current
+    if (!activeTabId || !isOpen) skipTermFocusRef.current = false
+    if (!inst) return
+
+    inst.sessionId = activeTabId
+    inst.term.reset()
+
+    if (!activeTabId) return
+
+    const activeTab = tabsRef.current.find((t) => t.id === activeTabId)
+    if (activeTab && activeTab.bufferText) {
+      inst.term.write(activeTab.bufferText)
+    }
+
+    const timer = setTimeout(() => {
+      try {
+        inst.fit.fit()
+        if (skipTermFocusRef.current) {
+          skipTermFocusRef.current = false
+        } else {
+          inst.term.focus()
+        }
+        if (inst.term.cols > 0 && inst.term.rows > 0) {
+          window.noteitAPI.resizeTerminal({
+            sessionId: activeTabId,
+            cols: inst.term.cols,
+            rows: inst.term.rows
+          })
+        }
+      } catch {
+        // Ignored
+      }
+    }, 50)
+
+    return () => clearTimeout(timer)
+  }, [activeTabId, isOpen])
 
   // Handle Resize Bar via pointer capture
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
@@ -257,7 +298,7 @@ export const BottomTerminalDrawer: React.FC = () => {
 
   // Helper membuat tab baru
   const handleLaunchPreset = async (command?: string, args?: string[], title?: string, presetId?: string) => {
-    setIsPresetMenuOpen(false)
+    skipTermFocusRef.current = false
     await createSession({
       cwd: currentRepoPath || process.cwd(),
       command,
@@ -271,8 +312,34 @@ export const BottomTerminalDrawer: React.FC = () => {
 
   const activeTab = tabs.find((t) => t.id === activeTabId)
 
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, idx: number): void => {
+    if (tabs.length === 0) return
+    let nextIdx: number | null = null
+
+    if (e.key === 'ArrowRight') {
+      nextIdx = (idx + 1) % tabs.length
+    } else if (e.key === 'ArrowLeft') {
+      nextIdx = (idx - 1 + tabs.length) % tabs.length
+    } else if (e.key === 'Home') {
+      nextIdx = 0
+    } else if (e.key === 'End') {
+      nextIdx = tabs.length - 1
+    }
+
+    if (nextIdx !== null) {
+      e.preventDefault()
+      const nextTab = tabs[nextIdx]
+      if (nextTab && nextTab.id !== activeTabId) {
+        skipTermFocusRef.current = true
+        setActiveTabId(nextTab.id)
+      }
+      tabRefs.current[nextIdx]?.focus()
+    }
+  }
+
   return (
     <aside
+      id="ade-terminal-drawer"
       aria-label="Terminal Drawer ADE"
       style={{ height: isMaximized ? 'calc(100vh - 72px)' : `${height}px` }}
       className="w-full bg-surface-chrome border-t border-border-hairline flex flex-col shrink-0 z-40 select-none transition-[height] duration-75 relative shadow-popover"
@@ -302,118 +369,129 @@ export const BottomTerminalDrawer: React.FC = () => {
             <span className="font-medium text-xs text-ink-primary">Terminal</span>
           </div>
 
-          {/* Session Tabs */}
-          {tabs.map((tab) => {
-            const isActive = tab.id === activeTabId
-            const isWaiting = tab.detectedState === 'waiting_approval'
-            const isTesting = tab.detectedState === 'running_tests'
+          {/* Session Tabs (display: contents tablist keeps role="tab" direct semantic children while aligning close buttons) */}
+          <div className="flex items-center">
+            <div role="tablist" aria-label="Terminal sessions" className="contents">
+              {tabs.map((tab, idx) => {
+                const isActive = tab.id === activeTabId
+                const isWaiting = tab.detectedState === 'waiting_approval'
+                const isTesting = tab.detectedState === 'running_tests'
 
-            return (
-              <div
-                key={tab.id}
-                onClick={() => setActiveTabId(tab.id)}
-                className={`group h-6 px-2.5 rounded-[6px] border flex items-center gap-2 cursor-pointer text-[11.5px] transition-colors ${
-                  isActive
-                    ? 'bg-surface-elevated border-border-hairline text-ink-primary font-medium'
-                    : 'bg-transparent border-transparent text-ink-muted hover:bg-surface-hover hover:text-ink-secondary'
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    isWaiting
-                      ? 'bg-accent-amber animate-pulse'
-                      : isTesting
-                        ? 'bg-accent-cobalt animate-pulse'
-                        : 'bg-accent-emerald'
-                  }`}
-                  title={`Status: ${tab.detectedState || 'active'}`}
-                />
+                return (
+                  <button
+                    key={tab.id}
+                    id={`terminal-tab-${tab.id}`}
+                    ref={(el) => {
+                      tabRefs.current[idx] = el
+                    }}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls="terminal-tabpanel"
+                    tabIndex={isActive ? 0 : -1}
+                    style={{ order: idx * 2 }}
+                    onClick={() => {
+                      skipTermFocusRef.current = false
+                      setActiveTabId(tab.id)
+                    }}
+                    onKeyDown={(e) => handleTabKeyDown(e, idx)}
+                    className={`h-6 pl-2.5 pr-1.5 rounded-l-[6px] border-y border-l flex items-center gap-2 text-[11.5px] transition-colors shrink-0 ${
+                      isActive
+                        ? 'bg-surface-elevated border-border-hairline text-ink-primary font-medium'
+                        : 'bg-transparent border-transparent text-ink-muted hover:bg-surface-hover hover:text-ink-secondary'
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        isWaiting
+                          ? 'bg-accent-amber animate-pulse'
+                          : isTesting
+                            ? 'bg-accent-cobalt animate-pulse'
+                            : 'bg-accent-emerald'
+                      }`}
+                      title={`Status: ${tab.detectedState || 'active'}`}
+                      aria-hidden="true"
+                    />
 
-                <span className="truncate max-w-[140px]">{tab.title}</span>
+                    <span className="truncate max-w-[140px]">{tab.title}</span>
 
-                {isWaiting && (
-                  <span className="font-mono text-[10px] text-accent-amber font-semibold">
-                    [y/n]
-                  </span>
-                )}
+                    {isWaiting && (
+                      <span className="font-mono text-[10px] text-accent-amber font-semibold">
+                        [y/n]
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
 
+            {tabs.map((tab, idx) => {
+              const isActive = tab.id === activeTabId
+              return (
                 <button
+                  key={`${tab.id}-close`}
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    closeSession(tab.id)
-                  }}
-                  title="Tutup Sesi Terminal"
-                  className="opacity-40 group-hover:opacity-100 hover:text-accent-rose ml-0.5"
+                  style={{ order: idx * 2 + 1 }}
+                  onClick={() => closeSession(tab.id)}
+                  title="Close terminal session"
+                  aria-label={`Close ${tab.title}`}
+                  className={`h-6 pr-2 pl-0.5 mr-1.5 rounded-r-[6px] border-y border-r flex items-center justify-center text-ink-muted hover:text-accent-rose transition-colors shrink-0 ${
+                    isActive
+                      ? 'bg-surface-elevated border-border-hairline'
+                      : 'bg-transparent border-transparent hover:bg-surface-hover'
+                  }`}
                 >
-                  <X size={11} />
+                  <X size={11} aria-hidden="true" />
                 </button>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
 
           {/* New Tab Dropdown Button */}
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsPresetMenuOpen(!isPresetMenuOpen)}
-              title="Buka Sesi Terminal Baru"
-              className="h-6 px-2 rounded-[6px] hover:bg-surface-hover flex items-center gap-1 text-ink-secondary hover:text-ink-primary border border-border-hairline transition-colors"
-            >
-              <Plus size={12} />
-              <span className="text-[11.5px] font-medium">New</span>
-              <ChevronDown size={10.5} className="opacity-60" />
-            </button>
-
-            {isPresetMenuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-50"
-                  onClick={() => setIsPresetMenuOpen(false)}
-                />
-                <div className="absolute top-7 left-0 z-50 w-56 bg-surface-elevated border border-border-hairline rounded-[10px] shadow-popover p-1.5 flex flex-col gap-0.5 animate-popover-enter">
-                  <div className="px-2 py-1 text-[10.5px] font-medium text-ink-muted border-b border-border-subtle mb-1">
-                    Shell &amp; CLI presets
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleLaunchPreset(undefined, undefined, 'PowerShell', 'pwsh')}
-                    className="w-full px-2 py-1.5 text-left text-xs rounded-[7px] hover:bg-surface-hover flex items-center justify-between text-ink-primary transition-colors"
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title="Open new terminal session"
+                aria-label="Open new terminal session"
+                className="h-6 px-2 rounded-[6px] hover:bg-surface-hover flex items-center gap-1 text-ink-secondary hover:text-ink-primary border border-border-hairline transition-colors shrink-0 data-[state=open]:bg-surface-hover data-[state=open]:text-ink-primary"
+              >
+                <Plus size={12} aria-hidden="true" />
+                <span className="text-[11.5px] font-medium">New</span>
+                <ChevronDown size={10.5} className="opacity-60" aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" sideOffset={6} className="w-56">
+              <DropdownMenuLabel>Shell &amp; CLI presets</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => void handleLaunchPreset(undefined, undefined, 'PowerShell', 'pwsh')}
+              >
+                <span>PowerShell</span>
+                <span className="font-mono text-[10px] text-ink-muted">Default</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => void handleLaunchPreset('cmd.exe', undefined, 'Command Prompt', 'cmd')}
+              >
+                <span>CMD.exe</span>
+                <span className="font-mono text-[10px] text-ink-muted">Windows</span>
+              </DropdownMenuItem>
+              {presets
+                .filter((p) => p.available && !['pwsh', 'cmd'].includes(p.id))
+                .map((p) => (
+                  <DropdownMenuItem
+                    key={p.id}
+                    onSelect={() => void handleLaunchPreset(p.command, undefined, p.name, p.id)}
                   >
-                    <span>PowerShell</span>
-                    <span className="font-mono text-[10px] text-ink-muted">Default</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleLaunchPreset('cmd.exe', undefined, 'Command Prompt', 'cmd')}
-                    className="w-full px-2 py-1.5 text-left text-xs rounded-[7px] hover:bg-surface-hover flex items-center justify-between text-ink-primary transition-colors"
-                  >
-                    <span>CMD.exe</span>
-                    <span className="font-mono text-[10px] text-ink-muted">Windows</span>
-                  </button>
-
-                  {presets
-                    .filter((p) => p.available && !['pwsh', 'cmd'].includes(p.id))
-                    .map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => handleLaunchPreset(p.command, undefined, p.name, p.id)}
-                        className="w-full px-2 py-1.5 text-left text-xs rounded-[7px] hover:bg-surface-hover flex items-center justify-between text-ink-primary transition-colors"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <Zap size={11} className="text-accent-amber" />
-                          <span>{p.name}</span>
-                        </div>
-                        <span className="text-[10.5px] text-[var(--pill-teal-text)]">Ready</span>
-                      </button>
-                    ))}
-                </div>
-              </>
-            )}
-          </div>
+                    <span className="flex items-center gap-1.5">
+                      <Zap size={11} className="text-accent-amber" aria-hidden="true" />
+                      <span>{p.name}</span>
+                    </span>
+                    <span className="text-[10.5px] text-[var(--pill-teal-text)]">Ready</span>
+                  </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Right Drawer Action Controls */}
@@ -422,10 +500,10 @@ export const BottomTerminalDrawer: React.FC = () => {
             <button
               type="button"
               onClick={handleCaptureErrorToSpec}
-              title="Salin potongan error/trace terminal terakhir ke dokumen spec aktif"
+              title="Append latest terminal error trace to active spec"
               className="h-6 px-2.5 rounded-[6px] bg-[var(--pill-red-bg)] hover:brightness-110 text-[var(--pill-red-text)] border border-[var(--pill-red-border)] flex items-center gap-1.5 text-[11px] font-medium transition-all"
             >
-              <Radio size={11} />
+              <Radio size={11} aria-hidden="true" />
               <span>Capture error</span>
             </button>
           )}
@@ -442,25 +520,37 @@ export const BottomTerminalDrawer: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsMaximized(!isMaximized)}
-            title={isMaximized ? 'Pulihkan Ukuran Drawer' : 'Maksimalkan Drawer Terminal'}
+            title={isMaximized ? 'Restore terminal drawer height' : 'Maximize terminal drawer'}
+            aria-label={isMaximized ? 'Restore terminal drawer height' : 'Maximize terminal drawer'}
+            aria-pressed={isMaximized}
             className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary transition-colors"
           >
-            {isMaximized ? <Minimize2 size={12.5} /> : <Maximize2 size={12.5} />}
+            {isMaximized ? (
+              <Minimize2 size={12.5} aria-hidden="true" />
+            ) : (
+              <Maximize2 size={12.5} aria-hidden="true" />
+            )}
           </button>
 
           <button
             type="button"
             onClick={closeDrawer}
-            title="Tutup Drawer Terminal (Ctrl+`)"
+            title="Close terminal drawer (Ctrl+`)"
+            aria-label="Close terminal drawer"
             className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary transition-colors"
           >
-            <ChevronDown size={14} />
+            <ChevronDown size={14} aria-hidden="true" />
           </button>
         </div>
       </div>
 
       {/* Terminal Viewport */}
-      <div className="flex-1 w-full h-full overflow-hidden relative p-1.5 bg-surface-chrome">
+      <div
+        id="terminal-tabpanel"
+        role="tabpanel"
+        aria-labelledby={activeTab ? `terminal-tab-${activeTab.id}` : undefined}
+        className="flex-1 w-full h-full overflow-hidden relative p-1.5 bg-surface-chrome"
+      >
         <div ref={containerRef} className="w-full h-full" />
       </div>
     </aside>

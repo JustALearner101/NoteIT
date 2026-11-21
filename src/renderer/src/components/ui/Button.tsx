@@ -1,9 +1,10 @@
 import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { Loader2 } from 'lucide-react'
 import { cn } from './cn'
 
 export const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap font-sans font-medium transition-all duration-150 select-none disabled:opacity-45 disabled:pointer-events-none shrink-0',
+  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap font-sans font-medium transition-all duration-150 select-none disabled:opacity-45 disabled:pointer-events-none shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cobalt focus-visible:ring-offset-1 focus-visible:ring-offset-canvas-primary',
   {
     variants: {
       variant: {
@@ -36,17 +37,30 @@ export const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+    VariantProps<typeof buttonVariants> {
+  loading?: boolean
+}
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, type = 'button', ...props }, ref) => {
+  ({ className, variant, size, type = 'button', loading = false, disabled, children, ...props }, ref) => {
+    const isDisabled = Boolean(disabled || loading)
+    const isIconSize = size === 'icon' || size === 'icon-xs'
+    const spinnerSize = size === 'xs' || size === 'icon-xs' ? 11 : 13
+
     return (
       <button
         ref={ref}
         type={type}
+        disabled={isDisabled}
+        aria-busy={loading || undefined}
         className={cn(buttonVariants({ variant, size }), className)}
         {...props}
-      />
+      >
+        {loading && (
+          <Loader2 size={spinnerSize} className="animate-spin shrink-0" aria-hidden="true" />
+        )}
+        {!(loading && isIconSize) && children}
+      </button>
     )
   }
 )

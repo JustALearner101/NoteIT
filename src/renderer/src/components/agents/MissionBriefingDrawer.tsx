@@ -18,7 +18,18 @@ import {
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { useTerminalStore } from '@renderer/stores/useTerminalStore'
-import { Badge, Button, Kbd, cn } from '@renderer/components/ui'
+import { matchesShortcutEvent } from '@renderer/lib/shortcuts'
+import {
+  Badge,
+  Button,
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  Kbd,
+  cn
+} from '@renderer/components/ui'
 import type {
   DetectedCliPreset,
   DispatchMissionInput,
@@ -113,27 +124,9 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
     }
   }, [isOpen, page.id, repoPath])
 
-  // Keyboard shortcut: Esc tutup, Ctrl+Enter luncurkan
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault()
-        void handleLaunchMission()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, selectedPresetId, isolationMode, approvalMode, customDirective])
-
   const handleLaunchMission = async () => {
     if (!repoPath) {
-      showToast('Hubungkan folder repositori proyek terlebih dahulu!')
+      showToast('Connect a project repository folder first.', 'error')
       return
     }
 
@@ -149,59 +142,74 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
       })
 
       if (res.ok) {
-        showToast(`Misi ${selectedPresetId.toUpperCase()} diluncurkan di terminal ADE!`)
+        showToast(`Mission ${selectedPresetId.toUpperCase()} launched in ADE terminal!`)
         openDrawer()
         onClose()
       } else {
-        showToast(`Gagal meluncurkan misi: ${res.error || 'Terjadi kesalahan'}`)
+        showToast(`Failed to launch mission: ${res.error || 'Unknown error'}`, 'error')
       }
     } catch (error) {
       console.error('Failed to dispatch mission:', error)
-      showToast('Gagal meluncurkan misi agen.')
+      showToast('Failed to launch agent mission.', 'error')
     } finally {
       setIsLaunching(false)
     }
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex justify-end select-none">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/65 backdrop-blur-[3px] transition-opacity"
-        onClick={onClose}
-      />
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <DialogContent
+        variant="drawer-right"
+        showCloseButton={false}
+        className="select-none"
+        onKeyDown={(e) => {
+          if (matchesShortcutEvent(e, 'launch-mission')) {
+            e.preventDefault()
+            if (!isLaunching && repoPath) {
+              void handleLaunchMission()
+            }
+          }
+        }}
+      >
+        <DialogDescription className="sr-only">
+          Configure CLI agent preset, workspace isolation, and approval mode before dispatching{' '}
+          {page.code} {page.title}.
+        </DialogDescription>
 
-      {/* Slide-over Command Deck Body */}
-      <div className="relative w-full max-w-[540px] h-full bg-canvas-primary border-l border-border-hairline shadow-popover flex flex-col z-10 animate-view-enter text-ink-primary font-sans">
         {/* Header */}
         <div className="px-5 py-4 bg-surface-chrome border-b border-border-hairline flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-[8px] bg-[var(--pill-cobalt-bg)] border border-[var(--pill-cobalt-border)] flex items-center justify-center text-[var(--pill-cobalt-text)] shrink-0">
-              <Rocket size={15} />
+              <Rocket size={15} aria-hidden="true" />
             </div>
             <div className="min-w-0">
               <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
                 Mission Briefing · Spec Dispatch
               </div>
-              <h2 className="font-display font-semibold text-sm text-ink-primary flex items-center gap-1.5 truncate mt-0.5">
+              <DialogTitle className="font-display font-semibold text-sm text-ink-primary flex items-center gap-1.5 truncate mt-0.5 pr-0">
                 <span>{page.icon}</span>
                 <span className="truncate">
                   {page.code} · {page.title}
                 </span>
-              </h2>
+              </DialogTitle>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            title="Tutup (ESC)"
-            className="p-1.5 rounded-[7px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary transition-colors"
-          >
-            <X size={15} />
-          </button>
+          <DialogClose asChild>
+            <button
+              type="button"
+              title="Close (Esc)"
+              aria-label="Close mission briefing"
+              className="p-1.5 rounded-[7px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary transition-colors"
+            >
+              <X size={15} aria-hidden="true" />
+            </button>
+          </DialogClose>
         </div>
 
         {/* Scrollable Form Body */}
@@ -319,6 +327,7 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
                   <button
                     key={p.id}
                     type="button"
+                    aria-pressed={isSelected}
                     onClick={() => setSelectedPresetId(p.id)}
                     className={cn(
                       'p-3 rounded-[9px] border text-left flex flex-col gap-1 transition-all',
@@ -356,6 +365,7 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
             <div className="grid grid-cols-2 gap-2 text-xs">
               <button
                 type="button"
+                aria-pressed={isolationMode === 'worktree'}
                 onClick={() => setIsolationMode('worktree')}
                 className={cn(
                   'p-3 rounded-[9px] border text-left flex flex-col gap-1 transition-all',
@@ -375,6 +385,7 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
 
               <button
                 type="button"
+                aria-pressed={isolationMode === 'direct'}
                 onClick={() => setIsolationMode('direct')}
                 className={cn(
                   'p-3 rounded-[9px] border text-left flex flex-col gap-1 transition-all',
@@ -407,6 +418,7 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
                 <button
                   key={opt.id}
                   type="button"
+                  aria-pressed={approvalMode === opt.id}
                   onClick={() => setApprovalMode(opt.id)}
                   className={cn(
                     'p-2.5 rounded-[9px] border text-center transition-all',
@@ -424,13 +436,17 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
 
           {/* Custom Directive Input */}
           <div className="space-y-1.5">
-            <label className="font-medium text-ink-secondary text-xs block">
-              Arahan tambahan (opsional)
+            <label
+              htmlFor="mission-custom-directive"
+              className="font-medium text-ink-secondary text-xs block"
+            >
+              Additional directive (optional)
             </label>
             <textarea
+              id="mission-custom-directive"
               value={customDirective}
               onChange={(e) => setCustomDirective(e.target.value)}
-              placeholder="Contoh: Fokus pada pembuatan unit test di Vitest dan pastikan token secret dibaca via env..."
+              placeholder="Example: Focus on Vitest unit tests and keep secret tokens read via environment variables..."
               rows={2}
               className="w-full p-3 rounded-[9px] bg-surface-elevated border border-border-hairline text-xs text-ink-primary placeholder:text-ink-muted focus:border-accent-cobalt resize-none"
             />
@@ -440,22 +456,23 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
         {/* Footer Actions */}
         <div className="px-5 py-3.5 bg-surface-chrome border-t border-border-hairline flex items-center justify-between shrink-0">
           <Button variant="ghost" size="md" onClick={onClose}>
-            <span>Batal</span>
+            <span>Cancel</span>
             <Kbd>Esc</Kbd>
           </Button>
 
           <Button
             variant="primary"
             size="md"
-            onClick={handleLaunchMission}
-            disabled={isLaunching || !repoPath}
+            loading={isLaunching}
+            onClick={() => void handleLaunchMission()}
+            disabled={!repoPath}
           >
-            <Play size={12.5} className="fill-current" />
-            <span>{isLaunching ? 'Meluncurkan...' : 'Launch Mission'}</span>
+            {!isLaunching && <Play size={12.5} className="fill-current" aria-hidden="true" />}
+            <span>{isLaunching ? 'Launching...' : 'Launch Mission'}</span>
             <Kbd className="bg-white/15 border-white/20 text-white ml-1">Ctrl ↵</Kbd>
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

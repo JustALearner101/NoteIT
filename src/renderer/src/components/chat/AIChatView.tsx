@@ -660,7 +660,10 @@ export const AIChatView: React.FC = () => {
   )
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-canvas-primary ambient-aurora-host animate-view-enter">
+    <main
+      aria-label="AI Chat"
+      className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-canvas-primary ambient-aurora-host animate-view-enter"
+    >
       {/* Top Session Bar */}
       <div className="h-[38px] px-4 bg-surface-chrome border-b border-border-hairline flex items-center justify-between shrink-0 select-none">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -940,6 +943,6 @@ export const AIChatView: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </main>
   )
 }

@@ -44,6 +44,7 @@ interface WorkspaceStore {
   stats: WorkspaceSnapshot['stats']
   isLoading: boolean
   toastMessage: string | null
+  toastTone: 'info' | 'error'
 
   // Navigation & Multi-Tab / Split-Pane State
   activeNotebookId: string
@@ -59,6 +60,8 @@ interface WorkspaceStore {
   // UI Chrome State
   isSidebarCollapsed: boolean
   isCommandPaletteOpen: boolean
+  isShortcutCheatsheetOpen: boolean
+  missionBriefingPageId: string | null
   activeMainView: MainViewMode
   activeSettingsSection: string
   isBrowserSplitOpen: boolean
@@ -84,6 +87,10 @@ interface WorkspaceStore {
 
   toggleSidebar: () => void
   setCommandPaletteOpen: (open: boolean) => void
+  setShortcutCheatsheetOpen: (open: boolean) => void
+  openMissionBriefing: (pageId?: string) => void
+  closeMissionBriefing: () => void
+  toggleMissionBriefing: (pageId?: string) => void
   setActiveMainView: (view: MainViewMode, settingsSection?: string) => void
   setActiveSettingsSection: (section: string) => void
   toggleBrowserSplitPane: () => void
@@ -99,7 +106,7 @@ interface WorkspaceStore {
   toggleOnboardingItem: (itemId: string) => void
   openHelpCenter: () => Promise<void>
   setTelemetry: (partial: Partial<TelemetryState>) => void
-  showToast: (message: string) => void
+  showToast: (message: string, tone?: 'info' | 'error') => void
 
   // Mutations via IPC
   createNotebook: (input: { name: string; icon: string; color: MarkerColor }) => Promise<void>
@@ -279,6 +286,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   },
   isLoading: true,
   toastMessage: null,
+  toastTone: 'info',
 
   activeNotebookId: '',
   openTabIds: [],
@@ -292,6 +300,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   isSidebarCollapsed: false,
   isCommandPaletteOpen: false,
+  isShortcutCheatsheetOpen: false,
+  missionBriefingPageId: null,
   activeMainView: 'workbench',
   activeSettingsSection: 'appearance',
   isBrowserSplitOpen: false,
@@ -499,6 +509,33 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   setCommandPaletteOpen: (open) => set({ isCommandPaletteOpen: open }),
 
+  setShortcutCheatsheetOpen: (open) => set({ isShortcutCheatsheetOpen: open }),
+
+  openMissionBriefing: (pageId) =>
+    set((state) => {
+      const targetId =
+        pageId ??
+        (state.focusedPane === 'split' && state.splitPageId
+          ? state.splitPageId
+          : state.activePageId)
+      return { missionBriefingPageId: targetId || null }
+    }),
+
+  closeMissionBriefing: () => set({ missionBriefingPageId: null }),
+
+  toggleMissionBriefing: (pageId) =>
+    set((state) => {
+      if (state.missionBriefingPageId) {
+        return { missionBriefingPageId: null }
+      }
+      const targetId =
+        pageId ??
+        (state.focusedPane === 'split' && state.splitPageId
+          ? state.splitPageId
+          : state.activePageId)
+      return { missionBriefingPageId: targetId || null }
+    }),
+
   setActiveMainView: (view, settingsSection) =>
     set((state) => ({
       activeMainView: view,
@@ -515,10 +552,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     })),
 
   setRightSplitMode: (mode) =>
-    set({
+    set((state) => ({
       rightSplitMode: mode,
-      isBrowserSplitOpen: mode === 'browser'
-    }),
+      isBrowserSplitOpen: mode === 'browser',
+      focusedPane: 'primary',
+      splitPageId: mode === 'page' ? state.splitPageId : null
+    })),
 
   updateNotebookRepo: async (notebookId, repoPath, defaultBranch) => {
     try {
@@ -677,10 +716,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       telemetry: { ...state.telemetry, ...partial }
     })),
 
-  showToast: (message) => {
-    set({ toastMessage: message })
+  showToast: (message, tone = 'info') => {
+    set({ toastMessage: message, toastTone: tone })
     setTimeout(() => {
-      set((state) => (state.toastMessage === message ? { toastMessage: null } : state))
+      set((state) =>
+        state.toastMessage === message ? { toastMessage: null, toastTone: 'info' } : state
+      )
     }, 2800)
   },
 

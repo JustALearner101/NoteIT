@@ -19,7 +19,14 @@ import {
 import { useAgentStore, type AgentFilter } from '@renderer/stores/useAgentStore'
 import { useTerminalStore } from '@renderer/stores/useTerminalStore'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
-import { Badge, Button, SegmentedControl, cn } from '@renderer/components/ui'
+import {
+  Badge,
+  Button,
+  ConfirmModal,
+  PromptModal,
+  SegmentedControl,
+  cn
+} from '@renderer/components/ui'
 import type { AgentSessionRecord, AgentSessionStatus } from '@shared/types/domain'
 
 function formatTimeAgo(timestamp: number): string {
@@ -142,6 +149,8 @@ export const AgentMissionControlView: React.FC = () => {
   const [mergingSessionId, setMergingSessionId] = useState<string | null>(null)
   const [discardingSessionId, setDiscardingSessionId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [mergeTarget, setMergeTarget] = useState<AgentSessionRecord | null>(null)
+  const [discardTarget, setDiscardTarget] = useState<AgentSessionRecord | null>(null)
 
   useEffect(() => {
     loadSessions(activeNotebookId)
@@ -185,38 +194,41 @@ export const AgentMissionControlView: React.FC = () => {
     await quickApprove(sessionId)
   }
 
-  const handleMerge = async (session: AgentSessionRecord): Promise<void> => {
+  const handleMerge = (session: AgentSessionRecord): void => {
     setActionError(null)
+    setMergeTarget(session)
+  }
+
+  const confirmMerge = async (commitMsg: string): Promise<void> => {
+    if (!mergeTarget) return
+    const session = mergeTarget
     const defaultMsg = `feat(${session.taskCode || 'ADE'}): ${session.title}`
-    const commitMsg = window.prompt(
-      `Masukkan pesan commit merge untuk cabang [${session.branchName || 'worktree'}]:`,
-      defaultMsg
-    )
-    if (commitMsg === null) return // Canceled
 
     setMergingSessionId(session.id)
     try {
       const res = await mergeSession(session.id, commitMsg.trim() || defaultMsg)
       if (!res.ok) {
-        setActionError(res.error || 'Gagal menggabungkan worktree ke cabang utama.')
+        setActionError(res.error || 'Failed to merge worktree into the main branch.')
       }
     } finally {
       setMergingSessionId(null)
     }
   }
 
-  const handleDiscard = async (session: AgentSessionRecord): Promise<void> => {
+  const handleDiscard = (session: AgentSessionRecord): void => {
     setActionError(null)
-    const confirmed = window.confirm(
-      `Apakah Anda yakin ingin membuang worktree [${session.branchName || session.id}]?\n\nSemua perubahan yang belum di-commit dan folder worktree terisolasi akan dihapus secara permanen.`
-    )
-    if (!confirmed) return
+    setDiscardTarget(session)
+  }
+
+  const confirmDiscard = async (): Promise<void> => {
+    if (!discardTarget) return
+    const session = discardTarget
 
     setDiscardingSessionId(session.id)
     try {
       const res = await discardSession(session.id)
       if (!res.ok) {
-        setActionError(res.error || 'Gagal membuang worktree.')
+        setActionError(res.error || 'Failed to discard worktree.')
       }
     } finally {
       setDiscardingSessionId(null)
@@ -232,7 +244,7 @@ export const AgentMissionControlView: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-canvas-primary text-ink-primary font-sans select-none animate-view-enter">
       {/* Studio Header Bar */}
-      <header className="px-6 py-4 border-b border-border-hairline bg-surface-chrome/70 flex flex-wrap items-center justify-between gap-4 shrink-0">
+      <div className="px-6 py-4 border-b border-border-hairline bg-surface-chrome/70 flex flex-wrap items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-[10px] bg-[var(--pill-teal-bg)] border border-[var(--pill-teal-border)] flex items-center justify-center text-[var(--pill-teal-text)]">
             <Radio size={17} />
@@ -290,17 +302,19 @@ export const AgentMissionControlView: React.FC = () => {
             variant="secondary"
             size="icon"
             onClick={() => void loadSessions(activeNotebookId)}
-            title="Refresh Data Sesi"
+            title="Refresh sessions"
+            aria-label="Refresh sessions"
           >
-            <RefreshCw size={13.5} className={isLoading ? 'animate-spin' : ''} />
+            <RefreshCw size={13.5} className={isLoading ? 'animate-spin' : ''} aria-hidden="true" />
           </Button>
         </div>
-      </header>
+      </div>
 
       {/* Filter Segmented Toolbar */}
       <div className="px-6 py-2.5 bg-surface-chrome/40 border-b border-border-hairline flex flex-wrap items-center justify-between gap-3 shrink-0">
         <SegmentedControl<AgentFilter>
           size="sm"
+          ariaLabel="Filter agent missions"
           value={activeFilter}
           onChange={setFilter}
           options={[
@@ -322,11 +336,12 @@ export const AgentMissionControlView: React.FC = () => {
 
         {actionError && (
           <Badge tone="red" size="sm" className="gap-2 py-1 px-2.5">
-            <AlertTriangle size={12} />
+            <AlertTriangle size={12} aria-hidden="true" />
             <span>{actionError}</span>
             <button
               type="button"
               onClick={() => setActionError(null)}
+              aria-label="Dismiss error"
               className="ml-1 hover:opacity-75"
             >
               ×
@@ -336,7 +351,7 @@ export const AgentMissionControlView: React.FC = () => {
       </div>
 
       {/* Mission Cards Grid */}
-      <main className="flex-1 overflow-y-auto p-6">
+      <main aria-label="Mission Control" className="flex-1 overflow-y-auto p-6">
         {filteredSessions.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto py-16">
             <div className="h-14 w-14 rounded-[14px] bg-surface-elevated border border-border-hairline flex items-center justify-center text-ink-muted mb-4 shadow-card">
@@ -392,16 +407,20 @@ export const AgentMissionControlView: React.FC = () => {
                         {renderExecutorBadge(session.agentPreset)}
                       </div>
 
-                      <h2
-                        onClick={() => handleNavigateToSpec(session.pageId)}
-                        title="Klik untuk membuka spesifikasi di Workbench"
-                        className="font-display font-semibold text-[14px] text-ink-primary hover:text-accent-cobalt transition-colors truncate cursor-pointer flex items-center gap-1.5 group"
-                      >
-                        <span className="truncate">{session.title}</span>
-                        <ExternalLink
-                          size={12}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-accent-cobalt"
-                        />
+                      <h2 className="font-display font-semibold text-[14px] text-ink-primary truncate">
+                        <button
+                          type="button"
+                          onClick={() => handleNavigateToSpec(session.pageId)}
+                          title="Open specification in Workbench"
+                          className="w-full text-left hover:text-accent-cobalt transition-colors flex items-center gap-1.5 group truncate rounded-[4px]"
+                        >
+                          <span className="truncate">{session.title}</span>
+                          <ExternalLink
+                            size={12}
+                            aria-hidden="true"
+                            className="opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity shrink-0 text-accent-cobalt"
+                          />
+                        </button>
                       </h2>
                     </div>
 
@@ -513,10 +532,11 @@ export const AgentMissionControlView: React.FC = () => {
                             size="icon"
                             disabled={isDiscarding}
                             onClick={() => handleDiscard(session)}
-                            title="Batalkan & hapus direktori worktree terisolasi secara aman"
+                            title="Discard and delete isolated worktree"
+                            aria-label="Discard worktree"
                             className="hover:bg-[var(--pill-red-bg)] hover:text-[var(--pill-red-text)]"
                           >
-                            <Trash2 size={12.5} />
+                            <Trash2 size={12.5} aria-hidden="true" />
                           </Button>
                         </>
                       )}
@@ -535,6 +555,43 @@ export const AgentMissionControlView: React.FC = () => {
           </div>
         )}
       </main>
+
+      <PromptModal
+        open={Boolean(mergeTarget)}
+        onOpenChange={(open) => {
+          if (!open) setMergeTarget(null)
+        }}
+        title="Merge worktree to main branch"
+        description={
+          mergeTarget
+            ? `Enter a merge commit message for branch [${mergeTarget.branchName || 'worktree'}].`
+            : undefined
+        }
+        label="Merge commit message"
+        defaultValue={
+          mergeTarget ? `feat(${mergeTarget.taskCode || 'ADE'}): ${mergeTarget.title}` : ''
+        }
+        confirmLabel="Merge to Main"
+        loading={Boolean(mergeTarget && mergingSessionId === mergeTarget.id)}
+        onSubmit={confirmMerge}
+      />
+
+      <ConfirmModal
+        open={Boolean(discardTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDiscardTarget(null)
+        }}
+        title="Discard isolated worktree?"
+        description={
+          discardTarget
+            ? `Are you sure you want to discard worktree [${discardTarget.branchName || discardTarget.id}]? All uncommitted changes and the isolated worktree folder will be permanently deleted.`
+            : ''
+        }
+        confirmLabel="Discard worktree"
+        variant="danger"
+        loading={Boolean(discardTarget && discardingSessionId === discardTarget.id)}
+        onConfirm={confirmDiscard}
+      />
     </div>
   )
 }
