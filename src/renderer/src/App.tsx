@@ -256,7 +256,7 @@ export const App: React.FC = () => {
         <SettingsView />
       ) : (
         <div className="flex-1 flex min-h-0 overflow-hidden">
-          {!isSidebarCollapsed && <IndexRailSidebar />}
+          <IndexRailSidebar collapsed={isSidebarCollapsed} />
 
           {activeMainView === 'ai-chat' ? (
             <AIChatView />
@@ -266,8 +266,8 @@ export const App: React.FC = () => {
             <AgentMissionControlView />
           ) : (
             <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden animate-view-enter">
-              {/* Multi-Tab Bar with Section Drafting Marker Top Accent */}
-          <div className="h-[34px] bg-surface-chrome border-b border-border-hairline flex items-center justify-between px-2 select-none shrink-0">
+              {/* Calm Multi-Tab Strip */}
+          <div className="h-[38px] bg-surface-chrome/90 border-b border-border-hairline flex items-center justify-between px-2.5 select-none shrink-0">
             <div className="flex items-center gap-1 min-w-0">
               <div
                 ref={tabStripRef}
@@ -313,22 +313,20 @@ export const App: React.FC = () => {
                         e.preventDefault()
                         setTabMenu({ pageId: tabId, x: e.clientX, y: e.clientY })
                       }}
-                      className={`group relative h-7 px-3 rounded-[5px] border flex items-center gap-2 text-xs cursor-pointer transition-colors ${
+                      className={`group relative h-[28px] px-2.5 rounded-[7px] border flex items-center gap-2 text-[12px] cursor-pointer transition-colors shrink-0 ${
                         draggingTabId === tabId ? 'opacity-40' : ''
                       } ${
                         isActive
-                          ? 'bg-surface-elevated border-border-hairline text-ink-primary font-medium'
-                          : 'bg-surface-chrome border-transparent text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
+                          ? 'bg-surface-elevated border-border-hairline text-ink-primary font-medium shadow-[0_1px_2px_rgba(0,0,0,0.25)]'
+                          : 'bg-transparent border-transparent text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
                       }`}
                     >
-                      {/* 2px Active Section Marker Accent Line */}
-                      {isActive && (
-                        <span
-                          className={`absolute top-0 left-1.5 right-1.5 h-[2px] rounded-full ${marker.bgStrip}`}
-                        />
-                      )}
-                      <span className="text-xs">{tabPage.icon}</span>
-                      <span className="truncate max-w-[160px]">{tabPage.title}</span>
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${marker.dotBg} ${
+                          isActive ? 'opacity-100' : 'opacity-45'
+                        }`}
+                      />
+                      <span className="truncate max-w-[168px]">{tabPage.title}</span>
                       {isDirty && (
                         <span
                           title="Perubahan belum tersimpan"
@@ -336,14 +334,16 @@ export const App: React.FC = () => {
                           className="w-1.5 h-1.5 rounded-full bg-accent-amber shrink-0"
                         />
                       )}
-                      <span className="font-mono text-[10px] text-ink-muted">{tabPage.code}</span>
+                      <span className="font-mono text-[10px] text-ink-muted tabular-nums">
+                        {tabPage.code}
+                      </span>
                       {openTabIds.length > 1 && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
                             closeTab(tabId)
                           }}
-                          className="opacity-60 group-hover:opacity-100 hover:text-[#EF4444]"
+                          className="p-0.5 rounded-[4px] opacity-40 group-hover:opacity-100 hover:bg-surface-hover hover:text-ink-primary transition-opacity"
                         >
                           <X size={11} />
                         </button>
@@ -364,7 +364,7 @@ export const App: React.FC = () => {
                     }
                   }}
                   title="Buka Halaman Baru"
-                  className="h-6 w-6 rounded hover:bg-surface-hover flex items-center justify-center text-ink-muted hover:text-ink-primary"
+                  className="h-7 w-7 rounded-[7px] hover:bg-surface-hover flex items-center justify-center text-ink-muted hover:text-ink-primary transition-colors shrink-0"
                 >
                   <Plus size={13} />
                 </button>
@@ -376,13 +376,13 @@ export const App: React.FC = () => {
 
             {/* Right Pane Indicator when Split-Pane is active */}
             {splitPage && (
-              <div className="flex items-center gap-2 font-mono text-[11px] pl-3 border-l border-border-hairline">
-                <Columns2 size={12} className="text-accent-cobalt" />
-                <span className="text-ink-secondary">SPLIT PANE:</span>
+              <div className="flex items-center gap-2 text-xs pl-3 border-l border-border-hairline shrink-0">
+                <Columns2 size={12.5} className="text-accent-cobalt" />
+                <span className="text-ink-muted">Split:</span>
                 <select
                   value={splitPage.id}
                   onChange={(e) => openPageInTab(e.target.value, true)}
-                  className="bg-surface-elevated border border-border-hairline rounded px-2 py-0.5 text-ink-primary focus:outline-none"
+                  className="h-6 bg-surface-elevated border border-border-hairline rounded-[6px] px-2 text-xs text-ink-primary focus:border-accent-cobalt"
                 >
                   {pages.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -393,7 +393,7 @@ export const App: React.FC = () => {
                 <button
                   onClick={() => toggleSplitPane()}
                   title="Tutup Split-Pane"
-                  className="p-0.5 rounded hover:bg-surface-hover text-ink-muted hover:text-[#EF4444]"
+                  className="p-1 rounded-[5px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary"
                 >
                   <X size={12} />
                 </button>
@@ -491,8 +491,8 @@ export const App: React.FC = () => {
 
       {/* Consistent Active-Voice Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-9 right-4 z-50 px-3.5 py-2 rounded-[6px] bg-surface-elevated border border-accent-cobalt shadow-xl font-mono text-xs text-ink-primary flex items-center gap-2 animate-toast-enter">
-          <span className="w-2 h-2 rounded-full bg-accent-cobalt" />
+        <div className="fixed top-12 right-4 z-50 px-3.5 py-2.5 rounded-[10px] bg-surface-elevated border border-border-hairline shadow-popover text-xs font-medium text-ink-primary flex items-center gap-2.5 animate-toast-enter">
+          <span className="w-2 h-2 rounded-full bg-accent-emerald shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}

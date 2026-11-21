@@ -13,6 +13,7 @@ import {
   X
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
+import { Button } from '@renderer/components/ui'
 
 interface BrowserTab {
   id: string
@@ -249,7 +250,7 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
   return (
     <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-canvas-primary animate-view-enter">
       {/* Top Browser Tab Bar */}
-      <div className="h-[34px] px-2 bg-surface-chrome border-b border-border-hairline flex items-center justify-between gap-2 select-none shrink-0">
+      <div className="h-[38px] px-2.5 bg-surface-chrome border-b border-border-hairline flex items-center justify-between gap-2 select-none shrink-0">
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 min-w-0">
           {tabs.map((tab) => {
             const isActive = tab.id === activeTab.id
@@ -257,14 +258,14 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
               <div
                 key={tab.id}
                 onClick={() => setActiveTabId(tab.id)}
-                className={`group h-7 px-2.5 rounded-[5px] border flex items-center gap-2 text-xs cursor-pointer transition-colors ${
+                className={`group h-7 px-2.5 rounded-[7px] border flex items-center gap-2 text-xs cursor-pointer transition-colors shrink-0 ${
                   isActive
                     ? 'bg-surface-elevated border-border-hairline text-ink-primary font-medium'
-                    : 'bg-surface-chrome border-transparent text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
+                    : 'bg-transparent border-transparent text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
                 }`}
               >
                 <Globe
-                  size={11}
+                  size={11.5}
                   className={
                     tab.isLoading ? 'text-accent-amber animate-spin' : 'text-accent-cobalt'
                   }
@@ -277,7 +278,7 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
                       e.stopPropagation()
                       handleCloseTab(tab.id)
                     }}
-                    className="opacity-60 group-hover:opacity-100 hover:text-[#EF4444]"
+                    className="opacity-50 group-hover:opacity-100 hover:text-accent-rose"
                   >
                     <X size={11} />
                   </button>
@@ -290,7 +291,7 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
             type="button"
             onClick={() => handleNewTab()}
             title="Buka Tab Browser Baru"
-            className="h-6 w-6 rounded hover:bg-surface-hover flex items-center justify-center text-ink-muted hover:text-ink-primary shrink-0"
+            className="h-7 w-7 rounded-[7px] hover:bg-surface-hover flex items-center justify-center text-ink-muted hover:text-ink-primary shrink-0 transition-colors"
           >
             <Plus size={13} />
           </button>
@@ -298,8 +299,9 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
 
         {/* Mode Dock / Split Toggle */}
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="xs"
             onClick={() => {
               if (isSplitMode) {
                 toggleBrowserSplitPane()
@@ -313,22 +315,21 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
                 ? 'Tutup Split Browser'
                 : 'Sematkan Browser di Split-Pane Kanan sambil buka Catatan'
             }
-            className="h-6 px-2 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-[11px] font-mono text-ink-secondary hover:text-ink-primary flex items-center gap-1.5"
           >
-            <Columns2 size={11} className="text-accent-cobalt" />
-            <span>{isSplitMode ? 'Tutup Split' : 'Dock ke Split-Pane'}</span>
-          </button>
+            <Columns2 size={11.5} className="text-accent-cobalt" />
+            <span>{isSplitMode ? 'Tutup Split' : 'Dock to Split'}</span>
+          </Button>
         </div>
       </div>
 
       {/* Omnibox URL & Workbench Action Bar */}
-      <div className="px-2.5 py-1.5 bg-surface-chrome/70 border-b border-border-hairline flex flex-wrap items-center gap-1.5 shrink-0">
+      <div className="px-3 py-2 bg-surface-chrome/65 border-b border-border-hairline flex flex-wrap items-center gap-2 shrink-0">
         <div className="flex items-center gap-0.5">
           <button
             type="button"
             onClick={() => webviewRefs.current[activeTabId]?.goBack?.()}
             title="Kembali"
-            className="h-7 w-7 rounded hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary"
+            className="h-7 w-7 rounded-[7px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
             <ArrowLeft size={13} />
           </button>
@@ -336,7 +337,7 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
             type="button"
             onClick={() => webviewRefs.current[activeTabId]?.goForward?.()}
             title="Maju"
-            className="h-7 w-7 rounded hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary"
+            className="h-7 w-7 rounded-[7px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
             <ArrowRight size={13} />
           </button>
@@ -344,7 +345,7 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
             type="button"
             onClick={() => webviewRefs.current[activeTabId]?.reload?.()}
             title="Muat Ulang"
-            className="h-7 w-7 rounded hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary"
+            className="h-7 w-7 rounded-[7px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
             <RotateCw size={12} />
           </button>
@@ -362,37 +363,37 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
             value={addressInput}
             onChange={(e) => setAddressInput(e.target.value)}
             placeholder="Ketik URL (https://..., localhost:3000) atau kata kunci pencarian..."
-            className="w-full h-7 px-3 rounded-[6px] bg-surface-elevated border border-border-hairline font-mono text-xs text-ink-primary focus:outline-none focus:border-accent-cobalt"
+            className="w-full h-7 px-3 rounded-[7px] bg-surface-elevated border border-border-hairline font-mono text-xs text-ink-primary placeholder:text-ink-muted focus:border-accent-cobalt"
           />
         </form>
 
         {/* NoteIT Workbench Superpowers */}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => void handleClipToActiveSpec()}
             title="Simpan teks/halaman ini sebagai blok di dokumen aktif"
-            className="h-7 px-2.5 rounded-[6px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs text-ink-primary flex items-center gap-1.5"
           >
             <BookmarkPlus size={12} className="text-accent-amber" />
             <span className="hidden sm:inline">Clip to {activePage?.code || 'Spec'}</span>
-          </button>
+          </Button>
 
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => void handleSendToAIChat()}
             title="Kirim isi halaman web ini sebagai konteks ke Vercel AI SDK Chat"
-            className="h-7 px-2.5 rounded-[6px] bg-accent-cobalt/15 hover:bg-accent-cobalt/25 border border-accent-cobalt/40 text-xs text-accent-cobalt font-medium flex items-center gap-1.5"
           >
             <Sparkles size={12} />
             <span className="hidden sm:inline">Ask AI</span>
-          </button>
+          </Button>
 
           <button
             type="button"
             onClick={() => webviewRefs.current[activeTabId]?.openDevTools?.()}
             title="Buka Chromium DevTools untuk tab ini"
-            className="h-7 w-7 rounded-[6px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline flex items-center justify-center text-ink-secondary hover:text-ink-primary"
+            className="h-7 w-7 rounded-[7px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
             <Bug size={12} />
           </button>
@@ -402,7 +403,7 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
             target="_blank"
             rel="noreferrer"
             title="Buka di Browser OS Eksternal"
-            className="h-7 w-7 rounded-[6px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline flex items-center justify-center text-ink-secondary hover:text-ink-primary"
+            className="h-7 w-7 rounded-[7px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
             <ExternalLink size={12} />
           </a>
@@ -410,14 +411,14 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
       </div>
 
       {/* Quick Bookmarks Bar */}
-      <div className="px-3 py-1 bg-surface-chrome/40 border-b border-border-subtle flex items-center gap-1.5 overflow-x-auto no-scrollbar select-none shrink-0">
-        <span className="font-mono text-[10px] text-ink-muted uppercase mr-1">QUICK DOCS:</span>
+      <div className="px-3 py-1.5 bg-surface-chrome/35 border-b border-border-subtle flex items-center gap-1.5 overflow-x-auto no-scrollbar select-none shrink-0">
+        <span className="text-[11px] font-medium text-ink-muted mr-1">Quick docs:</span>
         {QUICK_BOOKMARKS.map((bm) => (
           <button
             key={bm.label}
             type="button"
             onClick={() => handleNavigate(bm.url)}
-            className="px-2 py-0.5 rounded bg-surface-elevated/70 hover:bg-surface-hover border border-border-hairline font-mono text-[10px] text-ink-secondary hover:text-ink-primary shrink-0"
+            className="px-2.5 py-0.5 rounded-[6px] bg-surface-elevated/80 hover:bg-surface-hover border border-border-hairline text-[11px] text-ink-secondary hover:text-ink-primary shrink-0 transition-colors"
           >
             {bm.label}
           </button>

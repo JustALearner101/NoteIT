@@ -53,7 +53,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({ pageId, x, y, on
   const top = Math.max(4, Math.min(y, window.innerHeight - MENU_HEIGHT - 4))
 
   const itemClass =
-    'w-full px-3 py-1.5 flex items-center gap-2 text-left text-xs text-ink-secondary hover:bg-surface-hover hover:text-ink-primary disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-secondary disabled:cursor-default'
+    'w-full px-2.5 py-1.5 rounded-[6px] flex items-center gap-2 text-left text-xs text-ink-secondary hover:bg-surface-hover hover:text-ink-primary disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-secondary disabled:cursor-default transition-colors'
 
   const run = (action: () => void): void => {
     action()
@@ -66,7 +66,7 @@ export const TabContextMenu: React.FC<TabContextMenuProps> = ({ pageId, x, y, on
       role="menu"
       data-tab-context-menu
       style={{ left, top }}
-      className="fixed z-50 w-52 py-1 rounded-[6px] bg-surface-elevated border border-border-hairline shadow-2xl select-none animate-popover-enter"
+      className="fixed z-50 w-52 p-1.5 rounded-[10px] bg-surface-elevated border border-border-hairline shadow-popover select-none animate-popover-enter"
       onContextMenu={(e) => e.preventDefault()}
     >
       <button

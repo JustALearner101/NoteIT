@@ -37,7 +37,7 @@ export interface ChartSeriesOptions {
   dimension: 'item' | 'category'
 }
 
-const FALLBACK_HEX = '#3B82F6'
+const FALLBACK_HEX = '#6E7BF2'
 
 function colorHexOf(item: ProjectTaskItem): string {
   return MARKER_META[item.color]?.hex || FALLBACK_HEX
@@ -94,6 +94,9 @@ export function buildChartSeries(
 export const chartTooltipStyle = {
   backgroundColor: 'var(--bg-surface-elevated)',
   borderColor: 'var(--border-hairline)',
+  borderRadius: '8px',
+  boxShadow: 'var(--shadow-popover)',
+  color: 'var(--text-primary)',
   fontSize: '12px',
-  fontFamily: 'JetBrains Mono'
+  fontFamily: 'Inter, sans-serif'
 }

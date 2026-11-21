@@ -10,12 +10,15 @@ module.exports = {
         },
         surface: {
           chrome: 'var(--bg-surface-chrome)',
+          recessed: 'var(--bg-surface-recessed)',
           elevated: 'var(--bg-surface-elevated)',
-          hover: 'var(--bg-surface-hover)'
+          hover: 'var(--bg-surface-hover)',
+          active: 'var(--bg-surface-active)'
         },
         border: {
           hairline: 'var(--border-hairline)',
-          subtle: 'var(--border-subtle)'
+          subtle: 'var(--border-subtle)',
+          strong: 'var(--border-strong)'
         },
         ink: {
           primary: 'var(--text-primary)',
@@ -24,7 +27,11 @@ module.exports = {
         },
         accent: {
           cobalt: 'var(--accent-cobalt)',
-          amber: 'var(--accent-amber)'
+          amber: 'var(--accent-amber)',
+          teal: 'var(--marker-teal)',
+          emerald: 'var(--accent-emerald)',
+          rose: 'var(--marker-red)',
+          violet: 'var(--marker-violet)'
         },
         marker: {
           cobalt: 'var(--marker-cobalt)',
@@ -36,9 +43,15 @@ module.exports = {
         }
       },
       fontFamily: {
-        display: ['"Space Grotesk"', 'sans-serif'],
-        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', '"Inter"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        sans: ['"Inter"', '"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'Consolas', 'monospace']
+      },
+      boxShadow: {
+        card: 'var(--shadow-card)',
+        popover: 'var(--shadow-popover)',
+        'primary-cta': 'var(--shadow-primary-cta)',
+        'node-selected': 'var(--shadow-node-selected)'
       }
     }
   },

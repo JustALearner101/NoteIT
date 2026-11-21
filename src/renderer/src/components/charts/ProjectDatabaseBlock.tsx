@@ -4,6 +4,7 @@ import type { ProjectTaskItem } from '@shared/types/domain'
 import { moveTaskToDate } from '@renderer/lib/database/calendar'
 import { parseIsoDate, todayIso } from '@renderer/lib/database/dates'
 import { createTask, deleteTask, shiftTask, updateTask } from '@renderer/lib/database/tasks'
+import { Badge, Button, SegmentedControl } from '@renderer/components/ui'
 import { CalendarView } from './views/CalendarView'
 import { ChartView } from './views/ChartView'
 import { GanttView } from './views/GanttView'
@@ -43,6 +44,16 @@ export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
     return list
   }, [items])
 
+  const totalHours = useMemo(
+    () => items.reduce((sum, item) => sum + (item.estimateHours || 0), 0),
+    [items]
+  )
+
+  const openCount = useMemo(
+    () => items.filter((item) => item.status !== 'done').length,
+    [items]
+  )
+
   const handleUpdateTask = (taskId: string, patch: Partial<ProjectTaskItem>): void => {
     onChange({ databaseItems: updateTask(items, taskId, patch) })
   }
@@ -76,97 +87,53 @@ export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
   }
 
   return (
-    <div className="rounded-[8px] bg-surface-elevated border border-border-hairline overflow-hidden shadow-sm my-3">
-      {/* Top Database & View Switcher Header */}
-      <div className="px-3 py-2 bg-surface-chrome border-b border-border-hairline flex flex-wrap items-center justify-between gap-2 select-none">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-accent-amber" />
+    <div className="rounded-[12px] bg-canvas-primary border border-border-hairline overflow-hidden shadow-card my-4">
+      {/* Top Studio Header Bar (mirrors Reference Images 1 & 2 header) */}
+      <div className="px-4 py-2.5 bg-surface-chrome/75 border-b border-border-hairline flex flex-wrap items-center justify-between gap-3 select-none">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-6 h-6 rounded-[6px] bg-surface-elevated border border-border-hairline flex items-center justify-center shrink-0">
+            <Table2 size={13} className="text-accent-cobalt" />
+          </div>
           <input
             type="text"
             value={title}
+            size={Math.max(18, title.length + 2)}
             onChange={(e) => onChange({ databaseTitle: e.target.value })}
-            className="bg-transparent font-mono text-xs font-semibold tracking-wider uppercase text-ink-primary focus:outline-none border-b border-transparent focus:border-accent-amber"
+            className="bg-transparent font-display text-[14px] font-semibold tracking-[-0.01em] text-ink-primary focus:outline-none border-b border-transparent focus:border-accent-cobalt min-w-[140px] max-w-[360px]"
           />
+          <span className="text-xs text-ink-muted tabular-nums whitespace-nowrap hidden sm:inline">
+            {openCount} open · {totalHours}h total
+          </span>
           {conflicts.length > 0 && (
-            <span className="px-2 py-0.5 rounded bg-[#EF4444]/15 border border-[#EF4444]/40 font-mono text-[10px] text-[#EF4444] flex items-center gap-1">
+            <Badge tone="red" size="sm">
               <AlertTriangle size={11} />
               <span>
-                {conflicts.length} KONFLIK JADWAL ({conflicts[0].fromCode} → {conflicts[0].toCode})
+                {conflicts.length} konflik ({conflicts[0].fromCode} → {conflicts[0].toCode})
               </span>
-            </span>
+            </Badge>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* 5-View Switcher: Gantt | Kanban | Table | Data Chart | Calendar */}
-          <div className="p-0.5 rounded bg-surface-elevated border border-border-hairline flex items-center font-mono text-[10px]">
-            <button
-              onClick={() => onChange({ databaseActiveView: 'gantt' })}
-              className={`px-2.5 py-1 rounded flex items-center gap-1 ${
-                activeView === 'gantt'
-                  ? 'bg-accent-cobalt text-white font-semibold'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <GanttChart size={11} />
-              <span>Gantt</span>
-            </button>
-            <button
-              onClick={() => onChange({ databaseActiveView: 'kanban' })}
-              className={`px-2.5 py-1 rounded flex items-center gap-1 ${
-                activeView === 'kanban'
-                  ? 'bg-accent-cobalt text-white font-semibold'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <Kanban size={11} />
-              <span>Kanban</span>
-            </button>
-            <button
-              onClick={() => onChange({ databaseActiveView: 'table' })}
-              className={`px-2.5 py-1 rounded flex items-center gap-1 ${
-                activeView === 'table'
-                  ? 'bg-accent-cobalt text-white font-semibold'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <Table2 size={11} />
-              <span>Table</span>
-            </button>
-            <button
-              onClick={() => onChange({ databaseActiveView: 'chart' })}
-              className={`px-2.5 py-1 rounded flex items-center gap-1 ${
-                activeView === 'chart'
-                  ? 'bg-accent-cobalt text-white font-semibold'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <BarChart3 size={11} />
-              <span>Data Chart</span>
-            </button>
-            <button
-              onClick={() => onChange({ databaseActiveView: 'calendar' })}
-              className={`px-2.5 py-1 rounded flex items-center gap-1 ${
-                activeView === 'calendar'
-                  ? 'bg-accent-cobalt text-white font-semibold'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <CalendarDays size={11} />
-              <span>Calendar</span>
-            </button>
-          </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <SegmentedControl<DatabaseView>
+            size="xs"
+            value={activeView}
+            onChange={(nextView) => onChange({ databaseActiveView: nextView })}
+            options={[
+              { value: 'table', label: 'List', icon: <Table2 size={11.5} /> },
+              { value: 'kanban', label: 'Board', icon: <Kanban size={11.5} /> },
+              { value: 'gantt', label: 'Gantt', icon: <GanttChart size={11.5} /> },
+              { value: 'calendar', label: 'Calendar', icon: <CalendarDays size={11.5} /> },
+              { value: 'chart', label: 'Chart', icon: <BarChart3 size={11.5} /> }
+            ]}
+          />
 
-          <button
-            onClick={() => handleAddTask()}
-            className="h-7 px-2.5 rounded bg-accent-cobalt hover:opacity-90 text-white font-mono text-[10px] font-semibold flex items-center gap-1"
-          >
-            <Plus size={11} />
-            <span>Tambah Task</span>
-          </button>
+          <Button variant="primary" size="sm" onClick={() => handleAddTask()}>
+            <Plus size={12.5} />
+            <span>Add task</span>
+          </Button>
         </div>
       </div>
-
 
       {activeView === 'gantt' && <GanttView {...viewProps} />}
       {activeView === 'kanban' && <KanbanView {...viewProps} />}

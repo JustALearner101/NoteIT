@@ -6,80 +6,158 @@
   color-scheme: light dark;
   accent-color: var(--accent-cobalt);
 
-  /* Motion Tokens */
-  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
-  --motion-fast: 150ms;
-  --motion-normal: 220ms;
+  /* Motion Tokens (Responsive Desktop Discipline: 120ms-180ms) */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-fast: 130ms;
+  --motion-normal: 180ms;
 
-  /* Light Mode: Archival Vellum */
-  --bg-canvas-primary: #F7F6F2;
-  --bg-surface-chrome: #EFECE6;
+  /* Light Mode: Archival Vellum (Harmonized Clean Neutral Light) */
+  --bg-canvas-primary: #F8F8FA;
+  --bg-surface-chrome: #F1F1F5;
+  --bg-surface-recessed: #EAEAF0;
   --bg-surface-elevated: #FFFFFF;
-  --bg-surface-hover: #E5E1D8;
+  --bg-surface-hover: #E7E7EE;
+  --bg-surface-active: #DFDFE8;
 
-  --border-hairline: #D8D4CA;
-  --border-subtle: #E6E3DC;
+  --border-hairline: #E0E0E8;
+  --border-subtle: #ECECF2;
+  --border-strong: #CECED9;
 
-  --text-primary: #141619;
-  --text-secondary: #525866;
-  --text-muted: #8A909E;
+  --text-primary: #141418;
+  --text-secondary: #525260;
+  --text-muted: #767686;
 
-  --accent-cobalt: #2563EB;
-  --accent-amber: #D97706;
+  --accent-cobalt: #5B67E8;
+  --accent-amber: #C98212;
+  --accent-emerald: #10B981;
 
-  --glow-primary: rgba(37, 99, 235, 0.12);
-  --glow-secondary: rgba(217, 119, 6, 0.08);
+  --glow-primary: rgba(91, 103, 232, 0.10);
+  --glow-secondary: rgba(16, 185, 129, 0.08);
 
-  /* Drafting Markers (Light) */
-  --marker-cobalt: #2563EB;
-  --marker-amber: #D97706;
-  --marker-teal: #059669;
+  /* Adaptive Semantic Marker Tokens (Light) */
+  --marker-cobalt: #4F5BD5;
+  --marker-amber: #C98212;
+  --marker-teal: #0D9488;
   --marker-red: #DC2626;
   --marker-violet: #7C3AED;
-  --marker-slate: #475569;
+  --marker-slate: #64748B;
 
-  --grid-dot: rgba(20, 22, 25, 0.11);
-  --grid-major: rgba(37, 99, 235, 0.09);
+  /* Soft Pastel Pills (Light — crisp dark-tinted text on soft tint) */
+  --pill-cobalt-bg: rgba(91, 103, 232, 0.11);
+  --pill-cobalt-text: #434EC4;
+  --pill-cobalt-border: rgba(91, 103, 232, 0.22);
+
+  --pill-amber-bg: rgba(201, 130, 18, 0.11);
+  --pill-amber-text: #9A5F08;
+  --pill-amber-border: rgba(201, 130, 18, 0.22);
+
+  --pill-teal-bg: rgba(13, 148, 136, 0.11);
+  --pill-teal-text: #0B746A;
+  --pill-teal-border: rgba(13, 148, 136, 0.22);
+
+  --pill-red-bg: rgba(220, 38, 38, 0.10);
+  --pill-red-text: #B91C1C;
+  --pill-red-border: rgba(220, 38, 38, 0.22);
+
+  --pill-violet-bg: rgba(124, 58, 237, 0.10);
+  --pill-violet-text: #6D28D9;
+  --pill-violet-border: rgba(124, 58, 237, 0.22);
+
+  --pill-slate-bg: rgba(100, 116, 139, 0.11);
+  --pill-slate-text: #475569;
+  --pill-slate-border: rgba(100, 116, 139, 0.22);
+
+  /* Canvas Selected Node Surface */
+  --node-selected-bg: #EEF0FF;
+  --node-selected-border: #5B67E8;
+
+  /* Shadows (Light) */
+  --shadow-card: 0 1px 2px rgba(15, 15, 20, 0.04), 0 4px 12px rgba(15, 15, 20, 0.04);
+  --shadow-popover: 0 8px 28px rgba(15, 15, 20, 0.12), 0 1px 3px rgba(15, 15, 20, 0.06);
+  --shadow-primary-cta: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(15, 15, 20, 0.16);
+  --shadow-node-selected: 0 0 0 3px rgba(91, 103, 232, 0.16), 0 10px 28px rgba(15, 15, 20, 0.10);
+
+  --grid-dot: rgba(20, 20, 28, 0.13);
+  --grid-major: rgba(91, 103, 232, 0.06);
 }
 
 .dark {
   color-scheme: dark;
   accent-color: var(--accent-cobalt);
 
-  /* Dark Mode: Graphite Slate (Default) */
-  --bg-canvas-primary: #111317;
-  --bg-surface-chrome: #0C0E12;
-  --bg-surface-elevated: #181B22;
-  --bg-surface-hover: #20242D;
+  /* Dark Mode: Obsidian Studio (Default — Matte Neutral Obsidian + Periwinkle Indigo) */
+  --bg-canvas-primary: #141417;
+  --bg-surface-chrome: #0E0E11;
+  --bg-surface-recessed: #111114;
+  --bg-surface-elevated: #1C1C21;
+  --bg-surface-hover: #24242B;
+  --bg-surface-active: #2B2B34;
 
-  --border-hairline: #262A34;
-  --border-subtle: #1C2029;
+  --border-hairline: #27272E;
+  --border-subtle: #1F1F25;
+  --border-strong: #34343E;
 
-  --text-primary: #ECEEF2;
-  --text-secondary: #949BA6;
-  --text-muted: #5E6572;
+  --text-primary: #EDEDEF;
+  --text-secondary: #9A9AA6;
+  --text-muted: #787886;
 
-  --accent-cobalt: #3B82F6;
-  --accent-amber: #F59E0B;
+  --accent-cobalt: #6E7BF2;
+  --accent-amber: #E5A93C;
+  --accent-emerald: #22C55E;
 
-  --glow-primary: rgba(59, 130, 246, 0.16);
-  --glow-secondary: rgba(168, 85, 247, 0.14);
+  --glow-primary: rgba(110, 123, 242, 0.14);
+  --glow-secondary: rgba(45, 212, 191, 0.10);
 
-  /* Drafting Markers (Dark) */
-  --marker-cobalt: #3B82F6;
-  --marker-amber: #F59E0B;
-  --marker-teal: #10B981;
-  --marker-red: #EF4444;
-  --marker-violet: #8B5CF6;
-  --marker-slate: #64748B;
+  /* Calibrated Pastel-on-Dark Markers (Obsidian Studio) */
+  --marker-cobalt: #6E7BF2;
+  --marker-amber: #E5A93C;
+  --marker-teal: #2DD4BF;
+  --marker-red: #F87171;
+  --marker-violet: #A78BFA;
+  --marker-slate: #787886;
 
-  --grid-dot: rgba(236, 238, 242, 0.08);
-  --grid-major: rgba(59, 130, 246, 0.08);
+  /* Soft Tinted Pastel Pills (Dark — matching reference Images 1 & 2) */
+  --pill-cobalt-bg: rgba(110, 123, 242, 0.14);
+  --pill-cobalt-text: #A2ACFA;
+  --pill-cobalt-border: rgba(110, 123, 242, 0.24);
+
+  --pill-amber-bg: rgba(229, 169, 60, 0.14);
+  --pill-amber-text: #F2C46D;
+  --pill-amber-border: rgba(229, 169, 60, 0.24);
+
+  --pill-teal-bg: rgba(45, 212, 191, 0.13);
+  --pill-teal-text: #5EEAD4;
+  --pill-teal-border: rgba(45, 212, 191, 0.24);
+
+  --pill-red-bg: rgba(248, 113, 113, 0.14);
+  --pill-red-text: #FCA5A5;
+  --pill-red-border: rgba(248, 113, 113, 0.24);
+
+  --pill-violet-bg: rgba(167, 139, 250, 0.14);
+  --pill-violet-text: #C4B5FD;
+  --pill-violet-border: rgba(167, 139, 250, 0.24);
+
+  --pill-slate-bg: rgba(120, 120, 134, 0.15);
+  --pill-slate-text: #B4B4C2;
+  --pill-slate-border: rgba(120, 120, 134, 0.26);
+
+  /* Canvas Selected Node Surface (matching reference Image 3 AI AGENT node) */
+  --node-selected-bg: #1D1E34;
+  --node-selected-border: #6E7BF2;
+
+  /* Shadows (Dark — subtle grounding, matte feel) */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.28);
+  --shadow-popover: 0 14px 40px rgba(0, 0, 0, 0.58), 0 2px 6px rgba(0, 0, 0, 0.36);
+  --shadow-primary-cta: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-node-selected: 0 0 0 3px rgba(110, 123, 242, 0.18), 0 12px 32px rgba(0, 0, 0, 0.5);
+
+  --grid-dot: rgba(255, 255, 255, 0.085);
+  --grid-major: rgba(110, 123, 242, 0.05);
 }
 
 html[data-motion="subtle"] {
-  --motion-fast: 90ms;
-  --motion-normal: 130ms;
+  --motion-fast: 80ms;
+  --motion-normal: 120ms;
 }
 
 html[data-motion="off"] {
@@ -100,18 +178,31 @@ html[data-font-scale="comfortable"] {
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--bg-canvas-primary);
   color: var(--text-primary);
   margin: 0;
   padding: 0;
   user-select: none;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   transition:
     background-color var(--motion-normal) var(--ease-out-expo),
     color var(--motion-fast) ease;
 }
 
-/* Ambient Aurora Glow Backdrop (Finns Cosmic Nebula & Glow Themes) */
+/* Visible Keyboard Focus Indicator (WCAG AA/AAA compliant) */
+:focus-visible {
+  outline: 2px solid var(--accent-cobalt);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
+/* Ambient Aurora Glow Backdrop (only enabled for glow themes like Finns Cosmic Nebula) */
 html[data-ambient-glow="true"] .ambient-aurora-host {
   background-image:
     radial-gradient(ellipse 65% 45% at 50% -8%, var(--glow-primary), transparent 70%),
@@ -137,6 +228,22 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
+/* Tactile Periwinkle Primary CTA Sheen (matches reference + Add / Publish / + Ask AI buttons) */
+.btn-primary-sheen {
+  background-color: var(--accent-cobalt);
+  color: #ffffff;
+  box-shadow: var(--shadow-primary-cta);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.btn-primary-sheen:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+
+.btn-primary-sheen:active:not(:disabled) {
+  filter: brightness(0.96);
+}
+
 /* Compositor-Friendly View & Popover Animations with @starting-style */
 .animate-view-enter {
   opacity: 1;
@@ -149,8 +256,8 @@ code {
 
   @starting-style {
     opacity: 0;
-    translate: 0 6px;
-    scale: 0.992;
+    translate: 0 4px;
+    scale: 0.995;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -172,7 +279,7 @@ code {
   @starting-style {
     opacity: 0;
     translate: 0 -4px;
-    scale: 0.97;
+    scale: 0.98;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -191,7 +298,7 @@ code {
 
   @starting-style {
     opacity: 0;
-    translate: 0 10px;
+    translate: 0 8px;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -206,25 +313,20 @@ html[data-motion="off"] .animate-toast-enter {
   transition: none !important;
 }
 
-/* Architectural Crosshair & Micro-Dot Drafting Grid */
-.bg-blueprint-grid {
+/* Calm Dot-Matrix Canvas Background (matching reference Image 3) */
+.bg-blueprint-grid,
+.bg-dot-canvas {
   background-color: var(--bg-canvas-primary);
-  background-image:
-    radial-gradient(circle, var(--grid-dot) 1px, transparent 1px),
-    linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px);
-  background-size:
-    24px 24px,
-    96px 96px,
-    96px 96px;
+  background-image: radial-gradient(circle, var(--grid-dot) 1.15px, transparent 1.15px);
+  background-size: 20px 20px;
 }
 
-/* Engineering Hatched Pattern for Unfinished Gantt Bars */
+/* Subtle Diagonal Hatched Pattern for Unfinished Gantt Bars */
 .hatched-pattern {
   background-image: repeating-linear-gradient(
     -45deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.05) 4px,
+    rgba(255, 255, 255, 0.045),
+    rgba(255, 255, 255, 0.045) 4px,
     transparent 4px,
     transparent 8px
   );
@@ -239,7 +341,16 @@ html[data-motion="off"] .animate-toast-enter {
   -webkit-app-region: no-drag;
 }
 
-/* Precision Thin Scrollbars with modern scrollbar-color + legacy WebKit fallback */
+/* Hide Scrollbars cleanly where horizontal strip scrolling is used */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Precision Thin Scrollbars */
 @supports (scrollbar-color: auto) {
   * {
     scrollbar-width: thin;
@@ -259,7 +370,7 @@ html[data-motion="off"] .animate-toast-enter {
 
   ::-webkit-scrollbar-thumb {
     background: var(--border-hairline);
-    border-radius: 3px;
+    border-radius: 999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
@@ -267,7 +378,31 @@ html[data-motion="off"] .animate-toast-enter {
   }
 }
 
-/* ReactFlow overrides to match Precision Drafting Workbench */
+/* ReactFlow Obsidian Studio Overrides (Image 3 Aesthetic) */
 .react-flow__attribution {
   display: none !important;
+}
+
+.react-flow__minimap {
+  background-color: var(--bg-surface-elevated) !important;
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--shadow-card) !important;
+  overflow: hidden !important;
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(241, 241, 245, 0.65) !important;
+}
+
+.dark .react-flow__minimap-mask {
+  fill: rgba(14, 14, 17, 0.62) !important;
+}
+
+.react-flow__edge-path {
+  transition: stroke 140ms ease, stroke-width 140ms ease;
+}
+
+.react-flow__node.selected {
+  z-index: 20 !important;
 }

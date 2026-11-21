@@ -36,15 +36,15 @@ export const TabOverflowMenu: React.FC = () => {
         onClick={() => setIsOpen((prev) => !prev)}
         title="Semua Tab"
         aria-label="Semua Tab"
-        className={`h-6 w-6 rounded flex items-center justify-center transition-colors ${
-          isOpen ? 'bg-surface-hover text-ink-primary' : 'text-ink-muted hover:text-ink-primary'
+        className={`h-7 w-7 rounded-[7px] flex items-center justify-center transition-colors ${
+          isOpen ? 'bg-surface-hover text-ink-primary' : 'text-ink-muted hover:text-ink-primary hover:bg-surface-hover/70'
         }`}
       >
         <ChevronDown size={13} className={isOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-7 z-50 w-64 max-h-80 overflow-y-auto py-1 rounded-[6px] bg-surface-elevated border border-border-hairline shadow-2xl animate-popover-enter">
+        <div className="absolute right-0 top-8 z-50 w-64 max-h-80 overflow-y-auto p-1.5 rounded-[10px] bg-surface-elevated border border-border-hairline shadow-popover animate-popover-enter space-y-0.5">
           {openTabIds.map((tabId) => {
             const tabPage = pages.find((p) => p.id === tabId)
             if (!tabPage) return null
@@ -53,8 +53,8 @@ export const TabOverflowMenu: React.FC = () => {
             return (
               <div
                 key={tabId}
-                className={`group px-3 py-1.5 flex items-center gap-2 text-xs cursor-pointer hover:bg-surface-hover ${
-                  isActive ? 'text-ink-primary font-medium' : 'text-ink-secondary'
+                className={`group px-2.5 py-1.5 rounded-[7px] flex items-center gap-2 text-xs cursor-pointer transition-colors hover:bg-surface-hover ${
+                  isActive ? 'bg-surface-hover/80 text-ink-primary font-medium' : 'text-ink-secondary'
                 }`}
                 onClick={() => {
                   openPageInTab(tabId)

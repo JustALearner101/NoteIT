@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { useTerminalStore } from '@renderer/stores/useTerminalStore'
+import { Badge, Button, Kbd, cn } from '@renderer/components/ui'
 import type {
   DetectedCliPreset,
   DispatchMissionInput,
@@ -168,128 +169,136 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
     <div className="fixed inset-0 z-50 flex justify-end select-none">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-[2px] transition-opacity"
+        className="fixed inset-0 bg-black/65 backdrop-blur-[3px] transition-opacity"
         onClick={onClose}
       />
 
       {/* Slide-over Command Deck Body */}
-      <div className="relative w-full max-w-[540px] h-full bg-[#111317] border-l border-border-hairline shadow-2xl flex flex-col z-10 animate-slide-left text-ink-primary font-sans">
-        {/* Header HUD */}
-        <div className="p-4 bg-[#14171E] border-b border-border-hairline flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-[6px] bg-accent-cobalt/15 border border-accent-cobalt/30 flex items-center justify-center text-accent-cobalt">
-              <Rocket size={16} />
+      <div className="relative w-full max-w-[540px] h-full bg-canvas-primary border-l border-border-hairline shadow-popover flex flex-col z-10 animate-view-enter text-ink-primary font-sans">
+        {/* Header */}
+        <div className="px-5 py-4 bg-surface-chrome border-b border-border-hairline flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-[8px] bg-[var(--pill-cobalt-bg)] border border-[var(--pill-cobalt-border)] flex items-center justify-center text-[var(--pill-cobalt-text)] shrink-0">
+              <Rocket size={15} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] tracking-wider uppercase text-accent-cobalt font-bold">
-                  MISSION BRIEFING
-                </span>
-                <span className="text-[10px] text-ink-muted">·</span>
-                <span className="font-mono text-[10px] text-ink-muted">SPEC-TO-AGENT DISPATCH</span>
+            <div className="min-w-0">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
+                Mission Briefing · Spec Dispatch
               </div>
-              <h2 className="font-semibold text-sm text-ink-primary flex items-center gap-1.5 truncate max-w-[340px]">
-                <span className="text-base">{page.icon}</span>
-                <span>{page.code} · {page.title}</span>
+              <h2 className="font-display font-semibold text-sm text-ink-primary flex items-center gap-1.5 truncate mt-0.5">
+                <span>{page.icon}</span>
+                <span className="truncate">
+                  {page.code} · {page.title}
+                </span>
               </h2>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             title="Tutup (ESC)"
-            className="p-1.5 rounded-[5px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary"
+            className="p-1.5 rounded-[7px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary transition-colors"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
 
         {/* Scrollable Form Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+        <div className="flex-1 overflow-y-auto p-5 space-y-5 no-scrollbar">
           {/* Target Repo Banner */}
-          <div className="p-3 rounded-[6px] bg-[#181B22] border border-border-hairline text-xs font-mono flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
+          <div className="p-3.5 rounded-[10px] bg-surface-elevated border border-border-hairline text-xs flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
               <FolderGit2 size={15} className="text-accent-cobalt shrink-0" />
               <div className="min-w-0">
-                <div className="text-[10px] text-ink-muted uppercase">Target Repository</div>
-                <div className="truncate text-ink-primary font-medium">
+                <div className="text-[10.5px] text-ink-muted">Target repository</div>
+                <div className="truncate text-ink-primary font-medium font-mono text-[12px] mt-0.5">
                   {repoPath ? repoPath.split(/[/\\]/).pop() : '(Belum ada repo dihubungkan)'}
                 </div>
               </div>
             </div>
 
             {repoPath ? (
-              <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] flex items-center gap-1 shrink-0">
+              <Badge tone="teal" size="sm">
                 <CheckCircle2 size={11} /> Siap
-              </span>
+              </Badge>
             ) : (
-              <span className="px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[10px] flex items-center gap-1 shrink-0">
-                <AlertCircle size={11} /> Butuh Repo
-              </span>
+              <Badge tone="red" size="sm">
+                <AlertCircle size={11} /> Butuh repo
+              </Badge>
             )}
           </div>
 
           {/* Compiled Artifacts Bundle (.noteit/) */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="font-semibold text-ink-secondary uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium text-ink-secondary flex items-center gap-1.5">
                 <Layers size={13} className="text-accent-amber" />
-                <span>Kompilasi Artefak (.noteit/)</span>
+                <span>Compiled artifacts (.noteit/)</span>
               </span>
-              <span className="text-[10px] text-emerald-400 flex items-center gap-1">
-                <ShieldCheck size={11} /> Zero Git Pollution
+              <span className="text-[11px] text-[var(--pill-teal-text)] flex items-center gap-1">
+                <ShieldCheck size={12} /> Zero git pollution
               </span>
             </div>
 
-            <div className="p-2.5 rounded-[6px] bg-[#14171E] border border-border-hairline space-y-2">
+            <div className="p-3 rounded-[10px] bg-surface-chrome/70 border border-border-hairline space-y-2.5">
               {isCompiling ? (
-                <div className="py-4 text-center text-xs text-ink-muted font-mono animate-pulse">
-                  Mengompilasi DBML DDL & blok spesifikasi...
+                <div className="py-4 text-center text-xs text-ink-muted animate-pulse">
+                  Mengompilasi DBML DDL &amp; blok spesifikasi...
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                    <div className="p-2 rounded bg-[#181B22] border border-border-hairline/60 flex items-center gap-2">
-                      <FileText size={14} className="text-amber-400 shrink-0" />
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2.5 rounded-[8px] bg-surface-elevated border border-border-subtle flex items-center gap-2.5">
+                      <FileText size={14} className="text-accent-amber shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-ink-primary font-medium truncate">active-task.md</div>
-                        <div className="text-[10px] text-ink-muted">Kontrak PRD & Spec</div>
+                        <div className="font-mono text-[11.5px] text-ink-primary font-medium truncate">
+                          active-task.md
+                        </div>
+                        <div className="text-[10.5px] text-ink-muted">Kontrak PRD &amp; Spec</div>
                       </div>
                     </div>
 
-                    <div className="p-2 rounded bg-[#181B22] border border-border-hairline/60 flex items-center gap-2">
+                    <div className="p-2.5 rounded-[8px] bg-surface-elevated border border-border-subtle flex items-center gap-2.5">
                       <FileCode size={14} className="text-accent-cobalt shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-ink-primary font-medium truncate">schema.sql</div>
-                        <div className="text-[10px] text-ink-muted">
+                        <div className="font-mono text-[11.5px] text-ink-primary font-medium truncate">
+                          schema.sql
+                        </div>
+                        <div className="text-[10.5px] text-ink-muted tabular-nums">
                           {bundleSummary?.dbmlTableCount || 0} Tabel SQLite DDL
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-2 rounded bg-[#181B22] border border-border-hairline/60 flex items-center gap-2">
-                      <Sparkles size={14} className="text-purple-400 shrink-0" />
+                    <div className="p-2.5 rounded-[8px] bg-surface-elevated border border-border-subtle flex items-center gap-2.5">
+                      <Sparkles size={14} className="text-accent-violet shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-ink-primary font-medium truncate">architecture.mmd</div>
-                        <div className="text-[10px] text-ink-muted">
+                        <div className="font-mono text-[11.5px] text-ink-primary font-medium truncate">
+                          architecture.mmd
+                        </div>
+                        <div className="text-[10.5px] text-ink-muted tabular-nums">
                           {bundleSummary?.diagramCount || 0} Diagram Mermaid
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-2 rounded bg-[#181B22] border border-border-hairline/60 flex items-center gap-2">
-                      <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
+                    <div className="p-2.5 rounded-[8px] bg-surface-elevated border border-border-subtle flex items-center gap-2.5">
+                      <CheckCircle2 size={14} className="text-accent-teal shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-ink-primary font-medium truncate">task-contract.json</div>
-                        <div className="text-[10px] text-ink-muted">
+                        <div className="font-mono text-[11.5px] text-ink-primary font-medium truncate">
+                          task-contract.json
+                        </div>
+                        <div className="text-[10.5px] text-ink-muted tabular-nums">
                           {bundleSummary?.taskCount || 0} Sub-Tasks
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <p className="text-[10px] text-ink-muted font-mono leading-relaxed pt-1 border-t border-border-hairline/40">
-                    Folder <code>.noteit/</code> otomatis dikecualikan secara lokal lewat <code>.git/info/exclude</code>, aman dari pencemaran git commit tim.
+                  <p className="text-[11px] text-ink-muted leading-relaxed pt-2 border-t border-border-subtle">
+                    Folder <code className="font-mono text-ink-secondary">.noteit/</code> otomatis
+                    dikecualikan lewat <code className="font-mono text-ink-secondary">.git/info/exclude</code>.
                   </p>
                 </>
               )}
@@ -297,35 +306,39 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
           </div>
 
           {/* Preset Selector */}
-          <div className="space-y-1.5">
-            <span className="font-semibold text-ink-secondary uppercase tracking-wider text-[11px] font-mono flex items-center gap-1.5">
+          <div className="space-y-2">
+            <span className="font-medium text-ink-secondary text-xs flex items-center gap-1.5">
               <Zap size={13} className="text-accent-cobalt" />
-              <span>Eksekutor / CLI Agent Preset</span>
+              <span>CLI agent executor</span>
             </span>
 
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div className="grid grid-cols-2 gap-2 text-xs">
               {presets.map((p) => {
                 const isSelected = selectedPresetId === p.id
                 return (
                   <button
                     key={p.id}
+                    type="button"
                     onClick={() => setSelectedPresetId(p.id)}
-                    className={`p-2.5 rounded-[6px] border text-left flex flex-col gap-1 transition-all ${
+                    className={cn(
+                      'p-3 rounded-[9px] border text-left flex flex-col gap-1 transition-all',
                       isSelected
-                        ? 'bg-accent-cobalt/15 border-accent-cobalt text-ink-primary shadow-sm'
-                        : 'bg-[#181B22] border-border-hairline text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
-                    }`}
+                        ? 'bg-[var(--node-selected-bg)] border-[var(--node-selected-border)] text-ink-primary'
+                        : 'bg-surface-elevated border-border-hairline text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
+                    )}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="font-semibold">{p.name}</span>
-                      {p.available ? (
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Tersedia di PATH" />
-                      ) : (
-                        <span className="w-1.5 h-1.5 rounded-full bg-ink-muted" title="Belum terdeteksi di PATH" />
-                      )}
+                      <span className="font-medium">{p.name}</span>
+                      <span
+                        className={cn(
+                          'w-2 h-2 rounded-full',
+                          p.available ? 'bg-accent-emerald' : 'bg-ink-muted/50'
+                        )}
+                        title={p.available ? 'Tersedia di PATH' : 'Belum terdeteksi di PATH'}
+                      />
                     </div>
-                    <span className="text-[10px] text-ink-muted truncate">
-                      {p.available ? `Command: ${p.command}` : 'Belum terpasang'}
+                    <span className="font-mono text-[10.5px] text-ink-muted truncate">
+                      {p.available ? p.command : 'Belum terpasang'}
                     </span>
                   </button>
                 )
@@ -334,54 +347,56 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
           </div>
 
           {/* Isolation & Worktree Mode */}
-          <div className="space-y-1.5">
-            <span className="font-semibold text-ink-secondary uppercase tracking-wider text-[11px] font-mono flex items-center gap-1.5">
-              <GitBranch size={13} className="text-emerald-400" />
-              <span>Isolasi Eksekusi & Workspace</span>
+          <div className="space-y-2">
+            <span className="font-medium text-ink-secondary text-xs flex items-center gap-1.5">
+              <GitBranch size={13} className="text-accent-teal" />
+              <span>Workspace isolation</span>
             </span>
 
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div className="grid grid-cols-2 gap-2 text-xs">
               <button
+                type="button"
                 onClick={() => setIsolationMode('worktree')}
-                className={`p-2.5 rounded-[6px] border text-left flex flex-col gap-1 transition-all ${
+                className={cn(
+                  'p-3 rounded-[9px] border text-left flex flex-col gap-1 transition-all',
                   isolationMode === 'worktree'
-                    ? 'bg-emerald-500/15 border-emerald-500/60 text-ink-primary'
-                    : 'bg-[#181B22] border-border-hairline text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
-                }`}
+                    ? 'bg-[var(--pill-teal-bg)] border-[var(--pill-teal-border)] text-ink-primary'
+                    : 'bg-surface-elevated border-border-hairline text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
+                )}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold">Isolated Worktree</span>
-                  <span className="text-[10px] text-emerald-400">Rekomendasi</span>
+                  <span className="font-medium">Isolated Worktree</span>
+                  <Badge tone="teal">Recommended</Badge>
                 </div>
-                <span className="text-[10px] text-ink-muted truncate">
-                  Branch: {suggestedBranch}
+                <span className="font-mono text-[10.5px] text-ink-muted truncate">
+                  {suggestedBranch}
                 </span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setIsolationMode('direct')}
-                className={`p-2.5 rounded-[6px] border text-left flex flex-col gap-1 transition-all ${
+                className={cn(
+                  'p-3 rounded-[9px] border text-left flex flex-col gap-1 transition-all',
                   isolationMode === 'direct'
-                    ? 'bg-accent-cobalt/15 border-accent-cobalt text-ink-primary'
-                    : 'bg-[#181B22] border-border-hairline text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
-                }`}
+                    ? 'bg-[var(--node-selected-bg)] border-[var(--node-selected-border)] text-ink-primary'
+                    : 'bg-surface-elevated border-border-hairline text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
+                )}
               >
-                <span className="font-semibold">Direct Repo</span>
-                <span className="text-[10px] text-ink-muted">
-                  Bekerja langsung di CWD aktif
-                </span>
+                <span className="font-medium">Direct Repo</span>
+                <span className="text-[11px] text-ink-muted">Bekerja langsung di CWD aktif</span>
               </button>
             </div>
           </div>
 
           {/* Autonomy Level / Approval Gate */}
-          <div className="space-y-1.5">
-            <span className="font-semibold text-ink-secondary uppercase tracking-wider text-[11px] font-mono flex items-center gap-1.5">
-              <Cpu size={13} className="text-purple-400" />
-              <span>Tingkat Otonomi (Approval Gate)</span>
+          <div className="space-y-2">
+            <span className="font-medium text-ink-secondary text-xs flex items-center gap-1.5">
+              <Cpu size={13} className="text-accent-violet" />
+              <span>Approval gate</span>
             </span>
 
-            <div className="grid grid-cols-3 gap-2 text-xs font-mono">
+            <div className="grid grid-cols-3 gap-2 text-xs">
               {(
                 [
                   { id: 'plan-only', label: 'Plan-Only', desc: 'Rancang saja' },
@@ -391,15 +406,17 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
               ).map((opt) => (
                 <button
                   key={opt.id}
+                  type="button"
                   onClick={() => setApprovalMode(opt.id)}
-                  className={`p-2 rounded-[5px] border text-center transition-all ${
+                  className={cn(
+                    'p-2.5 rounded-[9px] border text-center transition-all',
                     approvalMode === opt.id
-                      ? 'bg-purple-500/15 border-purple-500/60 text-purple-300 font-semibold'
-                      : 'bg-[#181B22] border-border-hairline text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
-                  }`}
+                      ? 'bg-[var(--pill-violet-bg)] border-[var(--pill-violet-border)] text-[var(--pill-violet-text)] font-medium'
+                      : 'bg-surface-elevated border-border-hairline text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
+                  )}
                 >
                   <div>{opt.label}</div>
-                  <div className="text-[10px] text-ink-muted">{opt.desc}</div>
+                  <div className="text-[10.5px] text-ink-muted mt-0.5">{opt.desc}</div>
                 </button>
               ))}
             </div>
@@ -407,36 +424,36 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
 
           {/* Custom Directive Input */}
           <div className="space-y-1.5">
-            <label className="font-semibold text-ink-secondary uppercase tracking-wider text-[11px] font-mono">
-              Arahan Tambahan (Opsional)
+            <label className="font-medium text-ink-secondary text-xs block">
+              Arahan tambahan (opsional)
             </label>
             <textarea
               value={customDirective}
               onChange={(e) => setCustomDirective(e.target.value)}
               placeholder="Contoh: Fokus pada pembuatan unit test di Vitest dan pastikan token secret dibaca via env..."
               rows={2}
-              className="w-full p-2.5 rounded-[6px] bg-[#181B22] border border-border-hairline text-xs font-mono text-ink-primary placeholder:text-ink-muted focus:outline-none focus:border-accent-cobalt resize-none"
+              className="w-full p-3 rounded-[9px] bg-surface-elevated border border-border-hairline text-xs text-ink-primary placeholder:text-ink-muted focus:border-accent-cobalt resize-none"
             />
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="p-3 bg-[#14171E] border-t border-border-hairline flex items-center justify-between shrink-0">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 rounded-[5px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary text-xs font-mono"
-          >
-            Batal (ESC)
-          </button>
+        <div className="px-5 py-3.5 bg-surface-chrome border-t border-border-hairline flex items-center justify-between shrink-0">
+          <Button variant="ghost" size="md" onClick={onClose}>
+            <span>Batal</span>
+            <Kbd>Esc</Kbd>
+          </Button>
 
-          <button
+          <Button
+            variant="primary"
+            size="md"
             onClick={handleLaunchMission}
             disabled={isLaunching || !repoPath}
-            className="px-4 py-2 rounded-[5px] bg-accent-cobalt hover:bg-accent-cobalt/90 text-white font-medium text-xs font-mono flex items-center gap-2 shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Play size={13} className="fill-current" />
-            <span>{isLaunching ? 'Meluncurkan Misi...' : 'LAUNCH MISSION (Ctrl+Enter)'}</span>
-          </button>
+            <Play size={12.5} className="fill-current" />
+            <span>{isLaunching ? 'Meluncurkan...' : 'Launch Mission'}</span>
+            <Kbd className="bg-white/15 border-white/20 text-white ml-1">Ctrl ↵</Kbd>
+          </Button>
         </div>
       </div>
     </div>

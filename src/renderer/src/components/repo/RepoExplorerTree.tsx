@@ -15,6 +15,7 @@ import {
   Check
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
+import { Badge, Button } from '@renderer/components/ui'
 import type { GitFileStatus, RepoEntry, RepoGitStatusSummary } from '@shared/types/domain'
 
 interface TreeItemProps {
@@ -30,39 +31,27 @@ const GitBadge: React.FC<{ status?: GitFileStatus }> = ({ status }) => {
   switch (status) {
     case 'modified':
       return (
-        <span
-          title="Dimodifikasi"
-          className="text-[10px] font-mono px-1 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30"
-        >
+        <Badge tone="amber" title="Dimodifikasi" className="font-mono text-[9.5px] px-1 py-[1px]">
           M
-        </span>
+        </Badge>
       )
     case 'added':
       return (
-        <span
-          title="Ditambahkan"
-          className="text-[10px] font-mono px-1 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-        >
+        <Badge tone="teal" title="Ditambahkan" className="font-mono text-[9.5px] px-1 py-[1px]">
           A
-        </span>
+        </Badge>
       )
     case 'untracked':
       return (
-        <span
-          title="Untracked"
-          className="text-[10px] font-mono px-1 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
-        >
+        <Badge tone="cobalt" title="Untracked" className="font-mono text-[9.5px] px-1 py-[1px]">
           ?
-        </span>
+        </Badge>
       )
     case 'deleted':
       return (
-        <span
-          title="Dihapus"
-          className="text-[10px] font-mono px-1 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30"
-        >
+        <Badge tone="red" title="Dihapus" className="font-mono text-[9.5px] px-1 py-[1px]">
           D
-        </span>
+        </Badge>
       )
     default:
       return null
@@ -268,13 +257,10 @@ export const RepoExplorerTree: React.FC<{ isSplitMode?: boolean }> = () => {
         <p className="text-xs text-ink-secondary max-w-[280px] mb-4">
           Ikatkan folder git lokal ke Notebook <strong>{currentNotebook?.name}</strong> untuk mengaktifkan pohon berkas, status branch, dan ADE terminal context.
         </p>
-        <button
-          onClick={handlePickRepo}
-          className="px-3.5 py-1.5 rounded-[5px] bg-accent-cobalt hover:bg-accent-cobalt/90 text-white font-medium text-xs flex items-center gap-2 shadow-sm transition-colors"
-        >
+        <Button variant="primary" size="md" onClick={handlePickRepo}>
           <FolderPlus size={14} />
           <span>Pilih Folder Repositori</span>
-        </button>
+        </Button>
       </div>
     )
   }
@@ -284,33 +270,35 @@ export const RepoExplorerTree: React.FC<{ isSplitMode?: boolean }> = () => {
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-canvas-primary border-l border-border-hairline select-none overflow-hidden animate-view-enter">
       {/* Header Info Repo */}
-      <div className="p-2.5 bg-surface-chrome border-b border-border-hairline flex flex-col gap-2 shrink-0">
+      <div className="p-3 bg-surface-chrome border-b border-border-hairline flex flex-col gap-2 shrink-0">
         <div className="flex items-center justify-between gap-2 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <GitBranch size={14} className="text-accent-cobalt shrink-0" />
+          <div className="flex items-center gap-2 min-w-0">
+            <GitBranch size={13.5} className="text-accent-cobalt shrink-0" />
             <span className="font-semibold text-xs text-ink-primary truncate font-mono">
               {folderName}
             </span>
             {gitStatus?.branch && (
-              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-accent-cobalt/15 text-accent-cobalt border border-accent-cobalt/30 shrink-0">
+              <Badge tone="cobalt" className="font-mono text-[10px]">
                 {gitStatus.branch}
-              </span>
+              </Badge>
             )}
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
             <button
+              type="button"
               onClick={() => loadRepoData(repoPath)}
               title="Muat Ulang Status Git & Berkas"
               disabled={isLoading}
-              className="p-1 rounded hover:bg-surface-hover text-ink-muted hover:text-ink-primary disabled:opacity-40"
+              className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary disabled:opacity-40 transition-colors"
             >
               <RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} />
             </button>
             <button
+              type="button"
               onClick={handleUnlinkRepo}
               title="Lepas Hubungan Repositori dari Notebook Ini"
-              className="p-1 rounded hover:bg-surface-hover text-ink-muted hover:text-rose-400"
+              className="p-1 rounded-[6px] hover:bg-[var(--pill-red-bg)] text-ink-muted hover:text-[var(--pill-red-text)] transition-colors"
             >
               <Unlink size={12} />
             </button>
@@ -319,24 +307,24 @@ export const RepoExplorerTree: React.FC<{ isSplitMode?: boolean }> = () => {
 
         {/* Git Telemetry Strip */}
         {gitStatus && (
-          <div className="flex items-center justify-between text-[10px] font-mono px-2 py-1 rounded bg-surface-elevated border border-border-hairline">
+          <div className="flex items-center justify-between text-[11px] px-2.5 py-1.5 rounded-[7px] bg-surface-elevated border border-border-hairline">
             <div className="flex items-center gap-1.5">
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  gitStatus.isClean ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                  gitStatus.isClean ? 'bg-accent-emerald' : 'bg-accent-amber animate-pulse'
                 }`}
               />
-              <span className={gitStatus.isClean ? 'text-ink-secondary' : 'text-amber-400 font-medium'}>
+              <span className={gitStatus.isClean ? 'text-ink-secondary' : 'text-[var(--pill-amber-text)] font-medium'}>
                 {gitStatus.isClean
-                  ? 'Tree bersih'
+                  ? 'Working tree clean'
                   : `${gitStatus.changedFiles.length} file diubah`}
               </span>
             </div>
 
             {(gitStatus.linesAdded > 0 || gitStatus.linesRemoved > 0) && (
-              <div className="flex items-center gap-1">
-                <span className="text-emerald-400">+{gitStatus.linesAdded}</span>
-                <span className="text-rose-400">-{gitStatus.linesRemoved}</span>
+              <div className="flex items-center gap-1.5 font-mono text-[10.5px] tabular-nums">
+                <span className="text-[var(--pill-teal-text)]">+{gitStatus.linesAdded}</span>
+                <span className="text-[var(--pill-red-text)]">-{gitStatus.linesRemoved}</span>
               </div>
             )}
           </div>
@@ -344,13 +332,13 @@ export const RepoExplorerTree: React.FC<{ isSplitMode?: boolean }> = () => {
 
         {/* Search Input Filter */}
         <div className="relative">
-          <Search size={12} className="absolute left-2 top-2 text-ink-muted" />
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted" />
           <input
             type="text"
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
             placeholder="Cari berkas di repo..."
-            className="w-full h-7 pl-6 pr-2 rounded-[4px] bg-surface-elevated border border-border-hairline text-ink-primary placeholder:text-ink-muted text-[11px] font-mono focus:outline-none focus:border-accent-cobalt"
+            className="w-full h-7 pl-7 pr-2.5 rounded-[7px] bg-surface-elevated border border-border-hairline text-ink-primary placeholder:text-ink-muted text-xs focus:border-accent-cobalt"
           />
         </div>
       </div>

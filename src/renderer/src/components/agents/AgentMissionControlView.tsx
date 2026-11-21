@@ -19,6 +19,7 @@ import {
 import { useAgentStore, type AgentFilter } from '@renderer/stores/useAgentStore'
 import { useTerminalStore } from '@renderer/stores/useTerminalStore'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
+import { Badge, Button, SegmentedControl, cn } from '@renderer/components/ui'
 import type { AgentSessionRecord, AgentSessionStatus } from '@shared/types/domain'
 
 function formatTimeAgo(timestamp: number): string {
@@ -35,53 +36,49 @@ function renderStatusBadge(status: AgentSessionStatus): React.ReactNode {
   switch (status) {
     case 'thinking':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-mono text-[11px] font-semibold tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-          <span>REASONING</span>
-        </span>
+        <Badge tone="teal" dot pulseDot size="sm">
+          Reasoning
+        </Badge>
       )
     case 'waiting_approval':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-mono text-[11px] font-bold tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/10">
-          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse inline-block" />
-          <span>APPROVAL REQUIRED</span>
-        </span>
+        <Badge tone="amber" dot pulseDot size="sm">
+          Approval required
+        </Badge>
       )
     case 'running_tests':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-mono text-[11px] font-semibold tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse inline-block" />
-          <span>RUNNING TESTS</span>
-        </span>
+        <Badge tone="cobalt" dot pulseDot size="sm">
+          Running tests
+        </Badge>
       )
     case 'completed':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-mono text-[11px] font-semibold tracking-wider bg-teal-500/15 text-teal-300 border border-teal-500/30">
-          <Check size={11} className="text-teal-400" />
-          <span>COMPLETED</span>
-        </span>
+        <Badge tone="teal" size="sm">
+          <Check size={11} />
+          <span>Completed</span>
+        </Badge>
       )
     case 'merged':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-mono text-[11px] font-semibold tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-          <GitMerge size={11} className="text-emerald-400" />
-          <span>MERGED TO MAIN</span>
-        </span>
+        <Badge tone="teal" size="sm">
+          <GitMerge size={11} />
+          <span>Merged</span>
+        </Badge>
       )
     case 'failed':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-mono text-[11px] font-semibold tracking-wider bg-rose-500/15 text-rose-300 border border-rose-500/30">
-          <AlertTriangle size={11} className="text-rose-400" />
-          <span>FAILED</span>
-        </span>
+        <Badge tone="red" size="sm">
+          <AlertTriangle size={11} />
+          <span>Failed</span>
+        </Badge>
       )
     case 'idle':
     default:
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-mono text-[11px] text-ink-muted bg-surface-elevated border border-border-hairline">
-          <span className="w-1.5 h-1.5 rounded-full bg-ink-muted inline-block" />
-          <span>STANDBY</span>
-        </span>
+        <Badge tone="neutral" dot size="sm">
+          Standby
+        </Badge>
       )
   }
 }
@@ -90,38 +87,38 @@ function renderExecutorBadge(preset: string): React.ReactNode {
   switch (preset.toLowerCase()) {
     case 'claude-code':
       return (
-        <span className="inline-flex items-center gap-1 font-mono text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">
-          <Bot size={11} className="text-amber-400" />
+        <Badge tone="amber" size="sm">
+          <Bot size={11} />
           <span>Claude Code</span>
-        </span>
+        </Badge>
       )
     case 'codex':
       return (
-        <span className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
-          <Sparkles size={11} className="text-emerald-400" />
+        <Badge tone="teal" size="sm">
+          <Sparkles size={11} />
           <span>Codex</span>
-        </span>
+        </Badge>
       )
     case 'gemini':
       return (
-        <span className="inline-flex items-center gap-1 font-mono text-[11px] text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded">
-          <Radio size={11} className="text-blue-400" />
+        <Badge tone="cobalt" size="sm">
+          <Radio size={11} />
           <span>Gemini CLI</span>
-        </span>
+        </Badge>
       )
     case 'aider':
       return (
-        <span className="inline-flex items-center gap-1 font-mono text-[11px] text-purple-300 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded">
-          <Terminal size={11} className="text-purple-400" />
+        <Badge tone="violet" size="sm">
+          <Terminal size={11} />
           <span>Aider</span>
-        </span>
+        </Badge>
       )
     default:
       return (
-        <span className="inline-flex items-center gap-1 font-mono text-[11px] text-ink-secondary bg-surface-elevated border border-border-hairline px-2 py-0.5 rounded">
+        <Badge tone="neutral" size="sm">
           <Bot size={11} />
           <span>{preset}</span>
-        </span>
+        </Badge>
       )
   }
 }
@@ -233,113 +230,108 @@ export const AgentMissionControlView: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#0A0D12] text-ink-primary font-sans select-none">
-      {/* HUD Header Bar */}
-      <header className="px-6 py-4 border-b border-border-hairline/80 bg-[#0E1218]/90 backdrop-blur flex items-center justify-between shrink-0">
+    <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-canvas-primary text-ink-primary font-sans select-none animate-view-enter">
+      {/* Studio Header Bar */}
+      <header className="px-6 py-4 border-b border-border-hairline bg-surface-chrome/70 flex flex-wrap items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shadow-sm shadow-emerald-500/10">
-            <Radio size={18} className="animate-pulse" />
+          <div className="h-9 w-9 rounded-[10px] bg-[var(--pill-teal-bg)] border border-[var(--pill-teal-border)] flex items-center justify-center text-[var(--pill-teal-text)]">
+            <Radio size={17} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-mono text-sm font-bold tracking-wider uppercase text-ink-primary">
-                AGENT MISSION CONTROL
+              <h1 className="font-display text-[16px] font-semibold tracking-[-0.015em] text-ink-primary">
+                Mission Control
               </h1>
-              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-surface-elevated border border-border-hairline text-ink-muted">
-                v2.0 HUD
+              <span className="text-xs text-ink-muted tabular-nums">
+                {activeCount} active · {waitingCount} awaiting approval
               </span>
             </div>
-            <p className="text-xs text-ink-muted">
-              Monitoring Real-Time Agen Eksekutor & Smart Git Worktree Sibling
+            <p className="text-xs text-ink-secondary mt-0.5">
+              Real-time CLI agent executors &amp; isolated Git worktrees
             </p>
           </div>
         </div>
 
-        {/* Global Telemetry Chips */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-[#141922] border border-border-hairline rounded-lg px-3 py-1.5 font-mono text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-ink-secondary">ACTIVE:</span>
-              <span className="font-bold text-ink-primary">{activeCount}</span>
-            </div>
-            <span className="text-border-hairline">|</span>
-            <div className="flex items-center gap-1.5">
+        {/* Global Telemetry Summary Pill + Refresh */}
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3 bg-surface-elevated border border-border-hairline rounded-[8px] px-3 py-1.5 text-xs tabular-nums">
+            <span className="flex items-center gap-1.5 text-ink-secondary">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-emerald" />
+              <span>Active</span>
+              <strong className="font-mono text-ink-primary">{activeCount}</strong>
+            </span>
+            <span className="text-border-hairline">·</span>
+            <span className="flex items-center gap-1.5 text-ink-secondary">
               <span
-                className={`w-2 h-2 rounded-full ${waitingCount > 0 ? 'bg-amber-400 animate-ping' : 'bg-ink-muted'}`}
+                className={cn(
+                  'w-1.5 h-1.5 rounded-full',
+                  waitingCount > 0 ? 'bg-accent-amber animate-pulse' : 'bg-ink-muted'
+                )}
               />
-              <span className="text-ink-secondary">AWAITING APPROVAL:</span>
-              <span
-                className={`font-bold ${waitingCount > 0 ? 'text-amber-300' : 'text-ink-primary'}`}
+              <span>Approval</span>
+              <strong
+                className={cn(
+                  'font-mono',
+                  waitingCount > 0 ? 'text-[var(--pill-amber-text)]' : 'text-ink-primary'
+                )}
               >
                 {waitingCount}
-              </span>
-            </div>
-            <span className="text-border-hairline">|</span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-ink-secondary">DELTA:</span>
+              </strong>
+            </span>
+            <span className="text-border-hairline">·</span>
+            <span className="flex items-center gap-1.5 font-mono text-[11px]">
               <span className="text-ink-muted">{totalFilesChanged} files</span>
-              <span className="text-emerald-400 font-bold">+{totalLinesAdded}</span>
-              <span className="text-rose-400 font-bold">-{totalLinesRemoved}</span>
-            </div>
+              <span className="text-[var(--pill-teal-text)] font-semibold">+{totalLinesAdded}</span>
+              <span className="text-[var(--pill-red-text)] font-semibold">-{totalLinesRemoved}</span>
+            </span>
           </div>
 
-          <button
+          <Button
+            variant="secondary"
+            size="icon"
             onClick={() => void loadSessions(activeNotebookId)}
             title="Refresh Data Sesi"
-            className="h-8 w-8 rounded-lg bg-surface-elevated hover:bg-surface-hover border border-border-hairline flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
-            <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-          </button>
+            <RefreshCw size={13.5} className={isLoading ? 'animate-spin' : ''} />
+          </Button>
         </div>
       </header>
 
-      {/* Filter Segmented Control & Status Message */}
-      <div className="px-6 py-2.5 bg-[#0C1016] border-b border-border-hairline/60 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-1.5 font-mono text-xs">
-          {(
-            [
-              { id: 'all', label: 'ALL MISSIONS', count: sessions.length },
-              { id: 'active', label: 'ACTIVE', count: activeCount },
-              { id: 'waiting', label: 'APPROVAL REQUIRED', count: waitingCount },
-              {
-                id: 'completed',
-                label: 'COMPLETED & MERGED',
-                count: sessions.filter((s) => ['completed', 'merged'].includes(s.status)).length
-              },
-              {
-                id: 'failed',
-                label: 'FAILED',
-                count: sessions.filter((s) => s.status === 'failed').length
-              }
-            ] as const
-          ).map((filter) => {
-            const active = activeFilter === filter.id
-            return (
-              <button
-                key={filter.id}
-                onClick={() => setFilter(filter.id as AgentFilter)}
-                className={`px-3 py-1 rounded-[5px] border transition-colors flex items-center gap-1.5 ${
-                  active
-                    ? 'bg-accent-cobalt text-white border-accent-cobalt font-medium shadow-sm'
-                    : 'bg-[#12161E] text-ink-muted hover:text-ink-secondary border-border-hairline/60 hover:border-border-hairline'
-                }`}
-              >
-                <span>{filter.label}</span>
-                <span className="text-[10px] opacity-75 font-bold">({filter.count})</span>
-              </button>
-            )
-          })}
-        </div>
+      {/* Filter Segmented Toolbar */}
+      <div className="px-6 py-2.5 bg-surface-chrome/40 border-b border-border-hairline flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <SegmentedControl<AgentFilter>
+          size="sm"
+          value={activeFilter}
+          onChange={setFilter}
+          options={[
+            { value: 'all', label: 'All missions', count: sessions.length },
+            { value: 'active', label: 'Active', count: activeCount },
+            { value: 'waiting', label: 'Approval', count: waitingCount },
+            {
+              value: 'completed',
+              label: 'Completed',
+              count: sessions.filter((s) => ['completed', 'merged'].includes(s.status)).length
+            },
+            {
+              value: 'failed',
+              label: 'Failed',
+              count: sessions.filter((s) => s.status === 'failed').length
+            }
+          ]}
+        />
 
         {actionError && (
-          <div className="flex items-center gap-2 px-3 py-1 rounded bg-rose-500/15 border border-rose-500/30 text-rose-300 font-mono text-xs">
-            <AlertTriangle size={13} />
+          <Badge tone="red" size="sm" className="gap-2 py-1 px-2.5">
+            <AlertTriangle size={12} />
             <span>{actionError}</span>
-            <button onClick={() => setActionError(null)} className="ml-2 hover:text-white">
+            <button
+              type="button"
+              onClick={() => setActionError(null)}
+              className="ml-1 hover:opacity-75"
+            >
               ×
             </button>
-          </div>
+          </Badge>
         )}
       </div>
 
@@ -347,25 +339,26 @@ export const AgentMissionControlView: React.FC = () => {
       <main className="flex-1 overflow-y-auto p-6">
         {filteredSessions.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto py-16">
-            <div className="h-16 w-16 rounded-2xl bg-surface-elevated/60 border border-border-hairline flex items-center justify-center text-ink-muted mb-4 shadow-inner">
-              <FolderGit2 size={32} className="opacity-50" />
+            <div className="h-14 w-14 rounded-[14px] bg-surface-elevated border border-border-hairline flex items-center justify-center text-ink-muted mb-4 shadow-card">
+              <FolderGit2 size={26} className="opacity-65" />
             </div>
-            <h3 className="font-mono text-base font-bold text-ink-primary tracking-wide uppercase mb-1">
-              {sessions.length === 0 ? 'TIDAK ADA MISI AKTIF' : 'TIDAK ADA HASIL FILTER'}
+            <h3 className="font-display text-base font-semibold text-ink-primary mb-1">
+              {sessions.length === 0 ? 'Belum ada misi aktif' : 'Tidak ada hasil filter'}
             </h3>
-            <p className="text-xs text-ink-muted mb-6 leading-relaxed">
+            <p className="text-xs text-ink-secondary mb-6 leading-relaxed">
               {sessions.length === 0
-                ? 'Belum ada misi agen yang diluncurkan. Buka dokumen spesifikasi Anda di Workbench, lalu klik tombol "Dispatch Spec" atau tekan Ctrl+Shift+D untuk meluncurkan agen.'
+                ? 'Buka dokumen spesifikasi Anda di Workbench, lalu klik "Dispatch Spec" atau tekan Ctrl+Shift+D untuk meluncurkan agen.'
                 : 'Tidak ada sesi agen yang sesuai dengan kriteria filter saat ini.'}
             </p>
             {sessions.length === 0 && (
-              <button
+              <Button
+                variant="primary"
+                size="md"
                 onClick={() => setActiveMainView('workbench')}
-                className="px-4 py-2 rounded-lg bg-accent-cobalt hover:bg-accent-cobalt/90 text-white font-mono text-xs font-semibold flex items-center gap-2 shadow-md transition-colors"
               >
                 <FileCode2 size={14} />
                 <span>Buka Workbench Spesifikasi</span>
-              </button>
+              </Button>
             )}
           </div>
         ) : (
@@ -379,20 +372,21 @@ export const AgentMissionControlView: React.FC = () => {
               return (
                 <article
                   key={session.id}
-                  className={`rounded-xl border transition-all duration-200 bg-[#0F131A] flex flex-col justify-between overflow-hidden ${
+                  className={cn(
+                    'rounded-[12px] border transition-colors duration-150 bg-surface-elevated flex flex-col justify-between overflow-hidden shadow-card',
                     isWaiting
-                      ? 'border-amber-500/50 shadow-lg shadow-amber-500/5 ring-1 ring-amber-500/30'
-                      : 'border-border-hairline hover:border-ink-muted/60'
-                  }`}
+                      ? 'border-[var(--pill-amber-border)] ring-1 ring-accent-amber/30'
+                      : 'border-border-hairline hover:border-border-strong'
+                  )}
                 >
                   {/* Top Bar of Card */}
-                  <div className="p-4 border-b border-border-hairline/60 bg-[#12161E]/80 flex items-start justify-between gap-3">
+                  <div className="p-4 border-b border-border-subtle flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                         {session.taskCode && (
-                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-accent-cobalt/20 text-accent-cobalt border border-accent-cobalt/30">
+                          <Badge tone="cobalt" size="sm" className="font-mono">
                             {session.taskCode}
-                          </span>
+                          </Badge>
                         )}
                         {renderStatusBadge(session.status)}
                         {renderExecutorBadge(session.agentPreset)}
@@ -401,7 +395,7 @@ export const AgentMissionControlView: React.FC = () => {
                       <h2
                         onClick={() => handleNavigateToSpec(session.pageId)}
                         title="Klik untuk membuka spesifikasi di Workbench"
-                        className="font-medium text-sm text-ink-primary hover:text-accent-cobalt transition-colors truncate cursor-pointer flex items-center gap-1.5 group"
+                        className="font-display font-semibold text-[14px] text-ink-primary hover:text-accent-cobalt transition-colors truncate cursor-pointer flex items-center gap-1.5 group"
                       >
                         <span className="truncate">{session.title}</span>
                         <ExternalLink
@@ -412,54 +406,58 @@ export const AgentMissionControlView: React.FC = () => {
                     </div>
 
                     <div className="text-right shrink-0">
-                      <div className="flex items-center gap-1 font-mono text-[10px] text-ink-muted">
-                        <Clock size={10} />
+                      <div className="flex items-center gap-1 font-mono text-[10.5px] text-ink-muted tabular-nums">
+                        <Clock size={10.5} />
                         <span>{formatTimeAgo(session.createdAt)}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Branch & Isolation Telemetry */}
-                  <div className="px-4 py-2.5 bg-[#0D1017] border-b border-border-hairline/40 flex items-center justify-between text-xs font-mono">
-                    <div className="flex items-center gap-2 truncate text-ink-muted">
+                  <div className="px-4 py-2.5 bg-surface-chrome/50 border-b border-border-subtle flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 truncate text-ink-muted font-mono text-[11px]">
                       {isWorktree ? (
                         <>
-                          <GitBranch size={13} className="text-accent-teal shrink-0" />
-                          <span className="text-accent-teal font-semibold">
+                          <GitBranch size={12.5} className="text-[var(--pill-teal-text)] shrink-0" />
+                          <span className="text-[var(--pill-teal-text)] font-medium">
                             {session.branchName || 'worktree'}
                           </span>
-                          <span className="text-[10px] text-ink-muted truncate max-w-[220px]">
+                          <span className="text-[10.5px] text-ink-muted truncate max-w-[200px]">
                             ({session.worktreePath})
                           </span>
                         </>
                       ) : (
                         <>
-                          <FolderGit2 size={13} className="text-ink-secondary shrink-0" />
+                          <FolderGit2 size={12.5} className="text-ink-secondary shrink-0" />
                           <span className="text-ink-secondary">direct (main repository)</span>
                         </>
                       )}
                     </div>
 
                     {/* Diff Stat Counter */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-ink-muted">{session.filesChanged} file diubah</span>
-                      <span className="text-emerald-400 font-bold">+{session.linesAdded}</span>
-                      <span className="text-rose-400 font-bold">-{session.linesRemoved}</span>
+                    <div className="flex items-center gap-2 shrink-0 font-mono text-[11px] tabular-nums">
+                      <span className="text-ink-muted">{session.filesChanged} files</span>
+                      <span className="text-[var(--pill-teal-text)] font-medium">
+                        +{session.linesAdded}
+                      </span>
+                      <span className="text-[var(--pill-red-text)] font-medium">
+                        -{session.linesRemoved}
+                      </span>
                     </div>
                   </div>
 
                   {/* Monospace Live Tail Box */}
-                  <div className="px-4 py-3 bg-[#080A0E] flex-1 flex flex-col justify-end">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-mono text-[10px] tracking-wider uppercase text-ink-muted flex items-center gap-1">
-                        <Activity size={10} />
-                        <span>TERMINAL OUTPUT TAIL</span>
+                  <div className="px-4 py-3 bg-canvas-primary/50 flex-1 flex flex-col justify-end">
+                    <div className="flex items-center justify-between mb-1.5 text-[10.5px] text-ink-muted">
+                      <span className="font-medium uppercase tracking-[0.06em] flex items-center gap-1">
+                        <Activity size={10.5} />
+                        <span>Output tail</span>
                       </span>
-                      <span className="font-mono text-[10px] text-ink-muted">
-                        APPROVAL: {session.approvalMode.toUpperCase()}
+                      <span className="font-mono text-[10px]">
+                        Mode: {session.approvalMode}
                       </span>
                     </div>
-                    <div className="p-2.5 rounded-lg bg-[#050608] border border-border-hairline/50 font-mono text-[11px] text-ink-secondary min-h-[58px] flex flex-col justify-center overflow-x-auto leading-relaxed">
+                    <div className="p-2.5 rounded-[8px] bg-surface-chrome border border-border-subtle font-mono text-[11px] text-ink-secondary min-h-[58px] flex flex-col justify-center overflow-x-auto leading-relaxed">
                       {session.lastOutputTail ? (
                         <pre className="whitespace-pre-wrap break-all text-ink-secondary">
                           {session.lastOutputTail}
@@ -473,58 +471,61 @@ export const AgentMissionControlView: React.FC = () => {
                   </div>
 
                   {/* Actions Footer Bar */}
-                  <div className="p-3 bg-[#11151D] border-t border-border-hairline/80 flex items-center justify-between gap-2">
+                  <div className="px-4 py-3 bg-surface-chrome/65 border-t border-border-subtle flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      {/* Quick Approve Button for interactive waiting */}
                       {isWaiting && (
-                        <button
+                        <Button
+                          variant="primary"
+                          size="sm"
                           onClick={() => handleQuickApprove(session.id)}
-                          className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-mono text-xs font-bold flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all animate-bounce"
                         >
-                          <Check size={13} className="stroke-[3]" />
+                          <Check size={12.5} />
                           <span>Approve (y)</span>
-                        </button>
+                        </Button>
                       )}
 
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => handleOpenTerminal(session)}
-                        className="px-3 py-1.5 rounded-lg bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-primary font-mono text-xs font-medium flex items-center gap-1.5 transition-colors"
                       >
                         <Terminal size={12} className="text-accent-cobalt" />
                         <span>Buka Terminal</span>
-                      </button>
+                      </Button>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* Worktree Merge & Discard Actions */}
                       {isWorktree && session.status !== 'merged' && (
                         <>
                           <button
+                            type="button"
                             disabled={isMerging}
                             onClick={() => handleMerge(session)}
                             title="Gabungkan hasil kerja worktree ini ke cabang utama"
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                            className="h-7 px-2.5 rounded-[7px] bg-[var(--pill-teal-bg)] hover:brightness-110 border border-[var(--pill-teal-border)] text-[var(--pill-teal-text)] text-xs font-medium flex items-center gap-1.5 transition-all disabled:opacity-50"
                           >
                             <GitMerge size={12} />
                             <span>{isMerging ? 'Merging...' : 'Merge to Main'}</span>
                           </button>
 
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             disabled={isDiscarding}
                             onClick={() => handleDiscard(session)}
                             title="Batalkan & hapus direktori worktree terisolasi secara aman"
-                            className="px-2.5 py-1.5 rounded-lg bg-surface-elevated hover:bg-rose-500/20 hover:border-rose-500/40 hover:text-rose-300 border border-border-hairline text-ink-muted font-mono text-xs transition-colors disabled:opacity-50"
+                            className="hover:bg-[var(--pill-red-bg)] hover:text-[var(--pill-red-text)]"
                           >
-                            <Trash2 size={12} />
-                          </button>
+                            <Trash2 size={12.5} />
+                          </Button>
                         </>
                       )}
 
                       {session.status === 'merged' && (
-                        <span className="font-mono text-xs text-emerald-400 flex items-center gap-1 px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20">
-                          <Check size={12} />
+                        <Badge tone="teal" size="sm">
+                          <Check size={11} />
                           <span>Merged</span>
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   </div>

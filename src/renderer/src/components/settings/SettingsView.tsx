@@ -44,6 +44,7 @@ import {
   type ThemeDefinition
 } from '@renderer/lib/themes'
 import { MARKER_META } from '@renderer/lib/marker-colors'
+import { Badge, Button, Kbd, cn } from '@renderer/components/ui'
 
 interface NavItem {
   id: string
@@ -460,17 +461,9 @@ export const SettingsView: React.FC = () => {
 
   const renderBadge = (badge?: 'Optional' | 'Beta' | 'Alpha'): React.ReactNode => {
     if (!badge) return null
-    const styles =
-      badge === 'Optional'
-        ? 'bg-surface-elevated text-ink-muted border-border-hairline'
-        : badge === 'Beta'
-          ? 'bg-accent-cobalt/15 text-accent-cobalt border-accent-cobalt/30'
-          : 'bg-accent-amber/15 text-accent-amber border-accent-amber/30'
-    return (
-      <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${styles}`}>
-        {badge}
-      </span>
-    )
+    const tone =
+      badge === 'Optional' ? 'neutral' : badge === 'Beta' ? 'cobalt' : 'amber'
+    return <Badge tone={tone}>{badge}</Badge>
   }
 
   const renderActivePanel = (): React.ReactNode => {
@@ -633,11 +626,11 @@ export const SettingsView: React.FC = () => {
         return (
           <div className="space-y-8 animate-view-enter">
             <div>
-              <h1 className="font-display text-xl font-bold text-ink-primary">
+              <h1 className="font-display text-xl font-bold tracking-[-0.02em] text-ink-primary">
                 Appearance &amp; Theme Studio
               </h1>
               <p className="text-xs text-ink-secondary mt-1">
-                Pilih dari preset kurasi (termasuk Orca Carbon, Code.Zone Amber, dan Finns Cosmic Nebula) atau racik tema kustom lu sendiri.
+                Pilih preset kurasi (termasuk Obsidian Studio default, Graphite Slate, Orca Carbon, dan Archival Vellum) atau racik tema kustom sendiri.
               </p>
             </div>
 
@@ -647,8 +640,8 @@ export const SettingsView: React.FC = () => {
                 <h2 className="font-display text-sm font-semibold text-ink-primary">
                   Theme Presets ({allThemes.length})
                 </h2>
-                <span className="font-mono text-[11px] text-ink-muted">
-                  Aktif: <strong className="text-accent-cobalt">{activeThemeObj.name}</strong>
+                <span className="text-xs text-ink-muted">
+                  Active: <strong className="text-accent-cobalt font-medium">{activeThemeObj.name}</strong>
                 </span>
               </div>
 
@@ -659,11 +652,12 @@ export const SettingsView: React.FC = () => {
                     <div
                       key={t.id}
                       onClick={() => setActiveTheme(t.id)}
-                      className={`group rounded-lg p-3 border cursor-pointer transition-all flex flex-col justify-between ${
+                      className={cn(
+                        'group rounded-[12px] p-3 border cursor-pointer transition-all flex flex-col justify-between',
                         isSelected
-                          ? 'border-accent-cobalt ring-1 ring-accent-cobalt bg-surface-elevated shadow-lg'
-                          : 'border-border-hairline bg-surface-elevated/60 hover:bg-surface-elevated hover:border-ink-muted'
-                      }`}
+                          ? 'border-[var(--node-selected-border)] shadow-node-selected bg-[var(--node-selected-bg)]'
+                          : 'border-border-hairline bg-surface-elevated hover:border-border-strong'
+                      )}
                     >
                       <div>
                         {/* Mini Visual Swatch Window */}
@@ -920,22 +914,14 @@ export const SettingsView: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-subtle">
-                <button
-                  type="button"
-                  onClick={handlePreviewCustomTheme}
-                  className="px-3 py-1.5 rounded-md bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-xs text-ink-primary flex items-center gap-1.5"
-                >
+                <Button variant="secondary" size="sm" onClick={handlePreviewCustomTheme}>
                   <Eye size={13} />
                   <span>Preview Live</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveCustomTheme}
-                  className="px-3.5 py-1.5 rounded-md bg-accent-cobalt hover:opacity-90 text-white text-xs font-medium flex items-center gap-1.5"
-                >
+                </Button>
+                <Button variant="primary" size="sm" onClick={handleSaveCustomTheme}>
                   <Plus size={13} />
                   <span>Simpan &amp; Pakai Tema</span>
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -1189,16 +1175,14 @@ export const SettingsView: React.FC = () => {
               </p>
             </div>
 
-            <div className="rounded-xl bg-surface-elevated border border-border-hairline overflow-hidden divide-y divide-border-subtle">
+            <div className="rounded-[12px] bg-surface-elevated border border-border-hairline overflow-hidden divide-y divide-border-subtle">
               {shortcuts.map(([label, keys]) => (
                 <div
                   key={label}
-                  className="px-4 py-3 flex items-center justify-between text-xs hover:bg-surface-hover/40"
+                  className="px-4 py-3 flex items-center justify-between text-xs hover:bg-surface-hover/40 transition-colors"
                 >
                   <span className="text-ink-primary font-medium">{label}</span>
-                  <kbd className="font-mono text-[11px] px-2 py-0.5 rounded bg-surface-chrome border border-border-hairline text-accent-cobalt">
-                    {keys}
-                  </kbd>
+                  <Kbd className="px-2 py-0.5 text-[11px] text-ink-secondary">{keys}</Kbd>
                 </div>
               ))}
             </div>
@@ -1398,8 +1382,8 @@ export const SettingsView: React.FC = () => {
 
   return (
     <div className="flex-1 flex min-h-0 overflow-hidden bg-canvas-primary ambient-aurora-host animate-view-enter">
-      {/* Left Orca-Style Settings Navigation Rail */}
-      <aside className="w-[264px] shrink-0 bg-surface-chrome border-r border-border-hairline flex flex-col h-full select-none">
+      {/* Left Studio Settings Navigation Rail */}
+      <aside className="w-[252px] shrink-0 bg-surface-chrome border-r border-border-hairline flex flex-col h-full select-none">
         {/* Top: Back to app & Search settings (Ctrl+F) */}
         <div className="p-3 space-y-2.5 border-b border-border-hairline">
           <button
@@ -1422,26 +1406,20 @@ export const SettingsView: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search settings"
-              className="w-full h-8 pl-8 pr-14 rounded-[6px] bg-surface-elevated border border-border-hairline text-xs text-ink-primary placeholder:text-ink-muted focus:outline-none focus:border-accent-cobalt"
+              className="w-full h-8 pl-8 pr-14 rounded-[8px] bg-surface-elevated border border-border-hairline text-xs text-ink-primary placeholder:text-ink-muted focus:border-accent-cobalt"
             />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 pointer-events-none font-mono text-[10px] text-ink-muted">
-              <kbd className="px-1 py-0.2 rounded bg-surface-chrome border border-border-hairline">
-                Ctrl
-              </kbd>
-              <span>+</span>
-              <kbd className="px-1 py-0.2 rounded bg-surface-chrome border border-border-hairline">
-                F
-              </kbd>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 pointer-events-none">
+              <Kbd>Ctrl F</Kbd>
             </div>
           </div>
         </div>
 
-        {/* Scrollable Orca-style Categories + Projects */}
+        {/* Scrollable Categories + Projects */}
         <div className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
           {filteredGroups.map((group, idx) => (
             <div key={group.groupTitle || `grp-${idx}`} className="space-y-0.5">
               {group.groupTitle && (
-                <div className="px-2 pb-1 font-mono text-[10px] tracking-wider uppercase text-ink-muted">
+                <div className="px-2 pb-1 text-[11px] font-medium text-ink-muted">
                   {group.groupTitle}
                 </div>
               )}
@@ -1452,11 +1430,12 @@ export const SettingsView: React.FC = () => {
                     key={item.id}
                     type="button"
                     onClick={() => setActiveSettingsSection(item.id)}
-                    className={`w-full px-2.5 py-1.5 rounded-[6px] text-xs flex items-center justify-between transition-colors ${
+                    className={cn(
+                      'w-full px-2.5 py-[6px] rounded-[7px] text-[12.5px] flex items-center justify-between transition-colors',
                       isActive
                         ? 'bg-surface-hover text-ink-primary font-medium'
                         : 'text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
-                    }`}
+                    )}
                   >
                     <span className="flex items-center gap-2.5 truncate">
                       <span className={isActive ? 'text-accent-cobalt' : 'text-ink-muted'}>
@@ -1471,9 +1450,9 @@ export const SettingsView: React.FC = () => {
             </div>
           ))}
 
-          {/* Projects / Notebooks Section (Mirrors Orca's bottom Projects list) */}
+          {/* Projects / Notebooks Section */}
           <div className="space-y-0.5 pt-2 border-t border-border-subtle">
-            <div className="px-2 pb-1 font-mono text-[10px] tracking-wider uppercase text-ink-muted">
+            <div className="px-2 pb-1 text-[11px] font-medium text-ink-muted">
               Projects &amp; Notebooks
             </div>
             {notebooks.map((nb) => {
@@ -1484,15 +1463,16 @@ export const SettingsView: React.FC = () => {
                   key={nb.id}
                   type="button"
                   onClick={() => setActiveSettingsSection(secKey)}
-                  className={`w-full px-2.5 py-1.5 rounded-[6px] text-xs flex items-center justify-between transition-colors ${
+                  className={cn(
+                    'w-full px-2.5 py-[6px] rounded-[7px] text-[12.5px] flex items-center justify-between transition-colors',
                     isActive
                       ? 'bg-surface-hover text-ink-primary font-medium'
                       : 'text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
-                  }`}
+                  )}
                 >
                   <span className="flex items-center gap-2 truncate">
                     <span
-                      className={`w-2 h-2 rounded-full ${MARKER_META[nb.color].bgStrip}`}
+                      className={`w-2 h-2 rounded-[3px] ${MARKER_META[nb.color].dotBg}`}
                     />
                     <span className="truncate">{nb.name}</span>
                   </span>

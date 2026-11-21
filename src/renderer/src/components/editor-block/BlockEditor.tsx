@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { MARKER_META } from '@renderer/lib/marker-colors'
+import { Badge, Kbd, cn } from '@renderer/components/ui'
 import { createId } from '@renderer/lib/ids'
 import { isImageMime } from '@shared/assets'
 import { AssetBlock } from '@renderer/components/editor-block/AssetBlock'
@@ -410,9 +411,9 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
     if (matches.length === 0) return null
 
     return (
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-        <span className="font-mono text-[10px] text-ink-muted flex items-center gap-1">
-          <Link2 size={10} /> TAUTAN HALAMAN:
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] text-ink-muted flex items-center gap-1">
+          <Link2 size={11} /> Linked pages:
         </span>
         {matches.map((m, i) => {
           const targetTitle = m[1].trim()
@@ -422,6 +423,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
           return (
             <button
               key={`${targetTitle}-${i}`}
+              type="button"
               onClick={(e) => {
                 if (targetPage) openPageInTab(targetPage.id, e.altKey)
               }}
@@ -430,16 +432,17 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
                   ? `Buka ${targetPage.code}: ${targetPage.title} (Alt+Klik untuk Split-Pane)`
                   : `Halaman '${targetTitle}' belum dibuat`
               }
-              className={`px-2 py-0.5 rounded font-mono text-[11px] border flex items-center gap-1 transition-colors ${
+              className={cn(
+                'px-2 py-0.5 rounded-[6px] text-[11.5px] font-medium border flex items-center gap-1.5 transition-colors',
                 targetPage
-                  ? 'bg-accent-cobalt/15 border-accent-cobalt/40 text-accent-cobalt hover:bg-accent-cobalt/25'
+                  ? 'bg-[var(--pill-cobalt-bg)] border-[var(--pill-cobalt-border)] text-[var(--pill-cobalt-text)] hover:brightness-110'
                   : 'bg-surface-elevated border-border-hairline text-ink-muted'
-              }`}
+              )}
             >
               <span>{targetPage?.icon || '📄'}</span>
-              <span>[[{targetTitle}]]</span>
+              <span>{targetTitle}</span>
               {targetPage && (
-                <span className="text-[9px] opacity-75">({targetPage.code})</span>
+                <span className="font-mono text-[10px] opacity-75">{targetPage.code}</span>
               )}
             </button>
           )
@@ -471,73 +474,81 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
           event.dataTransfer.effectAllowed = 'move'
         }}
         onDragEnd={() => setDraggingBlockId(null)}
-        className={`group relative ${isWide ? 'max-w-full' : 'max-w-[780px] mx-auto'}`}
+        className={`group relative ${isWide ? 'max-w-full' : 'max-w-[760px] mx-auto'}`}
       >
-        {/* Hover Block Controls Gutter */}
+        {/* Hover Block Controls Pill Gutter */}
         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1 mb-1 select-none">
-          <span className="font-mono text-[9px] uppercase px-1.5 py-0.2 rounded bg-surface-chrome border border-border-hairline text-ink-muted">
-            {block.type}
-          </span>
-          <button
-            type="button"
-            onPointerDown={() => setDraggingBlockId(block.id)}
-            onPointerUp={() => setDraggingBlockId(null)}
-            title="Tarik ke kolom lain"
-            aria-label="Pegangan pindah blok"
-            className="p-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary cursor-grab active:cursor-grabbing"
-          >
-            <GripVertical size={11} />
-          </button>
-          <button
-            onClick={() =>
-              setWikiPickerForBlockId(
-                wikiPickerForBlockId === block.id ? null : block.id
-              )
-            }
-            title="Sisipkan [[Wiki-Link]] ke Halaman Lain"
-            className="p-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary hover:text-accent-cobalt"
-          >
-            <Link2 size={11} />
-          </button>
-          <button
-            onClick={() =>
-              setSlashMenuForBlockId(slashMenuForBlockId === block.id ? null : block.id)
-            }
-            title="Sisipkan Blok di Bawah (/)"
-            className="p-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary hover:text-accent-cobalt"
-          >
-            <Plus size={11} />
-          </button>
-          <button
-            onClick={() => moveBlock(block.id, -1)}
-            title="Pindah ke Atas"
-            className="p-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary"
-          >
-            <ArrowUp size={11} />
-          </button>
-          <button
-            onClick={() => moveBlock(block.id, 1)}
-            title="Pindah ke Bawah"
-            className="p-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary"
-          >
-            <ArrowDown size={11} />
-          </button>
-          {page.blocks.length > 1 && (
+          <div className="inline-flex items-center gap-0.5 p-0.5 rounded-[8px] bg-surface-elevated border border-border-hairline shadow-sm">
+            <span className="font-mono text-[9.5px] uppercase px-1.5 text-ink-muted">
+              {block.type}
+            </span>
+            <span className="h-3 w-[1px] bg-border-hairline mx-0.5" />
             <button
-              onClick={() => removeBlock(block.id)}
-              title="Hapus Blok"
-              className="p-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary hover:text-[#EF4444]"
+              type="button"
+              onPointerDown={() => setDraggingBlockId(block.id)}
+              onPointerUp={() => setDraggingBlockId(null)}
+              title="Tarik ke kolom lain"
+              aria-label="Pegangan pindah blok"
+              className="p-1 rounded-[5px] hover:bg-surface-hover text-ink-secondary cursor-grab active:cursor-grabbing transition-colors"
             >
-              <Trash2 size={11} />
+              <GripVertical size={11} />
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() =>
+                setWikiPickerForBlockId(
+                  wikiPickerForBlockId === block.id ? null : block.id
+                )
+              }
+              title="Sisipkan [[Wiki-Link]] ke Halaman Lain"
+              className="p-1 rounded-[5px] hover:bg-surface-hover text-ink-secondary hover:text-accent-cobalt transition-colors"
+            >
+              <Link2 size={11} />
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setSlashMenuForBlockId(slashMenuForBlockId === block.id ? null : block.id)
+              }
+              title="Sisipkan Blok di Bawah (/)"
+              className="p-1 rounded-[5px] hover:bg-surface-hover text-ink-secondary hover:text-accent-cobalt transition-colors"
+            >
+              <Plus size={11} />
+            </button>
+            <button
+              type="button"
+              onClick={() => moveBlock(block.id, -1)}
+              title="Pindah ke Atas"
+              className="p-1 rounded-[5px] hover:bg-surface-hover text-ink-secondary hover:text-ink-primary transition-colors"
+            >
+              <ArrowUp size={11} />
+            </button>
+            <button
+              type="button"
+              onClick={() => moveBlock(block.id, 1)}
+              title="Pindah ke Bawah"
+              className="p-1 rounded-[5px] hover:bg-surface-hover text-ink-secondary hover:text-ink-primary transition-colors"
+            >
+              <ArrowDown size={11} />
+            </button>
+            {page.blocks.length > 1 && (
+              <button
+                type="button"
+                onClick={() => removeBlock(block.id)}
+                title="Hapus Blok"
+                className="p-1 rounded-[5px] hover:bg-[var(--pill-red-bg)] text-ink-secondary hover:text-[var(--pill-red-text)] transition-colors"
+              >
+                <Trash2 size={11} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Wiki-Link Quick Picker Popup */}
         {wikiPickerForBlockId === block.id && (
-          <div className="mb-2 p-2 rounded-[6px] bg-surface-elevated border border-accent-cobalt shadow-lg z-20">
-            <div className="font-mono text-[10px] text-accent-cobalt uppercase mb-1.5">
-              PILIH HALAMAN UNTUK DITAUTKAN ([[WIKI-LINK]]):
+          <div className="mb-2.5 p-3 rounded-[10px] bg-surface-elevated border border-border-strong shadow-popover z-20 animate-popover-enter">
+            <div className="text-[11px] font-medium text-ink-secondary mb-2">
+              Link page ([[Wiki-Link]])
             </div>
             <div className="flex flex-wrap gap-1.5">
               {pages
@@ -545,13 +556,14 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
                 .map((target) => (
                   <button
                     key={target.id}
+                    type="button"
                     onClick={() => {
                       updateBlock(block.id, {
                         content: `${block.content} [[${target.title}]]`
                       })
                       setWikiPickerForBlockId(null)
                     }}
-                    className="px-2 py-1 rounded bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-xs text-ink-primary flex items-center gap-1.5"
+                    className="px-2.5 py-1.5 rounded-[7px] bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-xs text-ink-primary flex items-center gap-1.5 transition-colors"
                   >
                     <span>{target.icon}</span>
                     <span>{target.title}</span>
@@ -571,7 +583,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
             value={block.content}
             onChange={(e) => updateBlock(block.id, { content: e.target.value })}
             placeholder="Heading 1..."
-            className="w-full bg-transparent font-display font-bold text-2xl text-ink-primary focus:outline-none border-b border-border-subtle pb-1"
+            className="w-full bg-transparent font-display font-bold text-[26px] tracking-[-0.02em] text-ink-primary placeholder:text-ink-muted focus:outline-none border-b border-border-subtle pb-1.5"
           />
         )}
 
@@ -581,7 +593,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
             value={block.content}
             onChange={(e) => updateBlock(block.id, { content: e.target.value })}
             placeholder="Heading 2..."
-            className="w-full bg-transparent font-display font-semibold text-xl text-ink-primary focus:outline-none mt-2"
+            className="w-full bg-transparent font-display font-semibold text-[20px] tracking-[-0.015em] text-ink-primary placeholder:text-ink-muted focus:outline-none mt-2"
           />
         )}
 
@@ -591,7 +603,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
             value={block.content}
             onChange={(e) => updateBlock(block.id, { content: e.target.value })}
             placeholder="Heading 3..."
-            className="w-full bg-transparent font-display font-semibold text-base text-ink-primary focus:outline-none mt-1"
+            className="w-full bg-transparent font-display font-semibold text-[16px] tracking-[-0.01em] text-ink-primary placeholder:text-ink-muted focus:outline-none mt-1"
           />
         )}
 
@@ -608,19 +620,19 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
               }}
               rows={Math.max(2, Math.ceil(block.content.length / 85))}
               placeholder="Ketik catatan atau tekan '/' untuk menyisipkan blok DBML, Mermaid, atau Gantt Chart..."
-              className="w-full bg-transparent text-[15px] leading-[1.65] text-ink-primary resize-none focus:outline-none selectable-text"
+              className="w-full bg-transparent text-[14.5px] leading-[1.7] text-ink-primary placeholder:text-ink-muted resize-none focus:outline-none selectable-text"
             />
             {renderWikiLinkBadges(block.content)}
           </div>
         )}
 
         {block.type === 'checklist' && (
-          <div className="flex items-start gap-2.5 py-0.5">
+          <div className="flex items-start gap-2.5 py-1">
             <input
               type="checkbox"
               checked={Boolean(block.checked)}
               onChange={(e) => updateBlock(block.id, { checked: e.target.checked })}
-              className="mt-1.5 w-4 h-4 accent-[#3B82F6] rounded cursor-pointer"
+              className="mt-1 w-4 h-4 accent-[var(--accent-cobalt)] rounded cursor-pointer"
             />
             <div className="flex-1">
               <input
@@ -628,7 +640,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
                 value={block.content}
                 onChange={(e) => updateBlock(block.id, { content: e.target.value })}
                 placeholder="Item daftar periksa..."
-                className={`w-full bg-transparent text-[15px] focus:outline-none ${
+                className={`w-full bg-transparent text-[14.5px] focus:outline-none ${
                   block.checked ? 'line-through text-ink-muted' : 'text-ink-primary'
                 }`}
               />
@@ -638,24 +650,24 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
         )}
 
         {block.type === 'callout' && (
-          <div className="p-3.5 rounded-[6px] bg-surface-elevated border border-border-hairline flex gap-3">
+          <div className="p-4 rounded-[10px] bg-surface-elevated border border-border-hairline flex gap-3 shadow-[0_1px_3px_rgba(0,0,0,0.18)]">
             <div
               className={`w-1 rounded-full shrink-0 ${
-                MARKER_META[block.calloutColor || 'cobalt'].bgStrip
+                MARKER_META[block.calloutColor || 'cobalt'].dotBg
               }`}
             />
-            <div className="flex-1 space-y-1">
+            <div className="flex-1 space-y-1.5">
               <input
                 type="text"
-                value={block.calloutTitle || 'SPESIFIKASI TEKNIS'}
+                value={block.calloutTitle || 'Catatan Spesifikasi'}
                 onChange={(e) => updateBlock(block.id, { calloutTitle: e.target.value })}
-                className="w-full bg-transparent font-mono text-[11px] font-semibold tracking-wider uppercase text-accent-cobalt focus:outline-none"
+                className="w-full bg-transparent text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pill-cobalt-text)] focus:outline-none"
               />
               <textarea
                 value={block.content}
                 onChange={(e) => updateBlock(block.id, { content: e.target.value })}
                 rows={Math.max(2, Math.ceil(block.content.length / 80))}
-                className="w-full bg-transparent text-sm leading-relaxed text-ink-primary resize-none focus:outline-none selectable-text"
+                className="w-full bg-transparent text-[13.5px] leading-relaxed text-ink-primary resize-none focus:outline-none selectable-text"
               />
               {renderWikiLinkBadges(block.content)}
             </div>
@@ -663,14 +675,14 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
         )}
 
         {block.type === 'code' && (
-          <div className="rounded-[6px] bg-surface-chrome border border-border-hairline overflow-hidden">
-            <div className="px-3 py-1 bg-surface-elevated border-b border-border-hairline flex items-center justify-between font-mono text-[10px] text-ink-muted">
-              <span>CODE SNIPPET</span>
+          <div className="rounded-[10px] bg-surface-chrome border border-border-hairline overflow-hidden">
+            <div className="px-3.5 py-2 bg-surface-elevated/80 border-b border-border-hairline flex items-center justify-between text-[11px] text-ink-muted">
+              <span className="font-medium">Code snippet</span>
               <input
                 type="text"
                 value={block.language || 'sql'}
                 onChange={(e) => updateBlock(block.id, { language: e.target.value })}
-                className="w-20 bg-transparent text-right uppercase text-accent-amber focus:outline-none"
+                className="w-20 bg-transparent text-right font-mono uppercase text-accent-amber focus:outline-none"
               />
             </div>
             <textarea
@@ -678,7 +690,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
               onChange={(e) => updateBlock(block.id, { content: e.target.value })}
               rows={Math.max(3, block.content.split('\n').length)}
               spellCheck={false}
-              className="w-full p-3 bg-transparent font-mono text-xs leading-relaxed text-ink-primary resize-none focus:outline-none selectable-text"
+              className="w-full p-3.5 bg-transparent font-mono text-[12.5px] leading-relaxed text-ink-primary resize-none focus:outline-none selectable-text"
             />
           </div>
         )}
@@ -726,24 +738,26 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
 
         {/* Slash Command Menu Popover */}
         {slashMenuForBlockId === block.id && (
-          <div className="mt-2 p-2 rounded-[8px] bg-surface-elevated border border-border-hairline shadow-2xl z-30 max-w-md">
-            <div className="flex items-center justify-between px-2 pb-1.5 mb-1 border-b border-border-subtle font-mono text-[10px] text-ink-muted">
-              <span>SISIPKAN BLOK WORKBENCH (/)</span>
+          <div className="mt-2 p-2 rounded-[10px] bg-surface-elevated border border-border-hairline shadow-popover z-30 max-w-md animate-popover-enter">
+            <div className="flex items-center justify-between px-2.5 py-1.5 mb-1 border-b border-border-subtle text-[11px] font-medium text-ink-muted">
+              <span>Insert block</span>
               <button
+                type="button"
                 onClick={() => setSlashMenuForBlockId(null)}
                 className="hover:text-ink-primary"
               >
-                ESC
+                <Kbd>Esc</Kbd>
               </button>
             </div>
-            <div className="grid grid-cols-1 gap-1 max-h-64 overflow-y-auto">
+            <div className="grid grid-cols-1 gap-0.5 max-h-64 overflow-y-auto">
               {SLASH_OPTIONS.map((opt) => (
                 <button
                   key={opt.label}
+                  type="button"
                   onClick={() => handleSlashInsert(block.id, opt.type, opt.columnCount)}
-                  className="px-2.5 py-1.5 rounded-[5px] hover:bg-surface-hover text-left flex items-center gap-2.5 transition-colors"
+                  className="px-2.5 py-2 rounded-[7px] hover:bg-surface-hover text-left flex items-center gap-2.5 transition-colors"
                 >
-                  <div className="w-6 h-6 rounded bg-surface-chrome border border-border-hairline flex items-center justify-center shrink-0">
+                  <div className="w-7 h-7 rounded-[7px] bg-surface-chrome border border-border-hairline flex items-center justify-center shrink-0">
                     {opt.icon}
                   </div>
                   <div className="min-w-0">
@@ -763,24 +777,25 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
 
   return (
     <div
-      className="flex-1 overflow-y-auto px-6 py-6"
+      className="flex-1 overflow-y-auto px-6 py-7"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onPaste={handlePaste}
     >
-      <div className="space-y-2.5 pb-20">
+      <div className="space-y-3 pb-24">
         {groupBlocks(page.blocks).map((node) =>
           node.kind === 'group' ? (
             <div key={node.header.id} className="group relative">
               <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1 mb-1 select-none">
-                <span className="font-mono text-[9px] uppercase px-1.5 py-0.2 rounded bg-surface-chrome border border-border-hairline text-ink-muted">
+                <Badge tone="neutral" className="font-mono text-[9.5px] uppercase">
                   columns
-                </span>
+                </Badge>
                 {page.blocks.length > 1 && (
                   <button
+                    type="button"
                     onClick={() => removeBlock(node.header.id)}
                     title="Hapus Grup Kolom"
-                    className="p-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary hover:text-[#EF4444]"
+                    className="p-1 rounded-[6px] bg-surface-elevated hover:bg-[var(--pill-red-bg)] border border-border-hairline text-ink-secondary hover:text-[var(--pill-red-text)]"
                   >
                     <Trash2 size={11} />
                   </button>
@@ -807,39 +822,44 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
         )}
 
         {/* Bottom Quick Insert Bar */}
-        <div className="max-w-[780px] mx-auto pt-4 border-t border-dashed border-border-hairline flex flex-wrap items-center gap-2 select-none">
-          <span className="font-mono text-[10px] text-ink-muted uppercase mr-1">
-            + TAMBAH BLOK CEPAT:
+        <div className="max-w-[760px] mx-auto pt-5 mt-4 border-t border-border-subtle flex flex-wrap items-center gap-2 select-none">
+          <span className="text-[11.5px] font-medium text-ink-muted mr-1">
+            Add block:
           </span>
           <button
+            type="button"
             onClick={() => insertBlockAfter(null, 'paragraph')}
-            className="px-2.5 py-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline font-mono text-[11px] text-ink-secondary hover:text-ink-primary flex items-center gap-1"
+            className="h-7 px-2.5 rounded-[7px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
           >
-            <Type size={11} /> Teks
+            <Type size={12} /> Text
           </button>
           <button
+            type="button"
             onClick={() => insertBlockAfter(null, 'dbml')}
-            className="px-2.5 py-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline font-mono text-[11px] text-accent-cobalt flex items-center gap-1"
+            className="h-7 px-2.5 rounded-[7px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
           >
-            <Database size={11} /> + DBML Studio
+            <Database size={12} className="text-accent-cobalt" /> DBML Studio
           </button>
           <button
+            type="button"
             onClick={() => insertBlockAfter(null, 'mermaid')}
-            className="px-2.5 py-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline font-mono text-[11px] text-[#10B981] flex items-center gap-1"
+            className="h-7 px-2.5 rounded-[7px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
           >
-            <Sparkles size={11} /> + Diagram Mermaid
+            <Sparkles size={12} className="text-accent-teal" /> Mermaid
           </button>
           <button
+            type="button"
             onClick={() => insertBlockAfter(null, 'graphviz')}
-            className="px-2.5 py-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline font-mono text-[11px] text-[#8B5CF6] flex items-center gap-1"
+            className="h-7 px-2.5 rounded-[7px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
           >
-            <Network size={11} /> + Graphviz DOT
+            <Network size={12} className="text-accent-violet" /> Graphviz
           </button>
           <button
+            type="button"
             onClick={() => insertBlockAfter(null, 'database')}
-            className="px-2.5 py-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline font-mono text-[11px] text-accent-amber flex items-center gap-1"
+            className="h-7 px-2.5 rounded-[7px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
           >
-            <GanttChart size={11} /> + Gantt & Chart
+            <GanttChart size={12} className="text-accent-amber" /> Database &amp; Board
           </button>
         </div>
       </div>

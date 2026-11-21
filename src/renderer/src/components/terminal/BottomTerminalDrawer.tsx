@@ -65,26 +65,26 @@ export const BottomTerminalDrawer: React.FC = () => {
 
     const term = new Terminal({
       theme: {
-        background: '#0C0E12',
-        foreground: '#ECEEF2',
-        cursor: '#3B82F6',
-        cursorAccent: '#0C0E12',
-        selectionBackground: 'rgba(59, 130, 246, 0.35)',
-        black: '#14171E',
-        red: '#EF4444',
-        green: '#10B981',
-        yellow: '#F59E0B',
-        blue: '#3B82F6',
-        magenta: '#8B5CF6',
-        cyan: '#06B6D4',
-        white: '#ECEEF2',
-        brightBlack: '#5E6572',
-        brightRed: '#F87171',
-        brightGreen: '#34D399',
-        brightYellow: '#FBBF24',
-        brightBlue: '#60A5FA',
-        brightMagenta: '#A78BFA',
-        brightCyan: '#22D3EE',
+        background: '#0E0E11',
+        foreground: '#EDEDEF',
+        cursor: '#6E7BF2',
+        cursorAccent: '#0E0E11',
+        selectionBackground: 'rgba(110, 123, 242, 0.30)',
+        black: '#141417',
+        red: '#F87171',
+        green: '#2DD4BF',
+        yellow: '#E5A93C',
+        blue: '#6E7BF2',
+        magenta: '#A78BFA',
+        cyan: '#5EEAD4',
+        white: '#EDEDEF',
+        brightBlack: '#787886',
+        brightRed: '#FCA5A5',
+        brightGreen: '#5EEAD4',
+        brightYellow: '#F2C46D',
+        brightBlue: '#A2ACFA',
+        brightMagenta: '#C4B5FD',
+        brightCyan: '#99F6E4',
         brightWhite: '#FFFFFF'
       },
       fontFamily: 'JetBrains Mono, Menlo, monospace',
@@ -275,7 +275,7 @@ export const BottomTerminalDrawer: React.FC = () => {
     <aside
       aria-label="Terminal Drawer ADE"
       style={{ height: isMaximized ? 'calc(100vh - 72px)' : `${height}px` }}
-      className="w-full bg-[#0C0E12] border-t border-border-hairline flex flex-col shrink-0 z-40 select-none transition-[height] duration-75 relative shadow-2xl"
+      className="w-full bg-surface-chrome border-t border-border-hairline flex flex-col shrink-0 z-40 select-none transition-[height] duration-75 relative shadow-popover"
     >
       {/* Draggable Top Resize Handle */}
       <div
@@ -288,20 +288,18 @@ export const BottomTerminalDrawer: React.FC = () => {
         onPointerCancel={() => setIsResizing(false)}
         onDoubleClick={() => setHeight(280)}
         className={`h-1.5 w-full cursor-row-resize flex items-center justify-center transition-colors ${
-          isResizing ? 'bg-accent-cobalt' : 'bg-transparent hover:bg-accent-cobalt/60'
+          isResizing ? 'bg-accent-cobalt' : 'bg-transparent hover:bg-accent-cobalt/50'
         }`}
       >
-        <span className="w-12 h-0.5 rounded-full bg-border-hairline opacity-60" />
+        <span className="w-10 h-0.5 rounded-full bg-border-strong opacity-60" />
       </div>
 
-      {/* Cockpit HUD Terminal Header Strip */}
-      <div className="h-8 bg-[#111317] border-b border-border-hairline flex items-center justify-between px-2 gap-2 text-xs shrink-0">
+      {/* Terminal Header Strip */}
+      <div className="h-9 bg-canvas-primary border-b border-border-hairline flex items-center justify-between px-3 gap-2 text-xs shrink-0">
         <div className="flex items-center gap-1.5 min-w-0 overflow-x-auto no-scrollbar py-0.5">
-          <div className="flex items-center gap-1.5 text-ink-muted pl-1 pr-2 border-r border-border-hairline shrink-0">
+          <div className="flex items-center gap-1.5 text-ink-secondary pr-2.5 border-r border-border-hairline shrink-0">
             <TerminalIcon size={13} className="text-accent-cobalt" />
-            <span className="font-mono text-[11px] font-semibold tracking-wider uppercase text-ink-secondary">
-              ADE CONPTY
-            </span>
+            <span className="font-medium text-xs text-ink-primary">Terminal</span>
           </div>
 
           {/* Session Tabs */}
@@ -314,20 +312,19 @@ export const BottomTerminalDrawer: React.FC = () => {
               <div
                 key={tab.id}
                 onClick={() => setActiveTabId(tab.id)}
-                className={`group h-6 px-2.5 rounded-[4px] border flex items-center gap-2 cursor-pointer font-mono text-[11px] transition-colors ${
+                className={`group h-6 px-2.5 rounded-[6px] border flex items-center gap-2 cursor-pointer text-[11.5px] transition-colors ${
                   isActive
-                    ? 'bg-[#181B22] border-border-hairline text-ink-primary font-medium'
-                    : 'bg-[#111317] border-transparent text-ink-muted hover:bg-surface-hover hover:text-ink-secondary'
+                    ? 'bg-surface-elevated border-border-hairline text-ink-primary font-medium'
+                    : 'bg-transparent border-transparent text-ink-muted hover:bg-surface-hover hover:text-ink-secondary'
                 }`}
               >
-                {/* Status Dot */}
                 <span
                   className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                     isWaiting
                       ? 'bg-accent-amber animate-pulse'
                       : isTesting
                         ? 'bg-accent-cobalt animate-pulse'
-                        : 'bg-emerald-500'
+                        : 'bg-accent-emerald'
                   }`}
                   title={`Status: ${tab.detectedState || 'active'}`}
                 />
@@ -335,18 +332,19 @@ export const BottomTerminalDrawer: React.FC = () => {
                 <span className="truncate max-w-[140px]">{tab.title}</span>
 
                 {isWaiting && (
-                  <span className="text-[10px] text-accent-amber font-sans uppercase font-bold tracking-wider">
-                    [Y/N]
+                  <span className="font-mono text-[10px] text-accent-amber font-semibold">
+                    [y/n]
                   </span>
                 )}
 
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation()
                     closeSession(tab.id)
                   }}
                   title="Tutup Sesi Terminal"
-                  className="opacity-40 group-hover:opacity-100 hover:text-rose-400 ml-0.5"
+                  className="opacity-40 group-hover:opacity-100 hover:text-accent-rose ml-0.5"
                 >
                   <X size={11} />
                 </button>
@@ -357,13 +355,14 @@ export const BottomTerminalDrawer: React.FC = () => {
           {/* New Tab Dropdown Button */}
           <div className="relative shrink-0">
             <button
+              type="button"
               onClick={() => setIsPresetMenuOpen(!isPresetMenuOpen)}
               title="Buka Sesi Terminal Baru"
-              className="h-6 px-2 rounded-[4px] hover:bg-surface-hover flex items-center gap-1 text-ink-muted hover:text-ink-primary border border-border-hairline/60"
+              className="h-6 px-2 rounded-[6px] hover:bg-surface-hover flex items-center gap-1 text-ink-secondary hover:text-ink-primary border border-border-hairline transition-colors"
             >
               <Plus size={12} />
-              <span className="text-[11px] font-mono">Baru</span>
-              <ChevronDown size={10} className="opacity-60" />
+              <span className="text-[11.5px] font-medium">New</span>
+              <ChevronDown size={10.5} className="opacity-60" />
             </button>
 
             {isPresetMenuOpen && (
@@ -372,40 +371,45 @@ export const BottomTerminalDrawer: React.FC = () => {
                   className="fixed inset-0 z-50"
                   onClick={() => setIsPresetMenuOpen(false)}
                 />
-                <div className="absolute top-7 left-0 z-50 w-56 bg-[#181B22] border border-border-hairline rounded-[6px] shadow-2xl p-1.5 flex flex-col gap-0.5 animate-popover-enter">
-                  <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-ink-muted border-b border-border-hairline/60 mb-1">
-                    Shell & CLI Agent Presets
+                <div className="absolute top-7 left-0 z-50 w-56 bg-surface-elevated border border-border-hairline rounded-[10px] shadow-popover p-1.5 flex flex-col gap-0.5 animate-popover-enter">
+                  <div className="px-2 py-1 text-[10.5px] font-medium text-ink-muted border-b border-border-subtle mb-1">
+                    Shell &amp; CLI presets
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => handleLaunchPreset(undefined, undefined, 'PowerShell', 'pwsh')}
-                    className="w-full px-2 py-1.5 text-left text-xs rounded hover:bg-surface-hover flex items-center justify-between text-ink-primary font-mono"
+                    className="w-full px-2 py-1.5 text-left text-xs rounded-[7px] hover:bg-surface-hover flex items-center justify-between text-ink-primary transition-colors"
                   >
                     <span>PowerShell</span>
-                    <span className="text-[10px] text-ink-muted">Default</span>
+                    <span className="font-mono text-[10px] text-ink-muted">Default</span>
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => handleLaunchPreset('cmd.exe', undefined, 'Command Prompt', 'cmd')}
-                    className="w-full px-2 py-1.5 text-left text-xs rounded hover:bg-surface-hover flex items-center justify-between text-ink-primary font-mono"
+                    className="w-full px-2 py-1.5 text-left text-xs rounded-[7px] hover:bg-surface-hover flex items-center justify-between text-ink-primary transition-colors"
                   >
                     <span>CMD.exe</span>
-                    <span className="text-[10px] text-ink-muted">Windows</span>
+                    <span className="font-mono text-[10px] text-ink-muted">Windows</span>
                   </button>
 
-                  {presets.filter((p) => p.available && !['pwsh', 'cmd'].includes(p.id)).map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => handleLaunchPreset(p.command, undefined, p.name, p.id)}
-                      className="w-full px-2 py-1.5 text-left text-xs rounded hover:bg-surface-hover flex items-center justify-between text-ink-primary font-mono"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Zap size={11} className="text-accent-amber" />
-                        <span>{p.name}</span>
-                      </div>
-                      <span className="text-[10px] text-emerald-400">Siap</span>
-                    </button>
-                  ))}
+                  {presets
+                    .filter((p) => p.available && !['pwsh', 'cmd'].includes(p.id))
+                    .map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleLaunchPreset(p.command, undefined, p.name, p.id)}
+                        className="w-full px-2 py-1.5 text-left text-xs rounded-[7px] hover:bg-surface-hover flex items-center justify-between text-ink-primary transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Zap size={11} className="text-accent-amber" />
+                          <span>{p.name}</span>
+                        </div>
+                        <span className="text-[10.5px] text-[var(--pill-teal-text)]">Ready</span>
+                      </button>
+                    ))}
                 </div>
               </>
             )}
@@ -416,36 +420,39 @@ export const BottomTerminalDrawer: React.FC = () => {
         <div className="flex items-center gap-1.5 shrink-0">
           {activeTab && (
             <button
+              type="button"
               onClick={handleCaptureErrorToSpec}
               title="Salin potongan error/trace terminal terakhir ke dokumen spec aktif"
-              className="h-6 px-2.5 rounded-[4px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1.5 text-[11px] font-mono transition-colors"
+              className="h-6 px-2.5 rounded-[6px] bg-[var(--pill-red-bg)] hover:brightness-110 text-[var(--pill-red-text)] border border-[var(--pill-red-border)] flex items-center gap-1.5 text-[11px] font-medium transition-all"
             >
               <Radio size={11} />
-              <span>Capture Error to Spec</span>
+              <span>Capture error</span>
             </button>
           )}
 
           {currentRepoPath && (
             <span
               title={`CWD: ${currentRepoPath}`}
-              className="font-mono text-[10px] text-ink-muted truncate max-w-[200px] hidden md:inline px-1.5 py-0.5 rounded bg-surface-elevated/40 border border-border-hairline/40"
+              className="font-mono text-[10.5px] text-ink-muted truncate max-w-[200px] hidden md:inline px-2 py-0.5 rounded-[6px] bg-surface-elevated border border-border-hairline"
             >
               {currentRepoPath.split(/[/\\]/).pop()}
             </span>
           )}
 
           <button
+            type="button"
             onClick={() => setIsMaximized(!isMaximized)}
             title={isMaximized ? 'Pulihkan Ukuran Drawer' : 'Maksimalkan Drawer Terminal'}
-            className="p-1 rounded hover:bg-surface-hover text-ink-muted hover:text-ink-primary"
+            className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary transition-colors"
           >
-            {isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+            {isMaximized ? <Minimize2 size={12.5} /> : <Maximize2 size={12.5} />}
           </button>
 
           <button
+            type="button"
             onClick={closeDrawer}
             title="Tutup Drawer Terminal (Ctrl+`)"
-            className="p-1 rounded hover:bg-surface-hover text-ink-muted hover:text-ink-primary"
+            className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary transition-colors"
           >
             <ChevronDown size={14} />
           </button>
@@ -453,7 +460,7 @@ export const BottomTerminalDrawer: React.FC = () => {
       </div>
 
       {/* Terminal Viewport */}
-      <div className="flex-1 w-full h-full overflow-hidden relative p-1 bg-[#0C0E12]">
+      <div className="flex-1 w-full h-full overflow-hidden relative p-1.5 bg-surface-chrome">
         <div ref={containerRef} className="w-full h-full" />
       </div>
     </aside>

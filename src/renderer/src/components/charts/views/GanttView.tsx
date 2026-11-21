@@ -49,12 +49,12 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
   const toMs = (iso: string): number => parseIsoDate(iso) ?? timelineWindow.startMs
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12">
+    <div className="grid grid-cols-1 lg:grid-cols-12 bg-canvas-primary">
       {/* Left Task Spec Column */}
       <div className="lg:col-span-5 border-r border-border-hairline flex flex-col">
-        <div className="h-12 px-3 bg-surface-chrome/70 border-b border-border-hairline flex items-center justify-between font-mono text-[10px] text-ink-muted uppercase tracking-wider">
-          <span>TASK SPECIFICATION ({items.length})</span>
-          <span>PROGRESS · GESER HARI</span>
+        <div className="h-11 px-4 bg-surface-chrome/45 border-b border-border-hairline flex items-center justify-between text-[11.5px] font-medium text-ink-muted">
+          <span>Tasks ({items.length})</span>
+          <span>Progress · Shift days</span>
         </div>
 
         <div className="divide-y divide-border-subtle">
@@ -64,22 +64,22 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
               <div
                 key={task.id}
                 style={{ height: `${ROW_HEIGHT}px` }}
-                className="px-3 flex items-center justify-between gap-2 hover:bg-surface-hover/50 transition-colors"
+                className="px-4 flex items-center justify-between gap-2 hover:bg-surface-hover/40 transition-colors"
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <span className={`w-1.5 h-4 rounded-[2px] ${marker.bgStrip} shrink-0`} />
-                  <span className="font-mono text-[10px] text-ink-muted shrink-0">
+                  <span className={`w-2 h-2 rounded-[3px] ${marker.dotBg} shrink-0`} />
+                  <span className="font-mono text-[10.5px] text-ink-muted shrink-0">
                     {task.code}
                   </span>
                   <input
                     type="text"
                     value={task.title}
                     onChange={(e) => updateTask(task.id, { title: e.target.value })}
-                    className="bg-transparent text-xs text-ink-primary truncate focus:outline-none focus:border-b focus:border-accent-cobalt w-full"
+                    className="bg-transparent text-[12.5px] font-medium text-ink-primary truncate focus:outline-none focus:border-b focus:border-accent-cobalt w-full"
                   />
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px] tabular-nums">
+                <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10.5px] tabular-nums">
                   <input
                     type="range"
                     min={0}
@@ -90,20 +90,22 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
                       updateTask(task.id, { progress: Number(e.target.value) })
                     }
                     title={`Progress: ${task.progress}%`}
-                    className="w-14 accent-[#3B82F6] cursor-pointer"
+                    className="w-14 accent-[var(--accent-cobalt)] cursor-pointer"
                   />
                   <span className="w-8 text-right text-ink-secondary">{task.progress}%</span>
                   <button
+                    type="button"
                     onClick={() => shiftTask(task, -1)}
                     title="Majukan 1 Hari"
-                    className="p-0.5 rounded bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-ink-secondary"
+                    className="p-0.5 rounded-[5px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary"
                   >
                     <ChevronLeft size={11} />
                   </button>
                   <button
+                    type="button"
                     onClick={() => shiftTask(task, 1)}
                     title="Mundurkan 1 Hari"
-                    className="p-0.5 rounded bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-ink-secondary"
+                    className="p-0.5 rounded-[5px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary"
                   >
                     <ChevronRight size={11} />
                   </button>
@@ -118,7 +120,7 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
       <div className="lg:col-span-7 overflow-x-auto relative select-none">
         <div style={{ width: `${daysArray.length * DAY_COL_WIDTH}px` }}>
           {/* Two-Tier Date Scale Header */}
-          <div className="h-12 bg-surface-chrome/70 border-b border-border-hairline flex">
+          <div className="h-11 bg-surface-chrome/45 border-b border-border-hairline flex">
             {daysArray.map((d, idx) => {
               const isToday = idx === todayIdx
               return (
@@ -127,9 +129,9 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
                   style={{ width: `${DAY_COL_WIDTH}px` }}
                   className={`border-r border-border-subtle flex flex-col items-center justify-center font-mono tabular-nums ${
                     isToday
-                      ? 'bg-accent-amber/20 text-accent-amber font-bold'
+                      ? 'bg-[var(--pill-cobalt-bg)] text-[var(--pill-cobalt-text)] font-semibold'
                       : d.isWeekend
-                        ? 'bg-surface-chrome/90 text-ink-muted'
+                        ? 'bg-surface-chrome/70 text-ink-muted'
                         : 'text-ink-secondary'
                   }`}
                 >
@@ -145,19 +147,19 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
             style={{ height: `${items.length * ROW_HEIGHT}px` }}
             className="relative bg-canvas-primary"
           >
-            {/* Vertical Day Columns + Today Amber Marker */}
+            {/* Vertical Day Columns + Today Marker */}
             <div className="absolute inset-0 flex pointer-events-none">
               {daysArray.map((d, idx) => (
                 <div
                   key={d.iso}
                   style={{ width: `${DAY_COL_WIDTH}px` }}
-                  className={`h-full border-r border-border-subtle/60 ${
-                    d.isWeekend ? 'bg-surface-chrome/25' : ''
+                  className={`h-full border-r border-border-subtle ${
+                    d.isWeekend ? 'bg-surface-chrome' : ''
                   }`}
                 >
                   {idx === todayIdx && (
-                    <div className="h-full w-[1.5px] bg-accent-amber mx-auto relative">
-                      <span className="absolute top-1 -left-4 px-1 rounded-[2px] bg-accent-amber text-black font-mono text-[8px] font-bold">
+                    <div className="h-full w-[1.5px] bg-accent-cobalt mx-auto relative">
+                      <span className="absolute top-1 -left-4 px-1.5 py-[1px] rounded-[4px] bg-accent-cobalt text-white font-mono text-[8px] font-semibold">
                         TODAY
                       </span>
                     </div>
@@ -187,7 +189,7 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
                   const y2 = rowIdx * ROW_HEIGHT + ROW_HEIGHT / 2
 
                   const isConflict = toMs(task.startDate) < toMs(pred.endDate)
-                  const strokeColor = isConflict ? '#EF4444' : '#3B82F6'
+                  const strokeColor = isConflict ? '#F87171' : '#6E7BF2'
                   const midX = x2 >= x1 ? (x1 + x2) / 2 : x1 + 10
 
                   const path = `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`
@@ -198,7 +200,7 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
                         d={path}
                         fill="none"
                         stroke={strokeColor}
-                        strokeWidth={isConflict ? 2 : 1.4}
+                        strokeWidth={isConflict ? 1.8 : 1.4}
                       />
                       <polygon
                         points={`${x2},${y2} ${x2 - 6},${y2 - 3.5} ${x2 - 6},${y2 + 3.5}`}
@@ -210,7 +212,7 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
               )}
             </svg>
 
-            {/* Task Rows & Hatched Engineering Bars */}
+            {/* Task Rows & Soft Rounded Timeline Bars */}
             {items.map((task) => {
               const startOffset = Math.max(
                 0,
@@ -218,8 +220,7 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
               )
               const durationDays = Math.max(
                 1,
-                Math.round((toMs(task.endDate) - toMs(task.startDate)) / DAY_MS) +
-                  1
+                Math.round((toMs(task.endDate) - toMs(task.startDate)) / DAY_MS) + 1
               )
               const leftPx = startOffset * DAY_COL_WIDTH
               const widthPx = durationDays * DAY_COL_WIDTH
@@ -233,21 +234,21 @@ export const GanttView: React.FC<DatabaseViewProps> = ({ items, updateTask, shif
                 >
                   {task.isMilestone ? (
                     <div
-                      style={{ left: `${leftPx + DAY_COL_WIDTH / 2 - 8}px` }}
+                      style={{ left: `${leftPx + DAY_COL_WIDTH / 2 - 7}px` }}
                       className="absolute z-20 flex items-center gap-2"
                     >
                       <div
                         title={`Milestone: ${task.title} (${task.startDate})`}
-                        className="w-4 h-4 rotate-45 bg-accent-amber border border-white/60 shadow"
+                        className="w-3.5 h-3.5 rotate-45 rounded-[2px] bg-accent-amber border border-white/40 shadow"
                       />
-                      <span className="font-mono text-[10px] font-semibold text-accent-amber whitespace-nowrap">
-                        ◆ {task.code}
+                      <span className="font-mono text-[10.5px] font-medium text-accent-amber whitespace-nowrap">
+                        {task.code}
                       </span>
                     </div>
                   ) : (
                     <div
-                      style={{ left: `${leftPx + 2}px`, width: `${Math.max(24, widthPx - 4)}px` }}
-                      className={`absolute h-[22px] rounded-[4px] border ${marker.border} hatched-pattern bg-surface-elevated overflow-hidden flex items-center z-20`}
+                      style={{ left: `${leftPx + 2}px`, width: `${Math.max(28, widthPx - 4)}px` }}
+                      className={`absolute h-[24px] rounded-[6px] border ${marker.border} hatched-pattern bg-surface-elevated overflow-hidden flex items-center z-20`}
                     >
                       <div
                         style={{ width: `${task.progress}%` }}

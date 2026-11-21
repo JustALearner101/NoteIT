@@ -560,7 +560,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   toggleTheme: () => {
     set((state) => {
       const nextScheme = state.theme === 'dark' ? 'light' : 'dark'
-      const nextThemeId = nextScheme === 'light' ? 'archival-vellum' : 'graphite-slate'
+      const nextThemeId = nextScheme === 'light' ? 'archival-vellum' : 'obsidian-studio'
       const nextPrefs: WorkbenchPreferences = {
         ...state.preferences,
         activeThemeId: nextThemeId

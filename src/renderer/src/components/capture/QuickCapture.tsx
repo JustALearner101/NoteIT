@@ -62,10 +62,10 @@ export const QuickCapture: React.FC = () => {
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-canvas-primary text-ink-primary [-webkit-app-region:drag]">
-      <div className="px-4 pt-3 flex items-center gap-2 font-mono text-[10px] uppercase text-ink-muted">
-        <span className="w-1.5 h-1.5 rounded-full bg-accent-cobalt" />
-        <span>Quick Capture · INBOX</span>
+    <div className="h-screen w-screen flex flex-col bg-surface-elevated text-ink-primary border border-border-hairline [-webkit-app-region:drag]">
+      <div className="px-4 pt-3 flex items-center gap-2 text-[11px] font-medium text-ink-muted">
+        <span className="w-2 h-2 rounded-full bg-accent-cobalt" />
+        <span>Quick capture · Inbox</span>
       </div>
 
       <textarea
@@ -79,11 +79,11 @@ export const QuickCapture: React.FC = () => {
         className="flex-1 mx-4 mt-2 mb-1 bg-transparent resize-none text-sm leading-relaxed text-ink-primary placeholder:text-ink-muted focus:outline-none [-webkit-app-region:no-drag]"
       />
 
-      <div className="px-4 pb-3 flex items-center justify-between gap-3 font-mono text-[10px] text-ink-muted">
+      <div className="px-4 pb-3 flex items-center justify-between gap-3 text-[11px] text-ink-muted">
         <span>Enter untuk simpan · Shift+Enter baris baru · Esc tutup</span>
-        {status === 'saved' && <span className="text-[#10B981]">Tersimpan ke INBOX</span>}
+        {status === 'saved' && <span className="text-[var(--pill-teal-text)] font-medium">Tersimpan ke Inbox</span>}
         {status === 'error' && errorMessage && (
-          <span className="text-[#EF4444] truncate">{errorMessage}</span>
+          <span className="text-[var(--pill-red-text)] truncate">{errorMessage}</span>
         )}
       </div>
     </div>

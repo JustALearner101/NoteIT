@@ -155,15 +155,15 @@ export function ColumnGroup({
         <div
           key={`${header.id}-col-${columnIndex}`}
           {...dropHandlers(columnIndex)}
-          className={`min-w-0 px-3 ${
+          className={`min-w-0 px-3 rounded-[8px] transition-colors ${
             dropTargetColumn === columnIndex
-              ? 'bg-accent-cobalt/5 ring-1 ring-inset ring-accent-cobalt/40'
+              ? 'bg-[var(--pill-cobalt-bg)] ring-1 ring-inset ring-accent-cobalt/50'
               : ''
           }`}
         >
           <div className="flex flex-col">
             {columnBlocks.length === 0 ? (
-              <div className="font-mono text-[10px] text-ink-muted py-1 select-none">
+              <div className="text-[11px] text-ink-muted py-2 select-none">
                 Kolom kosong
               </div>
             ) : (
@@ -177,7 +177,7 @@ export function ColumnGroup({
               type="button"
               aria-label={`Hapus kolom ${columnIndex + 1}`}
               onClick={() => onRemoveColumn(columnIndex)}
-              className="mt-1 p-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary hover:text-[#EF4444]"
+              className="mt-1 p-1 rounded-[6px] bg-surface-elevated hover:bg-[var(--pill-red-bg)] border border-border-hairline text-ink-secondary hover:text-[var(--pill-red-text)] transition-colors"
             >
               <X size={10} />
             </button>
@@ -199,10 +199,10 @@ export function ColumnGroup({
           onPointerUp={readOnly ? undefined : endDrag}
           onPointerCancel={readOnly ? undefined : endDrag}
           onKeyDown={readOnly ? undefined : handleKeyDown(dividerIndex)}
-          className={`absolute top-0 bottom-0 w-1.5 -translate-x-1/2 ${
+          className={`absolute top-0 bottom-0 w-1 -translate-x-1/2 rounded-full transition-colors ${
             readOnly
               ? 'bg-border-hairline'
-              : 'cursor-col-resize bg-border-hairline hover:bg-accent-cobalt focus:outline-none focus-visible:bg-accent-cobalt'
+              : 'cursor-col-resize bg-border-subtle hover:bg-accent-cobalt focus:outline-none focus-visible:bg-accent-cobalt'
           }`}
           style={{ left: `${offset}%` }}
         />

@@ -28,8 +28,8 @@ export const AssetBlock: React.FC<AssetBlockProps> = ({ block }) => {
 
   if (!assetId || !assetExt) {
     return (
-      <div className="rounded-[6px] border border-dashed border-border-hairline bg-surface-elevated px-3 py-4 font-mono text-[11px] text-ink-muted flex items-center gap-2">
-        <Paperclip size={12} /> Aset belum terhubung ke berkas mana pun.
+      <div className="rounded-[10px] border border-dashed border-border-hairline bg-surface-elevated px-4 py-4 text-xs text-ink-muted flex items-center gap-2">
+        <Paperclip size={13} /> Aset belum terhubung ke berkas mana pun.
       </div>
     )
   }
@@ -37,34 +37,36 @@ export const AssetBlock: React.FC<AssetBlockProps> = ({ block }) => {
   const src = assetUrl(assetId, assetExt)
 
   const actions = (
-    <span className="flex items-center gap-1.5">
+    <span className="flex items-center gap-1">
       <button
+        type="button"
         onClick={saveAs}
         title="Simpan sebagai berkas..."
-        className="p-1 rounded hover:bg-surface-hover text-ink-secondary hover:text-accent-cobalt"
+        className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-secondary hover:text-ink-primary transition-colors"
       >
-        <Download size={11} />
+        <Download size={12} />
       </button>
       <button
+        type="button"
         onClick={openExternal}
         title="Buka di aplikasi eksternal"
-        className="p-1 rounded hover:bg-surface-hover text-ink-secondary hover:text-accent-cobalt"
+        className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-secondary hover:text-ink-primary transition-colors"
       >
-        <ExternalLink size={11} />
+        <ExternalLink size={12} />
       </button>
     </span>
   )
 
   if (isImageMime(mime)) {
     return (
-      <figure className="rounded-[6px] border border-border-hairline bg-surface-chrome overflow-hidden">
+      <figure className="rounded-[12px] border border-border-hairline bg-surface-chrome overflow-hidden shadow-card">
         <img
           src={src}
           alt={name}
           draggable={false}
           className="block mx-auto max-h-[560px] max-w-full w-auto select-none"
         />
-        <figcaption className="flex items-center justify-between gap-3 px-3 py-1.5 border-t border-border-hairline font-mono text-[10px] text-ink-muted">
+        <figcaption className="flex items-center justify-between gap-3 px-3.5 py-2 border-t border-border-hairline text-[11.5px] text-ink-muted">
           <span className="truncate">
             {name}
             {sizeLabel ? ` · ${sizeLabel}` : ''}
@@ -77,43 +79,45 @@ export const AssetBlock: React.FC<AssetBlockProps> = ({ block }) => {
 
   if (isPdfMime(mime)) {
     return (
-      <div className="rounded-[6px] border border-border-hairline bg-surface-chrome overflow-hidden">
-        <div className="px-3 py-1.5 bg-surface-elevated border-b border-border-hairline flex items-center justify-between gap-3 font-mono text-[10px] text-ink-muted">
-          <span className="truncate uppercase">
+      <div className="rounded-[12px] border border-border-hairline bg-surface-chrome overflow-hidden shadow-card">
+        <div className="px-3.5 py-2 bg-surface-elevated border-b border-border-hairline flex items-center justify-between gap-3 text-[11.5px] text-ink-secondary">
+          <span className="truncate font-medium">
             PDF · {name}
             {sizeLabel ? ` · ${sizeLabel}` : ''}
           </span>
           {actions}
         </div>
-        <iframe src={src} title={name} className="w-full h-[70vh] bg-surface-base" />
+        <iframe src={src} title={name} className="w-full h-[70vh] bg-canvas-primary" />
       </div>
     )
   }
 
   return (
-    <div className="rounded-[6px] border border-border-hairline bg-surface-elevated px-3.5 py-3 flex items-center gap-3">
-      <div className="w-9 h-9 rounded bg-surface-chrome border border-border-hairline flex items-center justify-center shrink-0">
+    <div className="rounded-[10px] border border-border-hairline bg-surface-elevated px-4 py-3 flex items-center gap-3 shadow-sm">
+      <div className="w-9 h-9 rounded-[8px] bg-surface-chrome border border-border-hairline flex items-center justify-center shrink-0">
         <FileText size={16} className="text-accent-amber" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-sm text-ink-primary truncate">{name}</div>
-        <div className="font-mono text-[10px] text-ink-muted uppercase">
+        <div className="text-[13px] font-medium text-ink-primary truncate">{name}</div>
+        <div className="font-mono text-[10.5px] text-ink-muted uppercase">
           {assetExt}
           {sizeLabel ? ` · ${sizeLabel}` : ''}
           {mime ? ` · ${mime}` : ''}
         </div>
       </div>
       <button
+        type="button"
         onClick={openExternal}
-        className="px-2.5 py-1 rounded bg-surface-chrome hover:bg-surface-hover border border-border-hairline font-mono text-[10px] text-ink-secondary hover:text-accent-cobalt flex items-center gap-1"
+        className="h-7 px-2.5 rounded-[7px] bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
       >
-        <ExternalLink size={11} /> Buka
+        <ExternalLink size={11.5} /> Buka
       </button>
       <button
+        type="button"
         onClick={saveAs}
-        className="px-2.5 py-1 rounded bg-surface-chrome hover:bg-surface-hover border border-border-hairline font-mono text-[10px] text-ink-secondary hover:text-accent-cobalt flex items-center gap-1"
+        className="h-7 px-2.5 rounded-[7px] bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
       >
-        <Download size={11} /> Simpan
+        <Download size={11.5} /> Simpan
       </button>
     </div>
   )

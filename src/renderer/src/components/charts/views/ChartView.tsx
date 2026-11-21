@@ -38,6 +38,7 @@ import {
   resolveChartKind
 } from '@renderer/lib/database/chart-data'
 import type { ChartKind } from '@renderer/lib/database/chart-data'
+import { SegmentedControl } from '@renderer/components/ui'
 import type { ChartViewProps } from './types'
 
 const CHART_ICONS: Record<ChartKind, React.ComponentType<{ size?: number }>> = {
@@ -82,7 +83,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
               type="monotone"
               dataKey="progress"
               name="Progress (%)"
-              stroke="#3B82F6"
+              stroke="#6E7BF2"
               strokeWidth={2}
               dot={{ r: 3 }}
               activeDot={{ r: 4 }}
@@ -91,7 +92,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
               type="monotone"
               dataKey="hours"
               name="Estimasi Jam"
-              stroke="#F59E0B"
+              stroke="#2DD4BF"
               strokeWidth={2}
               dot={{ r: 3 }}
             />
@@ -109,17 +110,17 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
               type="monotone"
               dataKey="progress"
               name="Progress (%)"
-              stroke="#3B82F6"
-              fill="#3B82F6"
-              fillOpacity={0.25}
+              stroke="#6E7BF2"
+              fill="#6E7BF2"
+              fillOpacity={0.22}
             />
             <Area
               type="monotone"
               dataKey="hours"
               name="Estimasi Jam"
-              stroke="#F59E0B"
-              fill="#F59E0B"
-              fillOpacity={0.2}
+              stroke="#2DD4BF"
+              fill="#2DD4BF"
+              fillOpacity={0.18}
             />
           </AreaChart>
         )
@@ -162,16 +163,16 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
             <Radar
               name="Progress (%)"
               dataKey="progress"
-              stroke="#3B82F6"
-              fill="#3B82F6"
-              fillOpacity={0.3}
+              stroke="#6E7BF2"
+              fill="#6E7BF2"
+              fillOpacity={0.26}
             />
             <Radar
               name="Estimasi Jam"
               dataKey="hours"
-              stroke="#F59E0B"
-              fill="#F59E0B"
-              fillOpacity={0.2}
+              stroke="#2DD4BF"
+              fill="#2DD4BF"
+              fillOpacity={0.18}
             />
           </RadarChart>
         )
@@ -215,12 +216,12 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
             {xAxis}
             {yAxis}
             {tooltip}
-            <Bar dataKey="progress" name="Progress (%)" radius={[4, 4, 0, 0]}>
+            <Bar dataKey="progress" name="Progress (%)" radius={[6, 6, 0, 0]}>
               {itemSeries.map((entry, index) => (
                 <Cell key={'cell-' + index} fill={entry.colorHex} />
               ))}
             </Bar>
-            <Bar dataKey="hours" name="Estimasi Jam" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="hours" name="Estimasi Jam" fill="#E5A93C" radius={[6, 6, 0, 0]} />
           </BarChart>
         )
     }
@@ -230,29 +231,22 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
   return (
     <div className="p-4 bg-canvas-primary">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <span className="font-mono text-xs text-ink-secondary">
-          VISUALISASI BEBAN KERJA (JAM) & PROGRESS PER MODUL
+        <span className="text-xs font-medium text-ink-secondary">
+          Workload (hours) &amp; progress by module
         </span>
-        <div className="p-0.5 rounded bg-surface-elevated border border-border-hairline flex items-center font-mono text-[10px]">
-          {CHART_KINDS.map((option) => {
+        <SegmentedControl<ChartKind>
+          size="xs"
+          value={kind}
+          onChange={(option) => onChange({ databaseChartType: option })}
+          options={CHART_KINDS.map((option) => {
             const Icon = CHART_ICONS[option]
-            return (
-              <button
-                key={option}
-                onClick={() => onChange({ databaseChartType: option })}
-                className={
-                  'px-2.5 py-1 rounded flex items-center gap-1 uppercase ' +
-                  (kind === option
-                    ? 'bg-accent-cobalt text-white font-semibold'
-                    : 'text-ink-secondary hover:text-ink-primary')
-                }
-              >
-                <Icon size={11} />
-                <span>{option}</span>
-              </button>
-            )
+            return {
+              value: option,
+              label: option.charAt(0).toUpperCase() + option.slice(1),
+              icon: <Icon size={11} />
+            }
           })}
-        </div>
+        />
       </div>
 
       <div className="h-[280px] w-full">

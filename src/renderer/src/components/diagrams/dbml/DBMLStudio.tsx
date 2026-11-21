@@ -16,6 +16,7 @@ import { generateSQLFromDBML, parseDBML, type DBMLTable } from '@shared/dbml-par
 import type { DBMLTableLayout, MarkerColor } from '@shared/types/domain'
 import { MARKER_META } from '@renderer/lib/marker-colors'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
+import { Badge, Button, SegmentedControl, cn } from '@renderer/components/ui'
 
 interface DBMLStudioProps {
   code: string
@@ -30,9 +31,9 @@ interface DBMLStudioProps {
   }) => void
 }
 
-const CARD_WIDTH = 252
-const HEADER_HEIGHT = 34
-const ROW_HEIGHT = 26
+const CARD_WIDTH = 260
+const HEADER_HEIGHT = 44
+const ROW_HEIGHT = 28
 
 export const DBMLStudio: React.FC<DBMLStudioProps> = ({
   code,
@@ -168,139 +169,104 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
   const lineCount = code.split(/\r?\n/).length
 
   return (
-    <div className="rounded-[8px] bg-surface-elevated border border-border-hairline overflow-hidden shadow-sm my-3">
-      {/* Top Engineering Studio Bar */}
-      <div className="h-9 px-3 bg-surface-chrome border-b border-border-hairline flex items-center justify-between select-none">
-        <div className="flex items-center gap-2">
+    <div className="rounded-[12px] bg-canvas-primary border border-border-hairline overflow-hidden shadow-card my-4">
+      {/* Top Studio Bar */}
+      <div className="min-h-[44px] px-4 py-2 bg-surface-chrome/75 border-b border-border-hairline flex flex-wrap items-center justify-between gap-2 select-none">
+        <div className="flex items-center gap-2.5">
           <span className="w-2 h-2 rounded-full bg-accent-cobalt" />
-          <span className="font-mono text-[11px] font-semibold tracking-wider uppercase text-ink-primary">
-            DBML STUDIO · ENGINEERING SCHEMATIC ERD
+          <span className="font-display text-[13.5px] font-semibold text-ink-primary">
+            DBML Studio
           </span>
-          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-surface-elevated border border-border-hairline text-ink-secondary tabular-nums">
-            {parsed.tables.length} TABLES · {parsed.refs.length} REFS
+          <span className="px-2 py-0.5 rounded-[6px] bg-surface-elevated border border-border-hairline font-mono text-[10.5px] text-ink-muted tabular-nums">
+            {parsed.tables.length} tables · {parsed.refs.length} refs
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          {/* Segmented View Toggle: Code | Split | Diagram */}
-          <div className="p-0.5 rounded bg-surface-elevated border border-border-hairline flex items-center font-mono text-[10px]">
-            <button
-              onClick={() => onChange({ dbmlViewMode: 'code' })}
-              className={`px-2 py-0.5 rounded flex items-center gap-1 ${
-                viewMode === 'code'
-                  ? 'bg-accent-cobalt text-white'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <Code2 size={11} />
-              <span>Code</span>
-            </button>
-            <button
-              onClick={() => onChange({ dbmlViewMode: 'split' })}
-              className={`px-2 py-0.5 rounded flex items-center gap-1 ${
-                viewMode === 'split'
-                  ? 'bg-accent-cobalt text-white'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <Columns2 size={11} />
-              <span>Split</span>
-            </button>
-            <button
-              onClick={() => onChange({ dbmlViewMode: 'diagram' })}
-              className={`px-2 py-0.5 rounded flex items-center gap-1 ${
-                viewMode === 'diagram'
-                  ? 'bg-accent-cobalt text-white'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <LayoutGrid size={11} />
-              <span>Diagram</span>
-            </button>
-          </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <SegmentedControl<'code' | 'split' | 'diagram'>
+            size="xs"
+            value={viewMode}
+            onChange={(nextMode) => onChange({ dbmlViewMode: nextMode })}
+            options={[
+              { value: 'code', label: 'Code', icon: <Code2 size={11} /> },
+              { value: 'split', label: 'Split', icon: <Columns2 size={11} /> },
+              { value: 'diagram', label: 'Diagram', icon: <LayoutGrid size={11} /> }
+            ]}
+          />
 
-          <button
+          <Button
+            variant="secondary"
+            size="xs"
             onClick={handleAutoLayout}
             title="Susun Ulang Posisi Tabel Otomatis"
-            className="h-6 px-2 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline font-mono text-[10px] text-ink-secondary hover:text-ink-primary flex items-center gap-1"
           >
-            <Sparkles size={11} className="text-accent-amber" />
-            <span>Auto-Layout</span>
-          </button>
+            <Sparkles size={11.5} className="text-accent-amber" />
+            <span>Auto-layout</span>
+          </Button>
 
-          <button
+          <Button
+            variant="primary"
+            size="xs"
             onClick={() => setSqlModalDialect(sqlModalDialect ? null : 'postgres')}
-            className="h-6 px-2 rounded bg-accent-cobalt/15 hover:bg-accent-cobalt/25 border border-accent-cobalt/40 font-mono text-[10px] text-accent-cobalt flex items-center gap-1"
           >
-            <Download size={11} />
-            <span>Ekspor ke SQL</span>
-          </button>
+            <Download size={11.5} />
+            <span>Export SQL</span>
+          </Button>
 
-          <button
+          <Button
+            variant="secondary"
+            size="icon-xs"
             onClick={() => onChange({ wide: !wide })}
             title={wide ? 'Kembalikan ke Lebar Standar' : 'Rentangkan Lebar Penuh'}
-            className="h-6 w-6 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline flex items-center justify-center text-ink-secondary hover:text-ink-primary"
           >
             {wide ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Optional SQL DDL Preview & Export Bar */}
       {sqlModalDialect && (
-        <div className="p-3 bg-surface-chrome border-b border-border-hairline">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 font-mono text-xs">
-              <span className="text-ink-secondary">SQL DDL COMPILER:</span>
-              <button
-                onClick={() => setSqlModalDialect('postgres')}
-                className={`px-2 py-0.5 rounded border ${
-                  sqlModalDialect === 'postgres'
-                    ? 'bg-accent-cobalt text-white border-accent-cobalt'
-                    : 'bg-surface-elevated text-ink-secondary border-border-hairline'
-                }`}
-              >
-                PostgreSQL
-              </button>
-              <button
-                onClick={() => setSqlModalDialect('sqlite')}
-                className={`px-2 py-0.5 rounded border ${
-                  sqlModalDialect === 'sqlite'
-                    ? 'bg-accent-cobalt text-white border-accent-cobalt'
-                    : 'bg-surface-elevated text-ink-secondary border-border-hairline'
-                }`}
-              >
-                SQLite
-              </button>
+        <div className="p-3.5 bg-surface-chrome/65 border-b border-border-hairline space-y-2.5 animate-popover-enter">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-ink-secondary font-medium">SQL DDL Compiler</span>
+              <SegmentedControl<'postgres' | 'sqlite'>
+                size="xs"
+                value={sqlModalDialect}
+                onChange={setSqlModalDialect}
+                options={[
+                  { value: 'postgres', label: 'PostgreSQL' },
+                  { value: 'sqlite', label: 'SQLite' }
+                ]}
+              />
             </div>
 
             <div className="flex items-center gap-1.5">
-              <button
+              <Button
+                variant="secondary"
+                size="xs"
                 onClick={() => {
                   navigator.clipboard.writeText(generateSQLFromDBML(parsed, sqlModalDialect))
                   showToast('SQL DDL disalin ke clipboard')
                 }}
-                className="px-2.5 py-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline font-mono text-[11px] text-ink-primary flex items-center gap-1"
               >
                 <Copy size={11} />
                 <span>Salin SQL</span>
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                size="xs"
                 onClick={() => handleExportSQL(sqlModalDialect)}
-                className="px-2.5 py-1 rounded bg-accent-cobalt text-white font-mono text-[11px] flex items-center gap-1"
               >
                 <Download size={11} />
-                <span>Simpan .SQL</span>
-              </button>
-              <button
-                onClick={() => setSqlModalDialect(null)}
-                className="px-2 py-1 font-mono text-xs text-ink-muted hover:text-ink-primary"
-              >
+                <span>Simpan .sql</span>
+              </Button>
+              <Button variant="ghost" size="xs" onClick={() => setSqlModalDialect(null)}>
                 Tutup
-              </button>
+              </Button>
             </div>
           </div>
-          <pre className="p-2.5 rounded bg-canvas-primary border border-border-hairline font-mono text-[11px] text-ink-primary max-h-44 overflow-y-auto selectable-text">
+          <pre className="p-3 rounded-[8px] bg-canvas-primary border border-border-hairline font-mono text-[11.5px] text-ink-primary max-h-44 overflow-y-auto selectable-text">
             {generateSQLFromDBML(parsed, sqlModalDialect)}
           </pre>
         </div>
@@ -310,18 +276,18 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
       <div
         className={`grid ${
           viewMode === 'split' ? 'grid-cols-1 lg:grid-cols-12' : 'grid-cols-1'
-        } min-h-[420px]`}
+        } min-h-[430px]`}
       >
         {/* Left: Line-Numbered DBML Code Editor */}
         {(viewMode === 'code' || viewMode === 'split') && (
           <div
             className={`${
               viewMode === 'split' ? 'lg:col-span-5 border-r border-border-hairline' : ''
-            } flex flex-col bg-surface-chrome/50`}
+            } flex flex-col bg-surface-chrome/45`}
           >
-            <div className="flex flex-1 min-h-[380px] font-mono text-[12.5px] leading-[1.6]">
+            <div className="flex flex-1 min-h-[380px] font-mono text-[12.5px] leading-[1.65]">
               {/* Line Numbers */}
-              <div className="w-9 py-3 bg-surface-chrome border-r border-border-subtle text-right pr-2 text-ink-muted select-none tabular-nums">
+              <div className="w-10 py-3 bg-surface-chrome/70 border-r border-border-subtle text-right pr-2.5 text-ink-muted select-none tabular-nums">
                 {Array.from({ length: lineCount }).map((_, idx) => (
                   <div key={idx}>{idx + 1}</div>
                 ))}
@@ -330,18 +296,18 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
                 value={code}
                 onChange={(e) => onChange({ content: e.target.value })}
                 spellCheck={false}
-                placeholder="Table users {\n  id uuid [pk]\n}"
-                className="flex-1 p-3 bg-transparent text-ink-primary font-mono text-[12.5px] leading-[1.6] resize-none focus:outline-none selectable-text"
+                placeholder={'Table users {\n  id uuid [pk]\n}'}
+                className="flex-1 p-3 bg-transparent text-ink-primary font-mono text-[12.5px] leading-[1.65] resize-none focus:outline-none selectable-text"
               />
             </div>
 
-            {/* Diagnostic Error Bar (Interface Voice from DESIGN.md) */}
+            {/* Diagnostic Error Bar */}
             {parsed.errors.length > 0 && (
-              <div className="p-2.5 bg-[#EF4444]/10 border-t border-[#EF4444]/40 space-y-1">
+              <div className="p-2.5 bg-[var(--pill-red-bg)] border-t border-[var(--pill-red-border)] space-y-1">
                 {parsed.errors.map((err, i) => (
                   <div
                     key={i}
-                    className="flex items-start gap-2 font-mono text-[11px] text-[#EF4444]"
+                    className="flex items-start gap-2 font-mono text-[11px] text-[var(--pill-red-text)]"
                   >
                     <AlertTriangle size={13} className="shrink-0 mt-0.5" />
                     <span>{err.message}</span>
@@ -352,7 +318,7 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
           </div>
         )}
 
-        {/* Right: Interactive Engineering Schematic ERD Canvas */}
+        {/* Right: Interactive Dot-Matrix ERD Canvas (Reference Image 3 node & bezier aesthetic) */}
         {(viewMode === 'diagram' || viewMode === 'split') && (
           <div
             onMouseDown={handleMouseDownCanvas}
@@ -361,37 +327,40 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
             onMouseLeave={handleMouseUpCanvas}
             className={`${
               viewMode === 'split' ? 'lg:col-span-7' : ''
-            } relative overflow-hidden bg-blueprint-grid min-h-[420px] cursor-grab active:cursor-grabbing select-none`}
+            } relative overflow-hidden bg-dot-canvas min-h-[430px] cursor-grab active:cursor-grabbing select-none`}
           >
-            {/* Floating Zoom & Coordinate HUD */}
-            <div className="absolute right-3 bottom-3 z-20 flex items-center gap-1 p-1 rounded-[6px] bg-surface-elevated/95 border border-border-hairline font-mono text-[11px] shadow-md">
+            {/* Floating Zoom Pill */}
+            <div className="absolute right-3.5 bottom-3.5 z-20 flex items-center gap-0.5 p-1 rounded-[9px] bg-surface-elevated/95 border border-border-hairline font-mono text-[11px] shadow-popover">
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation()
                   setZoom((z) => Math.max(0.55, +(z - 0.1).toFixed(2)))
                 }}
-                className="p-1 rounded hover:bg-surface-hover text-ink-secondary hover:text-ink-primary"
+                className="h-6 w-6 rounded-[6px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
               >
-                <ZoomOut size={13} />
+                <ZoomOut size={12.5} />
               </button>
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation()
                   setZoom(1)
                   setPan({ x: 0, y: 0 })
                 }}
-                className="px-1.5 text-ink-primary tabular-nums"
+                className="px-2 text-ink-primary tabular-nums"
               >
                 {Math.round(zoom * 100)}%
               </button>
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation()
                   setZoom((z) => Math.min(1.6, +(z + 0.1).toFixed(2)))
                 }}
-                className="p-1 rounded hover:bg-surface-hover text-ink-secondary hover:text-ink-primary"
+                className="h-6 w-6 rounded-[6px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
               >
-                <ZoomIn size={13} />
+                <ZoomIn size={12.5} />
               </button>
             </div>
 
@@ -403,7 +372,7 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
               }}
               className="w-[1400px] h-[900px] relative"
             >
-              {/* SVG Layer: Row-Accurate Orthogonal Foreign Key Wires */}
+              {/* SVG Layer: Smooth Cubic Bezier Foreign Key Curves (Image 3 wire craft) */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
                 {parsed.refs.map((ref) => {
                   const srcTable = parsed.tables.find((t) => t.name === ref.sourceTable)
@@ -431,9 +400,11 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
                   const srcRightOfTgt = srcPos.x > tgtPos.x + CARD_WIDTH
                   const srcX = srcRightOfTgt ? srcPos.x : srcPos.x + CARD_WIDTH
                   const tgtX = srcRightOfTgt ? tgtPos.x + CARD_WIDTH : tgtPos.x
-                  const midX = (srcX + tgtX) / 2
+                  const dx = Math.max(48, Math.abs(tgtX - srcX) * 0.45)
+                  const c1x = srcRightOfTgt ? srcX - dx : srcX + dx
+                  const c2x = srcRightOfTgt ? tgtX + dx : tgtX - dx
 
-                  const pathData = `M ${srcX} ${srcY} L ${midX} ${srcY} L ${midX} ${tgtY} L ${tgtX} ${tgtY}`
+                  const pathData = `M ${srcX} ${srcY} C ${c1x} ${srcY}, ${c2x} ${tgtY}, ${tgtX} ${tgtY}`
 
                   const isHighlighted =
                     hoveredRefId === ref.id ||
@@ -445,28 +416,27 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
                       <path
                         d={pathData}
                         fill="none"
-                        stroke={isHighlighted ? '#3B82F6' : 'var(--border-hairline)'}
-                        strokeWidth={isHighlighted ? 2.2 : 1.3}
-                        strokeDasharray={isHighlighted ? 'none' : 'none'}
+                        stroke={isHighlighted ? '#6E7BF2' : 'var(--border-strong)'}
+                        strokeWidth={isHighlighted ? 2 : 1.4}
                       />
                       <circle
                         cx={srcX}
                         cy={srcY}
-                        r={3.5}
-                        fill={isHighlighted ? '#3B82F6' : '#64748B'}
+                        r={isHighlighted ? 4 : 3}
+                        fill={isHighlighted ? '#6E7BF2' : 'var(--text-muted)'}
                       />
-                      <polygon
-                        points={`${tgtX},${tgtY} ${tgtX + (srcRightOfTgt ? 7 : -7)},${tgtY - 4} ${
-                          tgtX + (srcRightOfTgt ? 7 : -7)
-                        },${tgtY + 4}`}
-                        fill={isHighlighted ? '#F59E0B' : '#64748B'}
+                      <circle
+                        cx={tgtX}
+                        cy={tgtY}
+                        r={isHighlighted ? 4 : 3}
+                        fill={isHighlighted ? '#E5A93C' : 'var(--text-muted)'}
                       />
                     </g>
                   )
                 })}
               </svg>
 
-              {/* Table Schematic Nodes */}
+              {/* Table Schematic Nodes (rounded-[12px] obsidian studio cards) */}
               {parsed.tables.map((table) => {
                 const pos = tablePositions[table.name] || {
                   x: 24,
@@ -484,6 +454,8 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
                       (r.targetTable === hoveredTable && r.sourceTable === table.name)
                   )
 
+                const isHovered = hoveredTable === table.name
+
                 return (
                   <div
                     key={table.name}
@@ -494,25 +466,32 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
                     onMouseDown={(e) => handleMouseDownTable(e, table)}
                     onMouseEnter={() => setHoveredTable(table.name)}
                     onMouseLeave={() => setHoveredTable(null)}
-                    className={`absolute top-0 left-0 rounded-[6px] bg-surface-elevated border transition-opacity duration-150 shadow-lg cursor-move ${
-                      hoveredTable === table.name
-                        ? 'border-accent-cobalt ring-1 ring-accent-cobalt/40 z-10'
-                        : 'border-border-hairline'
-                    } ${isConnectedToHover ? 'opacity-100' : 'opacity-45'}`}
+                    className={cn(
+                      'absolute top-0 left-0 rounded-[12px] border transition-all duration-150 cursor-move overflow-hidden',
+                      isHovered
+                        ? 'bg-[var(--node-selected-bg)] border-[var(--node-selected-border)] shadow-node-selected z-10'
+                        : 'bg-surface-elevated border-border-hairline shadow-card',
+                      isConnectedToHover ? 'opacity-100' : 'opacity-40'
+                    )}
                   >
-                    {/* Engineering Schematic Header with 3px Drafting Marker Bar */}
+                    {/* Card Header */}
                     <div
                       style={{ height: `${HEADER_HEIGHT}px` }}
-                      className="px-2.5 bg-surface-chrome border-b border-border-hairline rounded-t-[6px] flex items-center justify-between"
+                      className="px-3 bg-surface-chrome/65 border-b border-border-hairline flex items-center justify-between gap-2"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className={`w-1.5 h-4 rounded-[2px] ${marker.bgStrip} shrink-0`} />
-                        <span className="font-mono font-semibold text-xs text-ink-primary truncate">
-                          {table.name}
-                        </span>
+                        <span className={cn('w-2.5 h-2.5 rounded-[4px] shrink-0', marker.dotBg)} />
+                        <div className="min-w-0">
+                          <div className="text-[9px] font-semibold uppercase tracking-[0.08em] text-ink-muted leading-none mb-0.5">
+                            TABLE
+                          </div>
+                          <div className="font-mono font-semibold text-xs text-ink-primary truncate leading-tight">
+                            {table.name}
+                          </div>
+                        </div>
                       </div>
-                      <span className="font-mono text-[10px] text-ink-muted">
-                        {table.columns.length} COL
+                      <span className="px-1.5 py-[2px] rounded-[5px] bg-surface-elevated border border-border-hairline font-mono text-[10px] text-ink-muted tabular-nums shrink-0">
+                        {table.columns.length} cols
                       </span>
                     </div>
 
@@ -528,20 +507,20 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
                             style={{ height: `${ROW_HEIGHT}px` }}
                             onMouseEnter={() => matchingRef && setHoveredRefId(matchingRef.id)}
                             onMouseLeave={() => setHoveredRefId(null)}
-                            className="px-2.5 flex items-center justify-between font-mono text-[11px] hover:bg-surface-hover/70 transition-colors"
+                            className="px-3 flex items-center justify-between font-mono text-[11px] hover:bg-surface-hover/55 transition-colors"
                           >
                             <div className="flex items-center gap-1.5 min-w-0">
                               {col.isPk ? (
                                 <span
                                   title="Primary Key"
-                                  className="text-accent-amber text-[10px] leading-none"
+                                  className="text-accent-amber text-[9.5px] leading-none"
                                 >
                                   ◆
                                 </span>
                               ) : col.isFk ? (
                                 <span
                                   title={`Foreign Key -> ${col.refTarget?.table}.${col.refTarget?.column}`}
-                                  className="text-accent-cobalt text-[10px] leading-none"
+                                  className="text-accent-cobalt text-[9.5px] leading-none"
                                 >
                                   ○
                                 </span>
@@ -562,14 +541,14 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
                             <div className="flex items-center gap-1 shrink-0">
                               <span className="text-[10px] text-ink-muted">{col.type}</span>
                               {col.isPk && (
-                                <span className="px-1 rounded-[3px] bg-accent-amber/15 text-accent-amber border border-accent-amber/30 text-[9px]">
+                                <Badge tone="amber" className="font-mono text-[9px] px-1 py-[1px]">
                                   PK
-                                </span>
+                                </Badge>
                               )}
                               {col.isFk && (
-                                <span className="px-1 rounded-[3px] bg-accent-cobalt/15 text-accent-cobalt border border-accent-cobalt/30 text-[9px]">
+                                <Badge tone="cobalt" className="font-mono text-[9px] px-1 py-[1px]">
                                   FK
-                                </span>
+                                </Badge>
                               )}
                             </div>
                           </div>

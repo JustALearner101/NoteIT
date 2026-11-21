@@ -47,10 +47,33 @@ export const PREFERENCES_STORAGE_KEY = 'noteit:preferences:v2'
 
 export const BUILTIN_THEMES: ThemeDefinition[] = [
   {
+    id: 'obsidian-studio',
+    name: 'Obsidian Studio',
+    tagline: 'Matte obsidian netral yang tenang dengan aksen Periwinkle Indigo & pill pastel lembut',
+    badge: 'Default',
+    colorScheme: 'dark',
+    ambientGlow: false,
+    colors: {
+      bgCanvasPrimary: '#141417',
+      bgSurfaceChrome: '#0E0E11',
+      bgSurfaceElevated: '#1C1C21',
+      bgSurfaceHover: '#24242B',
+      borderHairline: '#27272E',
+      borderSubtle: '#1F1F25',
+      textPrimary: '#EDEDEF',
+      textSecondary: '#9A9AA6',
+      textMuted: '#787886',
+      accentCobalt: '#6E7BF2',
+      accentAmber: '#E5A93C',
+      glowPrimary: 'rgba(110, 123, 242, 0.14)',
+      glowSecondary: 'rgba(45, 212, 191, 0.10)'
+    }
+  },
+  {
     id: 'graphite-slate',
     name: 'Graphite Slate',
-    tagline: 'Standar rekayasa presisi dengan aksen Cobalt & Amber',
-    badge: 'Default',
+    tagline: 'Standar rekayasa presisi klasik dengan aksen Cobalt & Amber',
+    badge: 'Classic',
     colorScheme: 'dark',
     ambientGlow: false,
     colors: {
@@ -62,7 +85,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
       borderSubtle: '#1C2029',
       textPrimary: '#ECEEF2',
       textSecondary: '#949BA6',
-      textMuted: '#5E6572',
+      textMuted: '#727988',
       accentCobalt: '#3B82F6',
       accentAmber: '#F59E0B',
       glowPrimary: 'rgba(59, 130, 246, 0.14)',
@@ -85,7 +108,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
       borderSubtle: '#1E1E22',
       textPrimary: '#F4F4F6',
       textSecondary: '#A1A1AA',
-      textMuted: '#63636B',
+      textMuted: '#767680',
       accentCobalt: '#F97316',
       accentAmber: '#38BDF8',
       glowPrimary: 'rgba(249, 115, 22, 0.12)',
@@ -108,7 +131,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
       borderSubtle: '#161820',
       textPrimary: '#F3F4F6',
       textSecondary: '#9CA3AF',
-      textMuted: '#5B6270',
+      textMuted: '#6E7687',
       accentCobalt: '#F59E0B',
       accentAmber: '#FB923C',
       glowPrimary: 'rgba(245, 158, 11, 0.15)',
@@ -131,7 +154,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
       borderSubtle: '#1B133D',
       textPrimary: '#F5F3FF',
       textSecondary: '#B6AEE0',
-      textMuted: '#6E649E',
+      textMuted: '#8378B5',
       accentCobalt: '#A855F7',
       accentAmber: '#3B82F6',
       glowPrimary: 'rgba(168, 85, 247, 0.24)',
@@ -153,7 +176,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
       borderSubtle: '#292E42',
       textPrimary: '#C0CAF5',
       textSecondary: '#9AA5CE',
-      textMuted: '#565F89',
+      textMuted: '#6F79A6',
       accentCobalt: '#7AA2F7',
       accentAmber: '#BB9AF7',
       glowPrimary: 'rgba(122, 162, 247, 0.14)',
@@ -175,7 +198,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
       borderSubtle: '#313244',
       textPrimary: '#CDD6F4',
       textSecondary: '#BAC2DE',
-      textMuted: '#6C7086',
+      textMuted: '#7F849C',
       accentCobalt: '#B4BEFE',
       accentAmber: '#FAB387',
       glowPrimary: 'rgba(180, 190, 254, 0.14)',
@@ -197,7 +220,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
       borderSubtle: '#3B4252',
       textPrimary: '#ECEFF4',
       textSecondary: '#D8DEE9',
-      textMuted: '#81A1C1',
+      textMuted: '#8FA8C6',
       accentCobalt: '#88C0D0',
       accentAmber: '#EBCB8B',
       glowPrimary: 'rgba(136, 192, 208, 0.14)',
@@ -207,24 +230,24 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
   {
     id: 'archival-vellum',
     name: 'Archival Vellum',
-    tagline: 'Kertas arsip hangat untuk pembacaan siang hari yang tajam',
+    tagline: 'Permukaan terang bersih & netral dengan aksen Indigo halus',
     badge: 'Light',
     colorScheme: 'light',
     ambientGlow: false,
     colors: {
-      bgCanvasPrimary: '#F7F6F2',
-      bgSurfaceChrome: '#EFECE6',
+      bgCanvasPrimary: '#F8F8FA',
+      bgSurfaceChrome: '#F1F1F5',
       bgSurfaceElevated: '#FFFFFF',
-      bgSurfaceHover: '#E5E1D8',
-      borderHairline: '#D8D4CA',
-      borderSubtle: '#E6E3DC',
-      textPrimary: '#141619',
-      textSecondary: '#525866',
-      textMuted: '#8A909E',
-      accentCobalt: '#2563EB',
-      accentAmber: '#D97706',
-      glowPrimary: 'rgba(37, 99, 235, 0.08)',
-      glowSecondary: 'rgba(217, 119, 6, 0.06)'
+      bgSurfaceHover: '#E7E7EE',
+      borderHairline: '#E0E0E8',
+      borderSubtle: '#ECECF2',
+      textPrimary: '#141418',
+      textSecondary: '#525260',
+      textMuted: '#767686',
+      accentCobalt: '#5B67E8',
+      accentAmber: '#C98212',
+      glowPrimary: 'rgba(91, 103, 232, 0.08)',
+      glowSecondary: 'rgba(16, 185, 129, 0.06)'
     }
   },
   {
@@ -243,7 +266,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
       borderSubtle: '#E6DFCA',
       textPrimary: '#073642',
       textSecondary: '#586E75',
-      textMuted: '#93A1A1',
+      textMuted: '#839496',
       accentCobalt: '#268BD2',
       accentAmber: '#CB4B16',
       glowPrimary: 'rgba(38, 139, 210, 0.08)',
@@ -253,7 +276,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
 ]
 
 export const DEFAULT_PREFERENCES: WorkbenchPreferences = {
-  activeThemeId: 'graphite-slate',
+  activeThemeId: 'obsidian-studio',
   customThemes: [],
   motionLevel: 'full',
   fontScale: 'default',
@@ -325,6 +348,7 @@ export function applyThemeToDocument(
   const { colors } = theme
   root.style.setProperty('--bg-canvas-primary', colors.bgCanvasPrimary)
   root.style.setProperty('--bg-surface-chrome', colors.bgSurfaceChrome)
+  root.style.setProperty('--bg-surface-recessed', colors.bgSurfaceChrome)
   root.style.setProperty('--bg-surface-elevated', colors.bgSurfaceElevated)
   root.style.setProperty('--bg-surface-hover', colors.bgSurfaceHover)
   root.style.setProperty('--border-hairline', colors.borderHairline)
@@ -336,14 +360,14 @@ export function applyThemeToDocument(
   root.style.setProperty('--accent-amber', colors.accentAmber)
   root.style.setProperty(
     '--glow-primary',
-    colors.glowPrimary || 'rgba(59, 130, 246, 0.16)'
+    colors.glowPrimary || 'rgba(110, 123, 242, 0.14)'
   )
   root.style.setProperty(
     '--glow-secondary',
-    colors.glowSecondary || 'rgba(168, 85, 247, 0.14)'
+    colors.glowSecondary || 'rgba(45, 212, 191, 0.10)'
   )
 
   const gridDot =
-    theme.colorScheme === 'dark' ? 'rgba(236, 238, 242, 0.08)' : 'rgba(20, 22, 25, 0.11)'
+    theme.colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.085)' : 'rgba(20, 20, 28, 0.13)'
   root.style.setProperty('--grid-dot', gridDot)
 }

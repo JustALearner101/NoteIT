@@ -24,6 +24,7 @@ import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { useTerminalStore } from '@renderer/stores/useTerminalStore'
 import { MissionBriefingDrawer } from '@renderer/components/agents/MissionBriefingDrawer'
 import { MARKER_META } from '@renderer/lib/marker-colors'
+import { Badge, Button, SegmentedControl, cn } from '@renderer/components/ui'
 import { diffBlockSets } from '@shared/version-diff'
 import type { BlockDiff } from '@shared/version-diff'
 import type { BacklinkItem, DocumentBlock, Page, PageVersionSummary } from '@shared/types/domain'
@@ -346,97 +347,103 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
   }
 
   return (
-    <div className="bg-surface-chrome/70 border-b border-border-hairline shrink-0 select-none">
-      {/* Top Blueprint Spec Strip (28px height) */}
-      <div className="h-7 px-4 border-b border-border-subtle flex items-center justify-between text-[11px] font-mono">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className={`w-2 h-3.5 rounded-[2px] ${marker.bgStrip} shrink-0`} />
-          <span className="text-ink-muted uppercase truncate">{notebook?.name}</span>
+    <div className="bg-canvas-primary border-b border-border-hairline shrink-0 select-none">
+      {/* Top Breadcrumb & Context Bar (Calm Sentence-Case Rhythm matching Image 3) */}
+      <div className="h-[36px] px-5 border-b border-border-subtle flex items-center justify-between text-xs">
+        <div className="flex items-center gap-1.5 min-w-0 text-ink-secondary">
+          <span className={cn('w-2 h-2 rounded-[3px] shrink-0', marker.dotBg)} />
+          <span className="truncate">{notebook?.name}</span>
           <span className="text-ink-muted">/</span>
-          <span className={`uppercase font-medium ${marker.text}`}>
-            {section?.code}: {section?.name}
-          </span>
+          <span className="truncate font-medium text-ink-primary">{section?.name}</span>
           <span className="text-ink-muted">/</span>
-          <span className="px-1.5 py-0.2 rounded bg-surface-elevated border border-border-hairline text-ink-primary">
+          <Badge tone={section?.color || 'cobalt'} className="font-mono text-[10.5px]">
             {page.code}
-          </span>
+          </Badge>
         </div>
 
-        {/* Spec Strip Telemetry Badges: Backlinks, Snapshots, Favorite, Export */}
-        <div className="flex items-center gap-1.5">
+        {/* Utility Metadata Controls: Backlinks, Snapshots, Favorite, Export */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
+            type="button"
             onClick={() => setActiveDrawer(activeDrawer === 'backlinks' ? null : 'backlinks')}
-            className={`px-2 py-0.5 rounded border flex items-center gap-1 transition-colors ${
+            className={cn(
+              'h-6 px-2 rounded-[6px] border text-[11.5px] font-medium flex items-center gap-1.5 transition-colors',
               activeDrawer === 'backlinks'
-                ? 'bg-accent-cobalt/15 border-accent-cobalt text-accent-cobalt'
-                : 'bg-surface-elevated border-border-hairline text-ink-secondary hover:text-ink-primary'
-            }`}
+                ? 'bg-[var(--pill-cobalt-bg)] border-[var(--pill-cobalt-border)] text-[var(--pill-cobalt-text)]'
+                : 'bg-surface-elevated/80 hover:bg-surface-hover border-border-hairline text-ink-secondary hover:text-ink-primary'
+            )}
           >
-            <ArrowLeftRight size={11} />
-            <span>{backlinks.length} BACKLINKS</span>
+            <ArrowLeftRight size={11.5} />
+            <span className="tabular-nums">{backlinks.length} Backlinks</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveDrawer(activeDrawer === 'versions' ? null : 'versions')}
-            className={`px-2 py-0.5 rounded border flex items-center gap-1 transition-colors ${
+            className={cn(
+              'h-6 px-2 rounded-[6px] border text-[11.5px] font-medium flex items-center gap-1.5 transition-colors',
               activeDrawer === 'versions'
-                ? 'bg-accent-amber/15 border-accent-amber text-accent-amber'
-                : 'bg-surface-elevated border-border-hairline text-ink-secondary hover:text-ink-primary'
-            }`}
+                ? 'bg-[var(--pill-amber-bg)] border-[var(--pill-amber-border)] text-[var(--pill-amber-text)]'
+                : 'bg-surface-elevated/80 hover:bg-surface-hover border-border-hairline text-ink-secondary hover:text-ink-primary'
+            )}
           >
-            <History size={11} />
-            <span>v{versions.length || page.versionCount} SNAPSHOTS</span>
+            <History size={11.5} />
+            <span className="tabular-nums">v{versions.length || page.versionCount}</span>
           </button>
 
           <button
+            type="button"
             onClick={() => updatePage({ id: page.id, isFavorite: !page.isFavorite })}
             title={page.isFavorite ? 'Hapus dari Favorites' : 'Sematkan ke Favorites'}
-            className={`p-1 rounded border transition-colors ${
+            className={cn(
+              'h-6 w-6 rounded-[6px] border flex items-center justify-center transition-colors',
               page.isFavorite
-                ? 'bg-accent-amber/15 border-accent-amber/40 text-accent-amber'
-                : 'bg-surface-elevated border-border-hairline text-ink-muted hover:text-ink-primary'
-            }`}
+                ? 'bg-[var(--pill-amber-bg)] border-[var(--pill-amber-border)] text-accent-amber'
+                : 'bg-surface-elevated/80 hover:bg-surface-hover border-border-hairline text-ink-muted hover:text-ink-primary'
+            )}
           >
-            <Star size={11} fill={page.isFavorite ? 'currentColor' : 'none'} />
+            <Star size={11.5} fill={page.isFavorite ? 'currentColor' : 'none'} />
           </button>
 
           <button
+            type="button"
             onClick={handleExportMarkdown}
             title="Ekspor ke Markdown (.md)"
-            className="px-2 py-0.5 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary hover:text-ink-primary flex items-center gap-1 transition-colors"
+            className="h-6 px-2 rounded-[6px] bg-surface-elevated/80 hover:bg-surface-hover border border-border-hairline text-[11.5px] font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1 transition-colors"
           >
-            <Download size={11} />
-            <span>.MD</span>
+            <Download size={11.5} />
+            <span>Export</span>
           </button>
         </div>
       </div>
 
-      {/* Main Title Bar + Mechanical Mode Caliper Switch [ ▤ DOC | ⊞ CANVAS ] */}
-      <div className="px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+      {/* Main Title Bar + Recessed Doc|Canvas Switcher + Primary Periwinkle CTA */}
+      <div className="px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex-1 min-w-[260px]">
           <div className="flex items-center gap-2.5">
-            <span className="text-2xl">{page.icon}</span>
+            <span className="text-[22px] leading-none">{page.icon}</span>
             <input
               type="text"
               value={page.title}
               onChange={(e) => updatePage({ id: page.id, title: e.target.value })}
               placeholder="Judul Spesifikasi Halaman..."
-              className="w-full bg-transparent font-display font-bold text-2xl tracking-tight text-ink-primary focus:outline-none border-b border-transparent focus:border-accent-cobalt/50"
+              className="w-full bg-transparent font-display font-bold text-[22px] tracking-[-0.02em] text-ink-primary placeholder:text-ink-muted focus:outline-none border-b border-transparent focus:border-accent-cobalt"
             />
           </div>
 
           {/* Tags & Timestamp Metadata Row */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 font-mono text-[11px]">
-            <Tag size={11} className="text-ink-muted mr-0.5" />
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11.5px]">
+            <Tag size={11.5} className="text-ink-muted mr-0.5" />
             {page.tags.map((t) => (
               <span
                 key={t}
-                className="px-1.5 py-0.2 rounded bg-surface-elevated border border-border-hairline text-ink-secondary flex items-center gap-1"
+                className="px-2 py-[2px] rounded-[6px] bg-surface-elevated border border-border-hairline text-ink-secondary inline-flex items-center gap-1 whitespace-nowrap"
               >
                 <span>#{t}</span>
                 <button
+                  type="button"
                   onClick={() => handleRemoveTag(t)}
-                  className="hover:text-[#EF4444] text-ink-muted"
+                  className="hover:text-accent-rose text-ink-muted ml-0.5"
                 >
                   ×
                 </button>
@@ -452,22 +459,23 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                   onBlur={() => setIsAddingTag(false)}
                   placeholder="tag-baru..."
                   autoFocus
-                  className="w-24 px-1.5 py-0.2 rounded bg-surface-elevated border border-accent-cobalt text-[11px] text-ink-primary focus:outline-none"
+                  className="w-24 px-2 py-[2px] rounded-[6px] bg-surface-elevated border border-accent-cobalt text-[11.5px] text-ink-primary focus:outline-none"
                 />
               </form>
             ) : (
               <button
+                type="button"
                 onClick={() => setIsAddingTag(true)}
-                className="px-1.5 py-0.2 rounded border border-dashed border-border-hairline text-ink-muted hover:text-accent-cobalt hover:border-accent-cobalt flex items-center gap-0.5"
+                className="px-2 py-[2px] rounded-[6px] border border-dashed border-border-hairline text-ink-muted hover:text-ink-primary hover:border-border-strong inline-flex items-center gap-0.5 transition-colors"
               >
-                <Plus size={10} /> tag
+                <Plus size={10.5} /> Add tag
               </button>
             )}
 
             <span className="text-ink-muted mx-1">·</span>
-            <span className="text-ink-muted flex items-center gap-1 tabular-nums">
-              <Clock size={11} />
-              DIPERBARUI{' '}
+            <span className="text-ink-muted inline-flex items-center gap-1 tabular-nums">
+              <Clock size={11.5} />
+              Updated{' '}
               {new Date(page.updatedAt).toLocaleTimeString('id-ID', {
                 hour: '2-digit',
                 minute: '2-digit'
@@ -476,20 +484,20 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
           </div>
         </div>
 
-        {/* Signature Mechanical Mode Caliper Switch & ADE Quick Controls */}
+        {/* Right Controls: Recessed Mode Switcher + Utility Actions + Single Primary Periwinkle CTA */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* ADE 1-Click Dispatch Spec to Agent */}
-          <button
-            onClick={() => setIsMissionDrawerOpen(true)}
-            title="Kompilasi spesifikasi & buka Mission Briefing command deck (Ctrl+Shift+D)"
-            className="h-8 px-2.5 rounded-[5px] bg-accent-cobalt hover:bg-accent-cobalt/90 text-white font-mono text-[11px] font-medium flex items-center gap-1.5 shadow-sm transition-colors"
-          >
-            <Zap size={12} className="text-amber-300 fill-amber-300" />
-            <span>Dispatch Spec</span>
-          </button>
+          <SegmentedControl
+            value={page.mode}
+            onChange={(mode) => void switchPageMode(page.id, mode)}
+            options={[
+              { value: 'block', label: 'Doc', icon: <FileText size={12.5} /> },
+              { value: 'canvas', label: 'Canvas', icon: <LayoutGrid size={12.5} /> }
+            ]}
+          />
 
-          {/* ADE Repo Explorer Toggle */}
-          <button
+          <Button
+            variant={rightSplitMode === 'repo-explorer' ? 'subtle' : 'secondary'}
+            size="md"
             onClick={() =>
               setRightSplitMode(rightSplitMode === 'repo-explorer' ? 'page' : 'repo-explorer')
             }
@@ -498,91 +506,77 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                 ? `Repositori: ${currentRepoPath} (Klik untuk toggle pohon berkas)`
                 : 'Hubungkan folder repositori git ke notebook ini'
             }
-            className={`h-8 px-2.5 rounded-[5px] border flex items-center gap-1.5 font-mono text-[11px] transition-colors ${
-              rightSplitMode === 'repo-explorer'
-                ? 'bg-accent-cobalt/15 border-accent-cobalt text-accent-cobalt font-semibold'
-                : 'bg-surface-elevated border-border-hairline text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
-            }`}
           >
-            <FolderGit2 size={13} className={currentRepoPath ? 'text-accent-cobalt' : 'text-ink-muted'} />
-            <span className="truncate max-w-[130px]">
-              {repoBasename || 'Bind Repo'}
-            </span>
-          </button>
+            <FolderGit2
+              size={13}
+              className={currentRepoPath ? 'text-accent-cobalt' : 'text-ink-muted'}
+            />
+            <span className="truncate max-w-[120px]">{repoBasename || 'Bind repo'}</span>
+          </Button>
 
-          {/* ADE Terminal Toggle */}
-          <button
+          <Button
+            variant="secondary"
+            size="md"
             onClick={() => toggleTerminalDrawer()}
             title="Buka / Tutup Drawer Terminal ADE (Ctrl+`)"
-            className="h-8 px-2.5 rounded-[5px] border border-border-hairline bg-surface-elevated hover:bg-surface-hover text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 font-mono text-[11px] transition-colors"
           >
-            <TerminalIcon size={13} className="text-accent-cobalt" />
+            <TerminalIcon size={13} className="text-ink-secondary" />
             <span>Terminal</span>
-          </button>
+          </Button>
 
-          <div className="p-0.5 rounded-[6px] bg-surface-elevated border border-border-hairline flex items-center font-mono text-[11px]">
-            <button
-              onClick={() => switchPageMode(page.id, 'block')}
-              className={`px-3 py-1.5 rounded-[4px] flex items-center gap-1.5 transition-all duration-150 ${
-                page.mode === 'block'
-                  ? 'bg-accent-cobalt text-white font-semibold shadow-sm'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <FileText size={13} />
-              <span>▤ DOC</span>
-            </button>
-            <button
-              onClick={() => switchPageMode(page.id, 'canvas')}
-              className={`px-3 py-1.5 rounded-[4px] flex items-center gap-1.5 transition-all duration-150 ${
-                page.mode === 'canvas'
-                  ? 'bg-accent-amber text-black font-semibold shadow-sm'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <LayoutGrid size={13} />
-              <span>⊞ CANVAS</span>
-            </button>
-          </div>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => setIsMissionDrawerOpen(true)}
+            title="Kompilasi spesifikasi & buka Mission Briefing command deck (Ctrl+Shift+D)"
+          >
+            <Zap size={13} />
+            <span>Dispatch Spec</span>
+          </Button>
         </div>
       </div>
 
       {/* Expandable Drawer: Bi-directional Backlinks or Local Version Snapshots */}
       {activeDrawer === 'backlinks' && (
-        <div className="px-6 py-3 bg-surface-elevated border-t border-border-hairline">
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-accent-cobalt font-semibold">
-              REFERENSI SILang DUA ARAH (BACKLINKS KE {page.code})
+        <div className="px-6 py-3.5 bg-surface-chrome/70 border-t border-border-hairline animate-popover-enter">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-xs font-semibold text-ink-primary flex items-center gap-2">
+              <ArrowLeftRight size={13} className="text-accent-cobalt" />
+              <span>Backlinks ke {page.code}</span>
             </span>
             <button
+              type="button"
               onClick={() => setActiveDrawer(null)}
-              className="text-ink-muted hover:text-ink-primary"
+              className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary"
             >
               <X size={14} />
             </button>
           </div>
           {backlinks.length === 0 ? (
             <p className="text-xs text-ink-secondary">
-              Belum ada halaman lain yang menautkan <code className="font-mono text-accent-cobalt">[[{page.title}]]</code>. Ketik <code className="font-mono">[[{page.title}]]</code> di halaman mana pun untuk membangun koneksi dua arah.
+              Belum ada halaman lain yang menautkan{' '}
+              <code className="font-mono text-accent-cobalt">[[{page.title}]]</code>. Ketik{' '}
+              <code className="font-mono">[[{page.title}]]</code> di halaman mana pun untuk
+              membangun koneksi dua arah.
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {backlinks.map((bl) => (
                 <div
                   key={bl.sourcePageId}
                   onClick={() => openPageInTab(bl.sourcePageId)}
-                  className="p-2.5 rounded-[6px] bg-surface-chrome hover:bg-surface-hover border border-border-hairline cursor-pointer transition-colors"
+                  className="p-3 rounded-[10px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline cursor-pointer transition-colors"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-medium text-ink-primary flex items-center gap-1.5">
                       <span>{bl.sourcePageIcon}</span>
                       <span>{bl.sourcePageTitle}</span>
                     </span>
-                    <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-surface-elevated text-accent-cobalt">
+                    <Badge tone="cobalt" className="font-mono text-[10px]">
                       {bl.sourcePageCode}
-                    </span>
+                    </Badge>
                   </div>
-                  <p className="text-[11px] text-ink-secondary line-clamp-2 font-mono">
+                  <p className="text-[11.5px] text-ink-secondary line-clamp-2">
                     {bl.contextSnippet}
                   </p>
                 </div>
@@ -593,14 +587,16 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
       )}
 
       {activeDrawer === 'versions' && (
-        <div className="px-6 py-3 bg-surface-elevated border-t border-border-hairline">
+        <div className="px-6 py-3.5 bg-surface-chrome/70 border-t border-border-hairline animate-popover-enter">
           <div className="flex items-center justify-between mb-2.5">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-accent-amber font-semibold">
-              RIWAYAT SNAPSHOT LOKAL (SQLITE PAGE_VERSIONS)
+            <span className="text-xs font-semibold text-ink-primary flex items-center gap-2">
+              <History size={13} className="text-accent-amber" />
+              <span>Riwayat Snapshot Lokal</span>
             </span>
             <button
+              type="button"
               onClick={() => setActiveDrawer(null)}
-              className="text-ink-muted hover:text-ink-primary"
+              className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-muted hover:text-ink-primary"
             >
               <X size={14} />
             </button>
@@ -612,19 +608,16 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
               value={snapshotLabel}
               onChange={(e) => setSnapshotLabel(e.target.value)}
               placeholder="Label snapshot (mis. Sebelum ubah skema order)..."
-              className="flex-1 px-2.5 py-1 rounded bg-surface-chrome border border-border-hairline text-xs text-ink-primary focus:outline-none focus:border-accent-amber"
+              className="flex-1 h-8 px-3 rounded-[7px] bg-surface-elevated border border-border-hairline text-xs text-ink-primary placeholder:text-ink-muted focus:border-accent-cobalt"
             />
-            <button
-              type="submit"
-              className="px-3 py-1 rounded bg-accent-amber text-black font-mono text-xs font-semibold hover:opacity-90"
-            >
+            <Button type="submit" variant="primary" size="md">
               Simpan Snapshot
-            </button>
+            </Button>
           </form>
 
           <div className="space-y-1.5 max-h-56 overflow-y-auto pr-0.5">
             {versionsLoading && versions.length === 0 ? (
-              <div className="flex items-center gap-2 py-3 font-mono text-xs text-ink-muted">
+              <div className="flex items-center gap-2 py-3 text-xs text-ink-muted">
                 <Loader2 size={12} className="animate-spin" />
                 <span>Memuat riwayat snapshot...</span>
               </div>
@@ -636,12 +629,12 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
               versions.map((ver, index) => (
                 <div
                   key={ver.id}
-                  className="px-3 py-1.5 rounded bg-surface-chrome border border-border-hairline flex items-center justify-between gap-2 text-xs"
+                  className="px-3 py-2 rounded-[8px] bg-surface-elevated border border-border-hairline flex items-center justify-between gap-2 text-xs"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                    <span className="font-mono text-[11px] px-1.5 py-0.2 rounded bg-accent-amber/15 text-accent-amber border border-accent-amber/30">
+                    <Badge tone="amber" className="font-mono">
                       v{ver.versionNumber}
-                    </span>
+                    </Badge>
 
                     {renamingId === ver.id ? (
                       <form
@@ -659,90 +652,81 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                             if (e.key === 'Escape') setRenamingId(null)
                           }}
                           autoFocus
-                          className="w-48 px-1.5 py-0.2 rounded bg-surface-elevated border border-accent-amber text-[11px] text-ink-primary focus:outline-none"
+                          className="w-48 px-2 py-0.5 rounded-[6px] bg-surface-chrome border border-accent-cobalt text-xs text-ink-primary"
                         />
                         <button
                           type="submit"
                           title="Simpan label"
-                          className="p-0.5 text-accent-amber hover:text-ink-primary"
+                          className="p-1 text-accent-cobalt hover:text-ink-primary"
                         >
                           <Check size={12} />
                         </button>
                       </form>
                     ) : (
                       <button
+                        type="button"
                         onClick={() => startRename(ver)}
                         title="Klik untuk ubah label"
-                        className="flex items-center gap-1 min-w-0 font-medium text-ink-primary hover:text-accent-amber"
+                        className="flex items-center gap-1.5 min-w-0 font-medium text-ink-primary hover:text-accent-cobalt"
                       >
                         <span className="truncate max-w-[220px]">{ver.label}</span>
-                        <Pencil size={10} className="opacity-40 shrink-0" />
+                        <Pencil size={10.5} className="opacity-40 shrink-0" />
                       </button>
                     )}
 
-                    {index === 0 && (
-                      <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-accent-cobalt/15 text-accent-cobalt border border-accent-cobalt/30">
-                        CURRENT
-                      </span>
-                    )}
+                    {index === 0 && <Badge tone="cobalt">Current</Badge>}
 
                     {ver.tags === null && (
-                      <span
+                      <Badge
+                        tone="neutral"
                         title="Snapshot legacy: dibuat sebelum tags tersimpan, jadi tags halaman tidak dipulihkan"
-                        className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-surface-elevated text-ink-muted border border-border-hairline"
                       >
                         tanpa tags
-                      </span>
+                      </Badge>
                     )}
 
-                    <span className="font-mono text-[11px] text-ink-muted tabular-nums">
+                    <span className="text-[11px] text-ink-muted tabular-nums">
                       {formatRelativeTime(ver.createdAt)}
                     </span>
-                    <span className="font-mono text-[11px] text-ink-muted">
-                      {ver.blockCount} blok
+                    <span className="text-[11px] text-ink-muted tabular-nums">
+                      · {ver.blockCount} blok
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      variant={pendingRestoreId === ver.id ? 'danger' : 'secondary'}
+                      size="xs"
                       onClick={() => handleRestoreClick(ver)}
-                      className={`px-2 py-0.5 rounded border font-mono text-[11px] flex items-center gap-1 transition-colors ${
-                        pendingRestoreId === ver.id
-                          ? 'bg-[#EF4444]/15 border-[#EF4444]/50 text-[#EF4444] font-semibold'
-                          : 'bg-surface-elevated hover:bg-surface-hover border-border-hairline text-ink-secondary hover:text-ink-primary'
-                      }`}
                     >
                       <RotateCcw size={11} />
                       <span>{pendingRestoreId === ver.id ? 'Yakin? Klik lagi' : 'Pulihkan'}</span>
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
+                      variant={pendingDeleteId === ver.id ? 'danger' : 'ghost'}
+                      size="xs"
                       onClick={() => handleDeleteClick(ver)}
                       title="Hapus snapshot"
-                      className={`px-2 py-0.5 rounded border font-mono text-[11px] flex items-center gap-1 transition-colors ${
-                        pendingDeleteId === ver.id
-                          ? 'bg-[#EF4444]/15 border-[#EF4444]/50 text-[#EF4444] font-semibold'
-                          : 'bg-surface-elevated hover:bg-surface-hover border-border-hairline text-ink-muted hover:text-[#EF4444]'
-                      }`}
                     >
                       <Trash2 size={11} />
                       {pendingDeleteId === ver.id && <span>Yakin?</span>}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))
             )}
           </div>
 
-          {/* Panel diff inline: versi vs versi, atau versi vs kondisi sekarang */}
-          <div className="mt-3 pt-3 border-t border-border-hairline">
-            <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
-              <GitCompare size={12} className="text-accent-amber" />
-              <span className="uppercase tracking-wider text-ink-muted">Bandingkan</span>
+          {/* Panel diff inline */}
+          <div className="mt-3 pt-3 border-t border-border-subtle">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <GitCompare size={13} className="text-accent-amber" />
+              <span className="text-ink-secondary font-medium">Bandingkan</span>
               <select
                 value={diffBase}
                 onChange={(e) => setDiffBase(e.target.value)}
-                className="px-1.5 py-0.5 rounded bg-surface-chrome border border-border-hairline text-ink-primary focus:outline-none focus:border-accent-amber max-w-[220px]"
+                className="h-7 px-2 rounded-[6px] bg-surface-elevated border border-border-hairline text-xs text-ink-primary max-w-[220px]"
               >
                 <option value="">Pilih versi...</option>
                 {versions.map((ver) => (
@@ -755,7 +739,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
               <select
                 value={diffTarget}
                 onChange={(e) => setDiffTarget(e.target.value)}
-                className="px-1.5 py-0.5 rounded bg-surface-chrome border border-border-hairline text-ink-primary focus:outline-none focus:border-accent-amber max-w-[220px]"
+                className="h-7 px-2 rounded-[6px] bg-surface-elevated border border-border-hairline text-xs text-ink-primary max-w-[220px]"
               >
                 <option value="current">Kondisi sekarang</option>
                 {versions.map((ver) => (
@@ -764,51 +748,50 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                   </option>
                 ))}
               </select>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => void handleCompare()}
                 disabled={diffLoading || versions.length === 0}
-                className="px-2 py-0.5 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-ink-secondary hover:text-ink-primary flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {diffLoading ? <Loader2 size={11} className="animate-spin" /> : null}
                 <span>Bandingkan</span>
-              </button>
+              </Button>
             </div>
 
             {diffView && (
-              <div className="mt-2 space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
-                  <span className="text-[#4ADE80]">+{diffView.diff.added.length} ditambah</span>
-                  <span className="text-[#EF4444]">-{diffView.diff.removed.length} dihapus</span>
-                  <span className="text-accent-amber">~{diffView.diff.changed.length} diubah</span>
-                  <span className="text-ink-muted">{diffView.diff.unchanged} sama</span>
-                  {diffView.diff.titleChanged && (
-                    <span className="text-accent-cobalt">judul berubah</span>
-                  )}
+              <div className="mt-2.5 p-3 rounded-[8px] bg-surface-elevated border border-border-hairline space-y-2">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <Badge tone="teal">+{diffView.diff.added.length} ditambah</Badge>
+                  <Badge tone="red">-{diffView.diff.removed.length} dihapus</Badge>
+                  <Badge tone="amber">~{diffView.diff.changed.length} diubah</Badge>
+                  <span className="text-ink-muted text-[11px]">{diffView.diff.unchanged} sama</span>
+                  {diffView.diff.titleChanged && <Badge tone="cobalt">Judul berubah</Badge>}
                 </div>
 
                 {diffView.diff.added.length === 0 &&
                 diffView.diff.removed.length === 0 &&
                 diffView.diff.changed.length === 0 ? (
-                  <p className="text-[11px] text-ink-secondary">
+                  <p className="text-xs text-ink-secondary">
                     Tidak ada perbedaan blok pada dua versi ini.
                   </p>
                 ) : (
                   <div className="space-y-1 max-h-40 overflow-y-auto pr-0.5 font-mono text-[11px]">
                     {diffView.added.map((row) => (
                       <div key={`add-${row.id}`} className="flex items-start gap-1.5">
-                        <span className="text-[#4ADE80] shrink-0">+</span>
+                        <span className="text-[var(--pill-teal-text)] shrink-0">+</span>
                         <span className="text-ink-secondary truncate">{row.snippet}</span>
                       </div>
                     ))}
                     {diffView.removed.map((row) => (
                       <div key={`del-${row.id}`} className="flex items-start gap-1.5">
-                        <span className="text-[#EF4444] shrink-0">-</span>
+                        <span className="text-[var(--pill-red-text)] shrink-0">-</span>
                         <span className="text-ink-muted truncate">{row.snippet}</span>
                       </div>
                     ))}
                     {diffView.changed.map((row) => (
                       <div key={`chg-${row.id}`} className="flex items-start gap-1.5">
-                        <span className="text-accent-amber shrink-0">~</span>
+                        <span className="text-[var(--pill-amber-text)] shrink-0">~</span>
                         <span className="min-w-0">
                           <span className="text-ink-secondary truncate block">{row.after}</span>
                           <span className="text-ink-muted truncate block">sebelum: {row.before}</span>

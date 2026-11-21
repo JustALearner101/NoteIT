@@ -9,55 +9,68 @@ export const MARKER_META: Record<
     border: string
     badgeBg: string
     text: string
+    dotBg: string
   }
 > = {
   cobalt: {
-    label: 'Blueprint Cobalt',
-    hex: '#3B82F6',
-    bgStrip: 'bg-[#3B82F6]',
-    border: 'border-[#3B82F6]',
-    badgeBg: 'bg-[#3B82F6]/15 text-[#3B82F6] border-[#3B82F6]/30',
-    text: 'text-[#3B82F6]'
+    label: 'Periwinkle Indigo',
+    hex: '#6E7BF2',
+    bgStrip: 'bg-[#6E7BF2]',
+    border: 'border-[#6E7BF2]/50',
+    badgeBg:
+      'bg-[var(--pill-cobalt-bg)] text-[var(--pill-cobalt-text)] border-[var(--pill-cobalt-border)]',
+    text: 'text-[var(--pill-cobalt-text)]',
+    dotBg: 'bg-[#6E7BF2]'
   },
   amber: {
-    label: 'Caliper Amber',
-    hex: '#F59E0B',
-    bgStrip: 'bg-[#F59E0B]',
-    border: 'border-[#F59E0B]',
-    badgeBg: 'bg-[#F59E0B]/15 text-[#F59E0B] border-[#F59E0B]/30',
-    text: 'text-[#F59E0B]'
+    label: 'Warm Amber',
+    hex: '#E5A93C',
+    bgStrip: 'bg-[#E5A93C]',
+    border: 'border-[#E5A93C]/50',
+    badgeBg:
+      'bg-[var(--pill-amber-bg)] text-[var(--pill-amber-text)] border-[var(--pill-amber-border)]',
+    text: 'text-[var(--pill-amber-text)]',
+    dotBg: 'bg-[#E5A93C]'
   },
   teal: {
-    label: 'Verdigris Teal',
-    hex: '#10B981',
-    bgStrip: 'bg-[#10B981]',
-    border: 'border-[#10B981]',
-    badgeBg: 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30',
-    text: 'text-[#10B981]'
+    label: 'Mint Emerald',
+    hex: '#2DD4BF',
+    bgStrip: 'bg-[#2DD4BF]',
+    border: 'border-[#2DD4BF]/50',
+    badgeBg:
+      'bg-[var(--pill-teal-bg)] text-[var(--pill-teal-text)] border-[var(--pill-teal-border)]',
+    text: 'text-[var(--pill-teal-text)]',
+    dotBg: 'bg-[#2DD4BF]'
   },
   red: {
-    label: 'Vermilion Red',
-    hex: '#EF4444',
-    bgStrip: 'bg-[#EF4444]',
-    border: 'border-[#EF4444]',
-    badgeBg: 'bg-[#EF4444]/15 text-[#EF4444] border-[#EF4444]/30',
-    text: 'text-[#EF4444]'
+    label: 'Soft Rose',
+    hex: '#F87171',
+    bgStrip: 'bg-[#F87171]',
+    border: 'border-[#F87171]/50',
+    badgeBg:
+      'bg-[var(--pill-red-bg)] text-[var(--pill-red-text)] border-[var(--pill-red-border)]',
+    text: 'text-[var(--pill-red-text)]',
+    dotBg: 'bg-[#F87171]'
   },
   violet: {
-    label: 'Oxide Violet',
-    hex: '#8B5CF6',
-    bgStrip: 'bg-[#8B5CF6]',
-    border: 'border-[#8B5CF6]',
-    badgeBg: 'bg-[#8B5CF6]/15 text-[#8B5CF6] border-[#8B5CF6]/30',
-    text: 'text-[#8B5CF6]'
+    label: 'Soft Iris',
+    hex: '#A78BFA',
+    bgStrip: 'bg-[#A78BFA]',
+    border: 'border-[#A78BFA]/50',
+    badgeBg:
+      'bg-[var(--pill-violet-bg)] text-[var(--pill-violet-text)] border-[var(--pill-violet-border)]',
+    text: 'text-[var(--pill-violet-text)]',
+    dotBg: 'bg-[#A78BFA]'
   },
   slate: {
-    label: 'Slate Ochre',
-    hex: '#64748B',
-    bgStrip: 'bg-[#64748B]',
-    border: 'border-[#64748B]',
-    badgeBg: 'bg-[#64748B]/15 text-[#94A3B8] border-[#64748B]/30',
-    text: 'text-[#94A3B8]'
+    label: 'Neutral Zinc',
+    hex: '#787886',
+    bgStrip: 'bg-[#787886]',
+    border: 'border-[#787886]/50',
+    badgeBg:
+      'bg-[var(--pill-slate-bg)] text-[var(--pill-slate-text)] border-[var(--pill-slate-border)]',
+    text: 'text-[var(--pill-slate-text)]',
+    dotBg: 'bg-[#787886]'
   }
 }
 

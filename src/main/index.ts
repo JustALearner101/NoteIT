@@ -231,8 +231,8 @@ function createWindow(): void {
     minHeight: 680,
     show: false,
     frame: false,
-    backgroundColor: '#111317',
-    title: 'NoteIT v2.0 — Precision Drafting Workbench',
+    backgroundColor: '#141417',
+    title: 'NoteIT — Obsidian Studio Workbench',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -292,7 +292,7 @@ function createCaptureWindow(): BrowserWindow {
     alwaysOnTop: true,
     skipTaskbar: true,
     show: false,
-    backgroundColor: '#111317',
+    backgroundColor: '#1C1C21',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,

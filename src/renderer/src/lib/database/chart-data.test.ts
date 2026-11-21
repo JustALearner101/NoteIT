@@ -66,7 +66,7 @@ describe('buildChartSeries per item', () => {
       fullTitle: 'Task',
       progress: 40,
       hours: 16,
-      colorHex: '#3B82F6'
+      colorHex: '#6E7BF2'
     })
     expect(series[1]).toMatchObject({ name: 'TSK-02', hours: 8, progress: 100 })
   })
@@ -79,7 +79,7 @@ describe('buildChartSeries per item', () => {
   it('warna tak dikenal memakai fallback biru', () => {
     const series = buildChartSeries([makeTask({ color: 'tidak-ada' as MarkerColor })])
 
-    expect(series[0].colorHex).toBe('#3B82F6')
+    expect(series[0].colorHex).toBe('#6E7BF2')
   })
 })
 
@@ -104,9 +104,9 @@ describe('buildChartSeries per kategori', () => {
 })
 
 describe('chartTooltipStyle', () => {
-  it('memakai variabel tema yang sama dengan chart lama', () => {
+  it('memakai variabel tema Obsidian Studio', () => {
     expect(chartTooltipStyle.backgroundColor).toBe('var(--bg-surface-elevated)')
     expect(chartTooltipStyle.borderColor).toBe('var(--border-hairline)')
-    expect(chartTooltipStyle.fontFamily).toBe('JetBrains Mono')
+    expect(chartTooltipStyle.fontFamily).toBe('Inter, sans-serif')
   })
 })

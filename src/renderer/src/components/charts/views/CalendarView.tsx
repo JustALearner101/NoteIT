@@ -22,7 +22,7 @@ interface MonthCursor {
 const MAX_CHIPS = 3
 
 const ACTION_BUTTON_CLASS =
-  'h-6 px-2 rounded border border-border-hairline bg-surface-elevated text-ink-secondary hover:text-ink-primary flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed'
+  'h-7 px-2.5 rounded-[7px] border border-border-hairline bg-surface-elevated hover:bg-surface-hover text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
 
 /** Bulan awal diturunkan dari todayIso; tidak pernah disimpan ke dokumen. */
 function initialCursor(today: string): MonthCursor {
@@ -79,45 +79,47 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
 
   return (
     <div className="bg-canvas-primary">
-      <div className="px-3 py-2 border-b border-border-hairline bg-surface-chrome/70 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+      <div className="px-4 py-2.5 border-b border-border-hairline bg-surface-chrome/45 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
           <button
+            type="button"
             onClick={() => goMonth(-1)}
             aria-label="Bulan sebelumnya"
-            className="w-6 h-6 rounded border border-border-hairline bg-surface-elevated text-ink-secondary hover:text-ink-primary flex items-center justify-center"
+            className="w-7 h-7 rounded-[7px] border border-border-hairline bg-surface-elevated hover:bg-surface-hover text-ink-secondary hover:text-ink-primary flex items-center justify-center transition-colors"
           >
-            <ChevronLeft size={12} />
+            <ChevronLeft size={13} />
           </button>
-          <span className="min-w-[132px] text-center font-mono text-xs font-semibold uppercase tracking-wider text-ink-primary">
+          <span className="min-w-[136px] text-center font-display text-[13px] font-semibold text-ink-primary">
             {label}
           </span>
           <button
+            type="button"
             onClick={() => goMonth(1)}
             aria-label="Bulan berikutnya"
-            className="w-6 h-6 rounded border border-border-hairline bg-surface-elevated text-ink-secondary hover:text-ink-primary flex items-center justify-center"
+            className="w-7 h-7 rounded-[7px] border border-border-hairline bg-surface-elevated hover:bg-surface-hover text-ink-secondary hover:text-ink-primary flex items-center justify-center transition-colors"
           >
-            <ChevronRight size={12} />
+            <ChevronRight size={13} />
           </button>
           <button
+            type="button"
             onClick={goToday}
-            className="px-2 py-1 rounded border border-border-hairline bg-surface-elevated font-mono text-[10px] text-ink-secondary hover:text-ink-primary"
+            className="h-7 px-2.5 ml-1 rounded-[7px] border border-border-hairline bg-surface-elevated hover:bg-surface-hover text-xs font-medium text-ink-secondary hover:text-ink-primary transition-colors"
           >
             Hari ini
           </button>
         </div>
-        <span className="font-mono text-[10px] uppercase text-ink-muted">
-          {items.length === 0 ? 'Belum ada task' : items.length + ' TASK'}
+        <span className="text-xs text-ink-muted tabular-nums">
+          {items.length === 0 ? 'Belum ada task' : `${items.length} tasks`}
         </span>
       </div>
 
-
-      <div className="p-3">
-        <div className="rounded-[6px] border border-border-hairline overflow-hidden">
-          <div className="grid grid-cols-7 bg-surface-chrome/70 border-b border-border-hairline">
+      <div className="p-3.5">
+        <div className="rounded-[10px] border border-border-hairline overflow-hidden">
+          <div className="grid grid-cols-7 bg-surface-chrome/60 border-b border-border-hairline">
             {WEEKDAY_LABELS.map((day) => (
               <span
                 key={day}
-                className="py-1.5 text-center font-mono text-[10px] uppercase text-ink-muted"
+                className="py-2 text-center text-[11px] font-medium text-ink-muted"
               >
                 {day}
               </span>
@@ -139,36 +141,36 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
                     key={iso}
                     onClick={() => setSelectedDate(iso)}
                     className={
-                      'min-h-[84px] p-1 border-b border-r border-border-hairline cursor-pointer transition-colors ' +
-                      (inMonth ? 'bg-surface-elevated ' : 'bg-surface-chrome/40 ') +
+                      'min-h-[88px] p-1.5 border-b border-r border-border-subtle cursor-pointer transition-colors ' +
+                      (inMonth ? 'bg-surface-elevated/55 ' : 'bg-surface-chrome/40 ') +
                       (isSelected
-                        ? 'ring-1 ring-inset ring-accent-cobalt'
+                        ? 'ring-1 ring-inset ring-accent-cobalt bg-[var(--pill-cobalt-bg)]'
                         : 'hover:bg-surface-hover/40')
                     }
                   >
-
-                    <div className="flex items-center justify-between px-0.5 pb-1">
+                    <div className="flex items-center justify-between px-0.5 pb-1.5">
                       <span
                         className={
-                          'flex h-5 w-5 items-center justify-center rounded-full font-mono text-[10px] ' +
+                          'flex h-5 w-5 items-center justify-center rounded-full font-mono text-[10.5px] tabular-nums ' +
                           (isToday
                             ? 'bg-accent-cobalt font-semibold text-white '
                             : inMonth
                               ? 'text-ink-secondary '
-                              : 'text-ink-muted/60')
+                              : 'text-ink-muted/55')
                         }
                       >
                         {Number(iso.slice(8, 10))}
                       </span>
                     </div>
 
-                    <div className="flex flex-col gap-0.5">
+                    <div className="flex flex-col gap-1">
                       {visibleTasks.map((task) => {
                         const marker = MARKER_META[task.color]
                         const isTaskSelected = task.id === selectedTaskId
                         return (
                           <button
                             key={task.id}
+                            type="button"
                             onClick={(event) => {
                               event.stopPropagation()
                               setSelectedDate(iso)
@@ -180,7 +182,7 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
                               borderLeftColor: marker.hex
                             }}
                             className={
-                              'block w-full truncate border-l-2 py-[1px] pl-1 pr-1 text-left font-mono text-[10px] leading-tight text-ink-primary ' +
+                              'block w-full truncate border-l-2 py-[2px] px-1.5 text-left text-[11px] font-medium leading-tight text-ink-primary ' +
                               taskSpanClass(task, iso) +
                               (isTaskSelected ? ' ring-1 ring-inset ring-accent-cobalt' : '')
                             }
@@ -191,7 +193,7 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
                       })}
                       {overflow > 0 && (
                         <span className="pl-1 font-mono text-[10px] text-ink-muted">
-                          +{overflow}
+                          +{overflow} more
                         </span>
                       )}
                     </div>
@@ -203,36 +205,38 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
         </div>
       </div>
 
-
       {(selectedDate || selectedTask) && (
-        <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-t border-border-hairline bg-surface-chrome/60 font-mono text-[10px]">
-          <span className="text-ink-muted">
-            {selectedDate ?? 'TANPA TANGGAL'}
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 border-t border-border-hairline bg-surface-chrome/50 text-xs">
+          <span className="font-mono text-[11px] text-ink-muted mr-1">
+            {selectedDate ?? 'No date'}
             {selectedTask ? ' · ' + selectedTask.code : ''}
           </span>
-          <button onClick={() => handleAddTask(actionDate)} className={ACTION_BUTTON_CLASS}>
-            <CalendarPlus size={11} />
-            <span>Tambah task di tanggal ini</span>
+          <button type="button" onClick={() => handleAddTask(actionDate)} className={ACTION_BUTTON_CLASS}>
+            <CalendarPlus size={12} />
+            <span>Tambah task</span>
           </button>
           <button
+            type="button"
             disabled={!selectedTask}
             onClick={() => {
               if (selectedTask) shiftTask(selectedTask, -1)
             }}
             className={ACTION_BUTTON_CLASS}
           >
-            Geser -1 hari
+            -1 hari
           </button>
           <button
+            type="button"
             disabled={!selectedTask}
             onClick={() => {
               if (selectedTask) shiftTask(selectedTask, 1)
             }}
             className={ACTION_BUTTON_CLASS}
           >
-            Geser +1 hari
+            +1 hari
           </button>
           <button
+            type="button"
             disabled={!selectedTask || !selectedDate}
             onClick={setStart}
             className={ACTION_BUTTON_CLASS}
@@ -240,6 +244,7 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
             Set mulai
           </button>
           <button
+            type="button"
             disabled={!selectedTask || !selectedDate}
             onClick={setEnd}
             className={ACTION_BUTTON_CLASS}

@@ -10,6 +10,7 @@ import {
   ZoomOut
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
+import { Button, SegmentedControl } from '@renderer/components/ui'
 
 interface MermaidStudioProps {
   code: string
@@ -81,60 +82,33 @@ export const MermaidStudio: React.FC<MermaidStudioProps> = ({
   }
 
   return (
-    <div className="rounded-[8px] bg-surface-elevated border border-border-hairline overflow-hidden shadow-sm my-3">
+    <div className="rounded-[12px] bg-canvas-primary border border-border-hairline overflow-hidden shadow-card my-4">
       {/* Header Bar */}
-      <div className="h-9 px-3 bg-surface-chrome border-b border-border-hairline flex items-center justify-between select-none">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-          <span className="font-mono text-[11px] font-semibold tracking-wider uppercase text-ink-primary">
-            MERMAID ARCHITECTURAL DIAGRAM (OFFLINE RENDERER)
+      <div className="h-[44px] px-4 bg-surface-chrome/75 border-b border-border-hairline flex items-center justify-between gap-2 select-none">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2 h-2 rounded-full bg-accent-teal" />
+          <span className="font-display text-[13.5px] font-semibold text-ink-primary">
+            Mermaid Diagram
           </span>
+          <span className="text-[11px] text-ink-muted hidden sm:inline">Offline renderer</span>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <div className="p-0.5 rounded bg-surface-elevated border border-border-hairline flex items-center font-mono text-[10px]">
-            <button
-              onClick={() => onChange({ mermaidViewMode: 'code' })}
-              className={`px-2 py-0.5 rounded flex items-center gap-1 ${
-                viewMode === 'code'
-                  ? 'bg-accent-cobalt text-white'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <Code2 size={11} />
-              <span>Code</span>
-            </button>
-            <button
-              onClick={() => onChange({ mermaidViewMode: 'split' })}
-              className={`px-2 py-0.5 rounded flex items-center gap-1 ${
-                viewMode === 'split'
-                  ? 'bg-accent-cobalt text-white'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <Columns2 size={11} />
-              <span>Split</span>
-            </button>
-            <button
-              onClick={() => onChange({ mermaidViewMode: 'diagram' })}
-              className={`px-2 py-0.5 rounded flex items-center gap-1 ${
-                viewMode === 'diagram'
-                  ? 'bg-accent-cobalt text-white'
-                  : 'text-ink-secondary hover:text-ink-primary'
-              }`}
-            >
-              <LayoutGrid size={11} />
-              <span>Diagram</span>
-            </button>
-          </div>
+          <SegmentedControl<'code' | 'split' | 'diagram'>
+            size="xs"
+            value={viewMode}
+            onChange={(nextMode) => onChange({ mermaidViewMode: nextMode })}
+            options={[
+              { value: 'code', label: 'Code', icon: <Code2 size={11} /> },
+              { value: 'split', label: 'Split', icon: <Columns2 size={11} /> },
+              { value: 'diagram', label: 'Diagram', icon: <LayoutGrid size={11} /> }
+            ]}
+          />
 
-          <button
-            onClick={handleExportSvg}
-            className="h-6 px-2 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline font-mono text-[10px] text-ink-secondary hover:text-ink-primary flex items-center gap-1"
-          >
-            <Download size={11} />
-            <span>Ekspor SVG</span>
-          </button>
+          <Button variant="secondary" size="xs" onClick={handleExportSvg}>
+            <Download size={11.5} />
+            <span>Export SVG</span>
+          </Button>
         </div>
       </div>
 
@@ -148,16 +122,16 @@ export const MermaidStudio: React.FC<MermaidStudioProps> = ({
           <div
             className={`${
               viewMode === 'split' ? 'lg:col-span-5 border-r border-border-hairline' : ''
-            } flex flex-col bg-surface-chrome/50`}
+            } flex flex-col bg-surface-chrome/45`}
           >
             <textarea
               value={code}
               onChange={(e) => onChange({ content: e.target.value })}
               spellCheck={false}
-              className="flex-1 p-3 bg-transparent font-mono text-xs leading-relaxed text-ink-primary resize-none focus:outline-none selectable-text min-h-[260px]"
+              className="flex-1 p-3.5 bg-transparent font-mono text-xs leading-relaxed text-ink-primary resize-none focus:outline-none selectable-text min-h-[260px]"
             />
             {errorMsg && (
-              <div className="p-2.5 bg-[#EF4444]/10 border-t border-[#EF4444]/40 flex items-start gap-2 font-mono text-[11px] text-[#EF4444]">
+              <div className="p-2.5 bg-[var(--pill-red-bg)] border-t border-[var(--pill-red-border)] flex items-start gap-2 font-mono text-[11px] text-[var(--pill-red-text)]">
                 <AlertTriangle size={13} className="shrink-0 mt-0.5" />
                 <span>{errorMsg}</span>
               </div>
@@ -166,20 +140,30 @@ export const MermaidStudio: React.FC<MermaidStudioProps> = ({
         )}
 
         {(viewMode === 'diagram' || viewMode === 'split') && (
-          <div className={`${viewMode === 'split' ? 'lg:col-span-7' : ''} relative bg-blueprint-grid p-4 flex items-center justify-center overflow-auto min-h-[290px]`}>
-            <div className="absolute right-3 bottom-3 z-10 flex items-center gap-1 p-1 rounded bg-surface-elevated/90 border border-border-hairline font-mono text-[11px]">
+          <div
+            className={`${
+              viewMode === 'split' ? 'lg:col-span-7' : ''
+            } relative bg-dot-canvas p-5 flex items-center justify-center overflow-auto min-h-[290px]`}
+          >
+            <div className="absolute right-3.5 bottom-3.5 z-10 flex items-center gap-0.5 p-1 rounded-[9px] bg-surface-elevated/95 border border-border-hairline font-mono text-[11px] shadow-popover">
               <button
+                type="button"
                 onClick={() => setZoom((z) => Math.max(0.6, +(z - 0.15).toFixed(2)))}
-                className="p-1 rounded hover:bg-surface-hover text-ink-secondary"
+                className="h-6 w-6 rounded-[6px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary"
               >
                 <ZoomOut size={12} />
               </button>
-              <button onClick={() => setZoom(1)} className="px-1.5 text-ink-primary tabular-nums">
+              <button
+                type="button"
+                onClick={() => setZoom(1)}
+                className="px-2 text-ink-primary tabular-nums"
+              >
                 {Math.round(zoom * 100)}%
               </button>
               <button
+                type="button"
                 onClick={() => setZoom((z) => Math.min(1.8, +(z + 0.15).toFixed(2)))}
-                className="p-1 rounded hover:bg-surface-hover text-ink-secondary"
+                className="h-6 w-6 rounded-[6px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary"
               >
                 <ZoomIn size={12} />
               </button>
@@ -192,7 +176,7 @@ export const MermaidStudio: React.FC<MermaidStudioProps> = ({
                 dangerouslySetInnerHTML={{ __html: svgOutput }}
               />
             ) : (
-              <span className="font-mono text-xs text-ink-muted">
+              <span className="text-xs text-ink-muted">
                 Ketik kode Mermaid untuk merender diagram secara langsung.
               </span>
             )}

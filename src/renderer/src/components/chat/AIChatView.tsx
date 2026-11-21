@@ -16,6 +16,7 @@ import {
   X
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
+import { Badge, Button, cn } from '@renderer/components/ui'
 import type { AIApprovalProposal, AIChatStreamEvent } from '@shared/ipc-channels'
 import type { Page } from '@shared/types/domain'
 
@@ -438,12 +439,12 @@ export const AIChatView: React.FC = () => {
   }
 
   const renderComposerCard = (): React.ReactNode => (
-    <div className="w-full max-w-2xl rounded-[14px] bg-surface-elevated border border-border-hairline shadow-2xl p-3.5 transition-all focus-within:border-accent-cobalt/70 relative">
+    <div className="w-full max-w-2xl rounded-[14px] bg-surface-elevated border border-border-hairline shadow-popover p-4 transition-all focus-within:border-accent-cobalt relative">
       {/* Context Mention & Browser Context Pills */}
       {(mentionedPages.length > 0 || browserContextForAI) && (
-        <div className="flex flex-wrap items-center gap-1.5 mb-2 pb-2 border-b border-border-subtle">
+        <div className="flex flex-wrap items-center gap-1.5 mb-2.5 pb-2.5 border-b border-border-subtle">
           {browserContextForAI && (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-accent-cobalt/15 border border-accent-cobalt/40 text-[11px] text-accent-cobalt">
+            <Badge tone="cobalt" size="sm" className="gap-1.5">
               <Globe size={11} />
               <span className="truncate max-w-[180px]">{browserContextForAI.title}</span>
               <button
@@ -453,12 +454,12 @@ export const AIChatView: React.FC = () => {
               >
                 <X size={11} />
               </button>
-            </span>
+            </Badge>
           )}
           {mentionedPages.map((mp) => (
             <span
               key={mp.id}
-              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-surface-chrome border border-border-hairline text-[11px] text-ink-primary"
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-surface-chrome border border-border-hairline text-[11px] text-ink-primary"
             >
               <span>{mp.icon}</span>
               <span className="font-mono text-[10px] text-accent-cobalt">{mp.code}</span>
@@ -493,15 +494,15 @@ export const AIChatView: React.FC = () => {
           }
         }}
         rows={3}
-        placeholder="Ask anything, @ to mention pages, $ skills, or / commands (Powered by Vercel AI SDK)"
-        className="w-full bg-transparent resize-none text-sm text-ink-primary placeholder:text-ink-muted focus:outline-none leading-relaxed"
+        placeholder="Ask anything, @ to mention pages, or request DBML / Mermaid specs..."
+        className="w-full bg-transparent resize-none text-[13.5px] text-ink-primary placeholder:text-ink-muted focus:outline-none leading-relaxed"
       />
 
       {/* Mention Popover */}
       {isMentionMenuOpen && (
-        <div className="absolute left-3 bottom-14 z-30 w-72 max-h-56 overflow-y-auto rounded-lg bg-surface-chrome border border-border-hairline shadow-2xl p-1.5 space-y-0.5 animate-popover-enter">
-          <div className="px-2 py-1 font-mono text-[10px] text-ink-muted uppercase flex items-center justify-between">
-            <span>LAMPIRKAN HALAMAN (@MENTION)</span>
+        <div className="absolute left-3 bottom-14 z-30 w-72 max-h-56 overflow-y-auto rounded-[10px] bg-surface-elevated border border-border-hairline shadow-popover p-1.5 space-y-0.5 animate-popover-enter">
+          <div className="px-2 py-1 text-[10.5px] font-medium text-ink-muted flex items-center justify-between border-b border-border-subtle mb-1">
+            <span>Attach page (@mention)</span>
             <button
               type="button"
               onClick={() => setIsMentionMenuOpen(false)}
@@ -522,11 +523,12 @@ export const AIChatView: React.FC = () => {
                   }
                   handleToggleMentionPage(p.id)
                 }}
-                className={`w-full px-2 py-1.5 rounded text-left text-xs flex items-center justify-between ${
+                className={cn(
+                  'w-full px-2 py-1.5 rounded-[7px] text-left text-xs flex items-center justify-between transition-colors',
                   selected
-                    ? 'bg-accent-cobalt/15 text-accent-cobalt'
+                    ? 'bg-[var(--pill-cobalt-bg)] text-[var(--pill-cobalt-text)] font-medium'
                     : 'text-ink-secondary hover:bg-surface-hover hover:text-ink-primary'
-                }`}
+                )}
               >
                 <span className="flex items-center gap-2 truncate">
                   <span>{p.icon}</span>
@@ -539,14 +541,14 @@ export const AIChatView: React.FC = () => {
         </div>
       )}
 
-      {/* Bottom Controls Row (Orca Style: + | Ask for approval v | Model v | Submit ^) */}
-      <div className="flex items-center justify-between pt-2 mt-1">
-        <div className="flex items-center gap-2 relative">
+      {/* Bottom Controls Row */}
+      <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-border-subtle">
+        <div className="flex items-center gap-1.5 relative">
           <button
             type="button"
             onClick={() => setIsMentionMenuOpen(!isMentionMenuOpen)}
             title="Lampirkan Halaman NoteIT (@mention)"
-            className="w-7 h-7 rounded-full hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
+            className="w-7 h-7 rounded-[7px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
             <Plus size={15} />
           </button>
@@ -555,9 +557,9 @@ export const AIChatView: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsApprovalMenuOpen(!isApprovalMenuOpen)}
-              className="px-2.5 py-1 rounded-md hover:bg-surface-hover text-xs text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
+              className="h-7 px-2.5 rounded-[7px] hover:bg-surface-hover text-xs text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
             >
-              <Hand size={13} className="text-accent-amber" />
+              <Hand size={12.5} className="text-accent-amber" />
               <span>
                 {APPROVAL_MODES.find((m) => m.id === preferences.aiApprovalMode)?.label ||
                   'Ask for approval'}
@@ -566,7 +568,7 @@ export const AIChatView: React.FC = () => {
             </button>
 
             {isApprovalMenuOpen && (
-              <div className="absolute left-0 bottom-9 z-30 w-52 rounded-lg bg-surface-chrome border border-border-hairline shadow-xl p-1 space-y-0.5 animate-popover-enter">
+              <div className="absolute left-0 bottom-9 z-30 w-52 rounded-[10px] bg-surface-elevated border border-border-hairline shadow-popover p-1.5 space-y-0.5 animate-popover-enter">
                 {APPROVAL_MODES.map((m) => (
                   <button
                     key={m.id}
@@ -575,11 +577,12 @@ export const AIChatView: React.FC = () => {
                       updatePreferences({ aiApprovalMode: m.id })
                       setIsApprovalMenuOpen(false)
                     }}
-                    className={`w-full px-2.5 py-1.5 rounded text-left text-xs ${
+                    className={cn(
+                      'w-full px-2.5 py-1.5 rounded-[7px] text-left text-xs transition-colors',
                       preferences.aiApprovalMode === m.id
                         ? 'bg-surface-hover text-ink-primary font-medium'
                         : 'text-ink-secondary hover:bg-surface-hover hover:text-ink-primary'
-                    }`}
+                    )}
                   >
                     {m.label}
                   </button>
@@ -594,7 +597,7 @@ export const AIChatView: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
-              className="px-2.5 py-1 rounded-md hover:bg-surface-hover text-xs text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
+              className="h-7 px-2.5 rounded-[7px] hover:bg-surface-hover text-xs text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
             >
               <Sparkles size={12} className="text-accent-cobalt" />
               <span>{preferences.aiModel}</span>
@@ -602,7 +605,7 @@ export const AIChatView: React.FC = () => {
             </button>
 
             {isModelMenuOpen && (
-              <div className="absolute right-0 bottom-9 z-30 w-64 rounded-lg bg-surface-chrome border border-border-hairline shadow-xl p-1 space-y-0.5 animate-popover-enter">
+              <div className="absolute right-0 bottom-9 z-30 w-64 rounded-[10px] bg-surface-elevated border border-border-hairline shadow-popover p-1.5 space-y-0.5 animate-popover-enter">
                 {MODEL_OPTIONS.map((mdl) => (
                   <button
                     key={mdl}
@@ -611,11 +614,12 @@ export const AIChatView: React.FC = () => {
                       updatePreferences({ aiModel: mdl })
                       setIsModelMenuOpen(false)
                     }}
-                    className={`w-full px-2.5 py-1.5 rounded text-left text-xs ${
+                    className={cn(
+                      'w-full px-2.5 py-1.5 rounded-[7px] text-left text-xs transition-colors',
                       preferences.aiModel === mdl
                         ? 'bg-surface-hover text-ink-primary font-medium'
                         : 'text-ink-secondary hover:bg-surface-hover hover:text-ink-primary'
-                    }`}
+                    )}
                   >
                     {mdl}
                   </button>
@@ -627,9 +631,9 @@ export const AIChatView: React.FC = () => {
                       setIsModelMenuOpen(false)
                       setActiveMainView('settings', 'ai-providers')
                     }}
-                    className="w-full px-2.5 py-1 rounded text-left font-mono text-[10px] text-accent-cobalt hover:bg-surface-hover"
+                    className="w-full px-2.5 py-1.5 rounded-[7px] text-left text-[11px] font-medium text-accent-cobalt hover:bg-surface-hover transition-colors"
                   >
-                    ⚙️ Konfigurasi API Key / Ollama →
+                    Configure API Key / Ollama →
                   </button>
                 </div>
               </div>
@@ -641,11 +645,12 @@ export const AIChatView: React.FC = () => {
             onClick={() => void handleSendMessage()}
             disabled={!promptText.trim() || isStreamingReply}
             title="Kirim Pesan (Enter)"
-            className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+            className={cn(
+              'w-7 h-7 rounded-[8px] flex items-center justify-center transition-all',
               promptText.trim() && !isStreamingReply
-                ? 'bg-accent-cobalt text-white shadow-md hover:scale-105'
+                ? 'btn-primary-sheen'
                 : 'bg-surface-hover text-ink-muted cursor-not-allowed'
-            }`}
+            )}
           >
             <ArrowUp size={14} />
           </button>
@@ -703,18 +708,17 @@ export const AIChatView: React.FC = () => {
           })}
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 font-mono text-[11px] text-ink-secondary">
-          <span className="px-2 py-0.5 rounded bg-surface-elevated border border-border-hairline text-accent-amber">
-            VERCEL AI SDK
-          </span>
+        <div className="hidden sm:flex items-center gap-2 text-xs">
+          <Badge tone="amber">AI SDK</Badge>
           {activePage && (
-            <button
-              type="button"
+            <Button
+              variant="subtle"
+              size="xs"
               onClick={() => handleToggleMentionPage(activePage.id)}
-              className="px-2 py-0.5 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-accent-cobalt"
+              className="font-mono text-[11px]"
             >
               + @{activePage.code}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -722,20 +726,19 @@ export const AIChatView: React.FC = () => {
       {/* Main Body: Empty Hero State OR Active Conversation Thread */}
       {activeSession.messages.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center px-6 pb-12 select-none">
-          {/* Orca-Style Centered Heading */}
           <div className="text-center mb-6 relative">
             <div className="text-xs text-ink-muted font-medium mb-1">Let&apos;s work in</div>
             <button
               type="button"
               onClick={() => setIsModeMenuOpen(!isModeMenuOpen)}
-              className="inline-flex items-center gap-2 font-display text-3xl font-bold text-ink-primary hover:opacity-90 transition-opacity"
+              className="inline-flex items-center gap-2 font-display text-[28px] tracking-[-0.025em] font-bold text-ink-primary hover:opacity-90 transition-opacity"
             >
               <span>{chatMode}</span>
-              <ChevronDown size={20} className="text-ink-muted mt-1" />
+              <ChevronDown size={19} className="text-ink-muted mt-1" />
             </button>
 
             {isModeMenuOpen && (
-              <div className="absolute left-1/2 -translate-x-1/2 top-16 z-30 w-56 rounded-lg bg-surface-elevated border border-border-hairline shadow-2xl p-1 space-y-0.5 animate-popover-enter">
+              <div className="absolute left-1/2 -translate-x-1/2 top-16 z-30 w-56 rounded-[10px] bg-surface-elevated border border-border-hairline shadow-popover p-1.5 space-y-0.5 animate-popover-enter">
                 {CHAT_MODES.map((m) => (
                   <button
                     key={m}
@@ -744,11 +747,12 @@ export const AIChatView: React.FC = () => {
                       setChatMode(m)
                       setIsModeMenuOpen(false)
                     }}
-                    className={`w-full px-3 py-1.5 rounded text-left text-xs ${
+                    className={cn(
+                      'w-full px-3 py-1.5 rounded-[7px] text-left text-xs transition-colors',
                       chatMode === m
-                        ? 'bg-accent-cobalt/15 text-accent-cobalt font-semibold'
+                        ? 'bg-[var(--pill-cobalt-bg)] text-[var(--pill-cobalt-text)] font-medium'
                         : 'text-ink-secondary hover:bg-surface-hover hover:text-ink-primary'
-                    }`}
+                    )}
                   >
                     {m}
                   </button>
@@ -766,9 +770,9 @@ export const AIChatView: React.FC = () => {
                 key={sp.label}
                 type="button"
                 onClick={() => void handleSendMessage(sp.prompt)}
-                className="px-3 py-1.5 rounded-full bg-surface-elevated/80 hover:bg-surface-hover border border-border-hairline text-xs text-ink-secondary hover:text-ink-primary transition-colors flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-[8px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs text-ink-secondary hover:text-ink-primary transition-colors flex items-center gap-1.5"
               >
-                <Sparkles size={11} className="text-accent-cobalt" />
+                <Sparkles size={11.5} className="text-accent-cobalt" />
                 <span>{sp.label}</span>
               </button>
             ))}
@@ -857,7 +861,7 @@ export const AIChatView: React.FC = () => {
                             <div className="font-mono text-[10px] text-ink-muted uppercase">
                               BLOCK [{blk.type.toUpperCase()}]
                             </div>
-                            <pre className="p-2.5 rounded bg-[#090B10] border border-[#222634] font-mono text-[11px] text-[#E5E7EB] overflow-x-auto selectable-text">
+                            <pre className="p-3 rounded-[8px] bg-canvas-primary border border-border-hairline font-mono text-[11px] text-ink-primary overflow-x-auto selectable-text">
                               <code>{blk.content}</code>
                             </pre>
                           </div>
@@ -866,34 +870,31 @@ export const AIChatView: React.FC = () => {
                         <div className="flex items-center justify-between pt-1">
                           {prop.status === 'pending' ? (
                             <div className="flex items-center gap-2">
-                              <button
-                                type="button"
+                              <Button
+                                variant="primary"
+                                size="sm"
                                 onClick={() => void handleApproveProposal(msg.id, prop)}
-                                className="px-3 py-1 rounded bg-accent-cobalt text-white text-xs font-medium flex items-center gap-1.5 hover:opacity-90"
                               >
                                 <Check size={12} />
                                 <span>Approve &amp; Insert to {prop.targetPageCode}</span>
-                              </button>
-                              <button
-                                type="button"
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
                                 onClick={() => handleRejectProposal(msg.id, prop.proposalId)}
-                                className="px-2.5 py-1 rounded bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs text-ink-secondary hover:text-ink-primary"
                               >
                                 Reject
-                              </button>
+                              </Button>
                             </div>
                           ) : (
-                            <span
-                              className={`font-mono text-[11px] flex items-center gap-1 ${
-                                prop.status === 'approved'
-                                  ? 'text-[#10B981]'
-                                  : 'text-ink-muted line-through'
-                              }`}
+                            <Badge
+                              tone={prop.status === 'approved' ? 'teal' : 'neutral'}
+                              size="sm"
                             >
                               {prop.status === 'approved'
-                                ? `✓ Disetujui & disisipkan ke ${prop.targetPageCode}`
-                                : '✕ Ditolak'}
-                            </span>
+                                ? `Disetujui & disisipkan ke ${prop.targetPageCode}`
+                                : 'Ditolak'}
+                            </Badge>
                           )}
                         </div>
                       </div>
