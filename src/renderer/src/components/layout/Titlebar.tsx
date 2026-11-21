@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { BUILTIN_THEMES } from '@renderer/lib/themes'
+import noteitLogo from '@renderer/assets/noteit-logo.png'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,12 +79,12 @@ export const Titlebar: React.FC = () => {
           title="Back to main workbench"
           aria-label="Back to main workbench"
         >
-          <div
+          <img
+            src={noteitLogo}
+            alt=""
             aria-hidden="true"
-            className="h-[18px] w-[18px] rounded-[5px] bg-ink-primary text-canvas-primary flex items-center justify-center text-[10px] font-display font-bold shadow-sm"
-          >
-            N
-          </div>
+            className="h-[19px] w-[19px] rounded-[5px] shadow-sm select-none"
+          />
           <span className="font-display font-semibold text-[12.5px] tracking-[-0.015em] text-ink-primary">
             NoteIT
           </span>

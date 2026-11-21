@@ -239,6 +239,11 @@ function registerAssetProtocol(): void {
   })
 }
 
+function resolveAppIconPath(): string {
+  const baseDir = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../../resources')
+  return path.join(baseDir, 'icon.png')
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1480,
@@ -247,6 +252,7 @@ function createWindow(): void {
     minHeight: 680,
     show: false,
     frame: false,
+    icon: resolveAppIconPath(),
     backgroundColor: '#141417',
     title: 'NoteIT — Obsidian Studio Workbench',
     webPreferences: {
@@ -308,6 +314,7 @@ function createCaptureWindow(): BrowserWindow {
     alwaysOnTop: true,
     skipTaskbar: true,
     show: false,
+    icon: resolveAppIconPath(),
     backgroundColor: '#1C1C21',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),

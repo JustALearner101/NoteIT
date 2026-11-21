@@ -1,0 +1,50 @@
+appId: com.noteit.workbench
+productName: NoteIT
+copyright: Copyright © 2026 NoteIT
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+  - '!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}'
+  - '!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}'
+  - '!**/node_modules/*.d.ts'
+asar: true
+asarUnpack:
+  - node_modules/@lydell/node-pty/**
+extraResources:
+  - from: resources/help
+    to: help
+  - from: resources/icon.png
+    to: icon.png
+win:
+  icon: build/icon.ico
+  executableName: NoteIT
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: msi
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: NoteIT
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  artifactName: NoteIT-Setup-${version}-${arch}.${ext}
+msi:
+  oneClick: false
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: NoteIT
+  artifactName: NoteIT-${version}-${arch}.${ext}
