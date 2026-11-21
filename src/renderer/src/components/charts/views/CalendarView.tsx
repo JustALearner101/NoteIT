@@ -84,10 +84,10 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
           <button
             type="button"
             onClick={() => goMonth(-1)}
-            aria-label="Bulan sebelumnya"
+            aria-label="Previous month"
             className="w-7 h-7 rounded-[7px] border border-border-hairline bg-surface-elevated hover:bg-surface-hover text-ink-secondary hover:text-ink-primary flex items-center justify-center transition-colors"
           >
-            <ChevronLeft size={13} />
+            <ChevronLeft size={13} aria-hidden="true" />
           </button>
           <span className="min-w-[136px] text-center font-display text-[13px] font-semibold text-ink-primary">
             {label}
@@ -95,30 +95,31 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
           <button
             type="button"
             onClick={() => goMonth(1)}
-            aria-label="Bulan berikutnya"
+            aria-label="Next month"
             className="w-7 h-7 rounded-[7px] border border-border-hairline bg-surface-elevated hover:bg-surface-hover text-ink-secondary hover:text-ink-primary flex items-center justify-center transition-colors"
           >
-            <ChevronRight size={13} />
+            <ChevronRight size={13} aria-hidden="true" />
           </button>
           <button
             type="button"
             onClick={goToday}
             className="h-7 px-2.5 ml-1 rounded-[7px] border border-border-hairline bg-surface-elevated hover:bg-surface-hover text-xs font-medium text-ink-secondary hover:text-ink-primary transition-colors"
           >
-            Hari ini
+            Today
           </button>
         </div>
         <span className="text-xs text-ink-muted tabular-nums">
-          {items.length === 0 ? 'Belum ada task' : `${items.length} tasks`}
+          {items.length === 0 ? 'No tasks yet' : `${items.length} tasks`}
         </span>
       </div>
 
       <div className="p-3.5">
-        <div className="rounded-[10px] border border-border-hairline overflow-hidden">
-          <div className="grid grid-cols-7 bg-surface-chrome/60 border-b border-border-hairline">
+        <div role="grid" aria-label={`Calendar for ${label}`} className="rounded-[10px] border border-border-hairline overflow-hidden">
+          <div role="row" className="grid grid-cols-7 bg-surface-chrome/60 border-b border-border-hairline">
             {WEEKDAY_LABELS.map((day) => (
               <span
                 key={day}
+                role="columnheader"
                 className="py-2 text-center text-[11px] font-medium text-ink-muted"
               >
                 {day}
@@ -127,7 +128,7 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
           </div>
 
           {grid.map((week) => (
-            <div key={week[0]} className="grid grid-cols-7">
+            <div key={week[0]} role="row" className="grid grid-cols-7">
               {week.map((iso) => {
                 const inMonth = isSameMonth(iso, cursor.year, cursor.month)
                 const isToday = iso === today
@@ -139,9 +140,18 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
                 return (
                   <div
                     key={iso}
+                    role="gridcell"
+                    aria-selected={isSelected}
+                    tabIndex={0}
                     onClick={() => setSelectedDate(iso)}
+                    onKeyDown={(e) => {
+                      if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault()
+                        setSelectedDate(iso)
+                      }
+                    }}
                     className={
-                      'min-h-[88px] p-1.5 border-b border-r border-border-subtle cursor-pointer transition-colors ' +
+                      'min-h-[88px] p-1.5 border-b border-r border-border-subtle cursor-pointer transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-cobalt ' +
                       (inMonth ? 'bg-surface-elevated/55 ' : 'bg-surface-chrome/40 ') +
                       (isSelected
                         ? 'ring-1 ring-inset ring-accent-cobalt bg-[var(--pill-cobalt-bg)]'
@@ -212,8 +222,8 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
             {selectedTask ? ' · ' + selectedTask.code : ''}
           </span>
           <button type="button" onClick={() => handleAddTask(actionDate)} className={ACTION_BUTTON_CLASS}>
-            <CalendarPlus size={12} />
-            <span>Tambah task</span>
+            <CalendarPlus size={12} aria-hidden="true" />
+            <span>Add task</span>
           </button>
           <button
             type="button"
@@ -223,7 +233,7 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
             }}
             className={ACTION_BUTTON_CLASS}
           >
-            -1 hari
+            -1 day
           </button>
           <button
             type="button"
@@ -233,7 +243,7 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
             }}
             className={ACTION_BUTTON_CLASS}
           >
-            +1 hari
+            +1 day
           </button>
           <button
             type="button"
@@ -241,7 +251,7 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
             onClick={setStart}
             className={ACTION_BUTTON_CLASS}
           >
-            Set mulai
+            Set start
           </button>
           <button
             type="button"
@@ -249,7 +259,7 @@ export const CalendarView: React.FC<DatabaseViewProps> = ({
             onClick={setEnd}
             className={ACTION_BUTTON_CLASS}
           >
-            Set selesai
+            Set end
           </button>
         </div>
       )}

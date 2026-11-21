@@ -14,7 +14,7 @@ interface AssetBlockProps {
  */
 export const AssetBlock: React.FC<AssetBlockProps> = ({ block }) => {
   const { assetId, assetExt, assetMime, assetName, assetSize } = block
-  const name = assetName || block.content || 'Aset'
+  const name = assetName || block.content || 'Asset'
   const sizeLabel = typeof assetSize === 'number' ? formatAssetSize(assetSize) : ''
   const mime = assetMime || ''
 
@@ -29,7 +29,7 @@ export const AssetBlock: React.FC<AssetBlockProps> = ({ block }) => {
   if (!assetId || !assetExt) {
     return (
       <div className="rounded-[10px] border border-dashed border-border-hairline bg-surface-elevated px-4 py-4 text-xs text-ink-muted flex items-center gap-2">
-        <Paperclip size={13} /> Aset belum terhubung ke berkas mana pun.
+        <Paperclip size={13} aria-hidden="true" /> Asset is not linked to any file yet.
       </div>
     )
   }
@@ -41,18 +41,20 @@ export const AssetBlock: React.FC<AssetBlockProps> = ({ block }) => {
       <button
         type="button"
         onClick={saveAs}
-        title="Simpan sebagai berkas..."
+        title="Save as file..."
+        aria-label={`Save ${name} as file`}
         className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-secondary hover:text-ink-primary transition-colors"
       >
-        <Download size={12} />
+        <Download size={12} aria-hidden="true" />
       </button>
       <button
         type="button"
         onClick={openExternal}
-        title="Buka di aplikasi eksternal"
+        title="Open in external application"
+        aria-label={`Open ${name} externally`}
         className="p-1 rounded-[6px] hover:bg-surface-hover text-ink-secondary hover:text-ink-primary transition-colors"
       >
-        <ExternalLink size={12} />
+        <ExternalLink size={12} aria-hidden="true" />
       </button>
     </span>
   )
@@ -110,14 +112,14 @@ export const AssetBlock: React.FC<AssetBlockProps> = ({ block }) => {
         onClick={openExternal}
         className="h-7 px-2.5 rounded-[7px] bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
       >
-        <ExternalLink size={11.5} /> Buka
+        <ExternalLink size={11.5} aria-hidden="true" /> Open
       </button>
       <button
         type="button"
         onClick={saveAs}
         className="h-7 px-2.5 rounded-[7px] bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
       >
-        <Download size={11.5} /> Simpan
+        <Download size={11.5} aria-hidden="true" /> Save
       </button>
     </div>
   )

@@ -96,6 +96,7 @@ export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
           </div>
           <input
             type="text"
+            aria-label="Database block title"
             value={title}
             size={Math.max(18, title.length + 2)}
             onChange={(e) => onChange({ databaseTitle: e.target.value })}
@@ -106,9 +107,9 @@ export const ProjectDatabaseBlock: React.FC<ProjectDatabaseBlockProps> = ({
           </span>
           {conflicts.length > 0 && (
             <Badge tone="red" size="sm">
-              <AlertTriangle size={11} />
+              <AlertTriangle size={11} aria-hidden="true" />
               <span>
-                {conflicts.length} konflik ({conflicts[0].fromCode} → {conflicts[0].toCode})
+                {conflicts.length} {conflicts.length === 1 ? 'conflict' : 'conflicts'} ({conflicts[0].fromCode} → {conflicts[0].toCode})
               </span>
             </Badge>
           )}

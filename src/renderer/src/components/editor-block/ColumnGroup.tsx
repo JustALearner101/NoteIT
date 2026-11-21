@@ -146,7 +146,7 @@ export function ColumnGroup({
     <div
       ref={containerRef}
       role="group"
-      aria-label={header.content || 'Grup kolom'}
+      aria-label={header.content || 'Column group'}
       data-column-group={header.id}
       className="relative grid my-2"
       style={{ gridTemplateColumns: template }}
@@ -164,7 +164,7 @@ export function ColumnGroup({
           <div className="flex flex-col">
             {columnBlocks.length === 0 ? (
               <div className="text-[11px] text-ink-muted py-2 select-none">
-                Kolom kosong
+                Empty column
               </div>
             ) : (
               columnBlocks.map((block) => (
@@ -175,11 +175,12 @@ export function ColumnGroup({
           {onRemoveColumn && columnCount > 1 && (
             <button
               type="button"
-              aria-label={`Hapus kolom ${columnIndex + 1}`}
+              aria-label={`Remove column ${columnIndex + 1}`}
+              title={`Remove column ${columnIndex + 1}`}
               onClick={() => onRemoveColumn(columnIndex)}
               className="mt-1 p-1 rounded-[6px] bg-surface-elevated hover:bg-[var(--pill-red-bg)] border border-border-hairline text-ink-secondary hover:text-[var(--pill-red-text)] transition-colors"
             >
-              <X size={10} />
+              <X size={10} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -189,6 +190,7 @@ export function ColumnGroup({
         <div
           key={`${header.id}-divider-${dividerIndex}`}
           role={readOnly ? undefined : 'separator'}
+          aria-label={readOnly ? undefined : `Resize column divider ${dividerIndex + 1}`}
           aria-orientation={readOnly ? undefined : 'vertical'}
           aria-valuenow={readOnly ? undefined : Math.round(active[dividerIndex])}
           aria-valuemin={readOnly ? undefined : MIN_COLUMN_PCT}

@@ -570,11 +570,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         notebooks: state.notebooks.map((nb) => (nb.id === notebookId ? updated : nb))
       }))
       get().showToast(
-        repoPath ? `Repositori dihubungkan: ${repoPath.split(/[/\\]/).pop()}` : 'Hubungan repositori dilepas'
+        repoPath ? `Repository bound: ${repoPath.split(/[/\\]/).pop()}` : 'Repository unbound'
       )
     } catch (e) {
       console.error('Failed to update notebook repo:', e)
-      get().showToast('Gagal memperbarui hubungan repositori.')
+      get().showToast('Failed to update repository binding.')
     }
   },
 
@@ -587,10 +587,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       set((state) => ({
         sections: state.sections.map((sec) => (sec.id === sectionId ? updated : sec))
       }))
-      get().showToast('Override repositori section diperbarui')
+      get().showToast('Section repository override updated')
     } catch (e) {
       console.error('Failed to update section repo override:', e)
-      get().showToast('Gagal memperbarui repositori section.')
+      get().showToast('Failed to update section repository.')
     }
   },
 
@@ -643,7 +643,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         preferences: nextPrefs
       }
     })
-    get().showToast(`Tema kustom '${customTheme.name}' disimpan & diterapkan`)
+    get().showToast(`Custom theme '${customTheme.name}' saved & applied`)
   },
 
   deleteCustomTheme: (themeId) => {
@@ -666,7 +666,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         preferences: nextPrefs
       }
     })
-    get().showToast('Tema kustom dihapus')
+    get().showToast('Custom theme deleted')
   },
 
   updatePreferences: (patch) => {
@@ -704,9 +704,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (window.noteitAPI?.openHelpExternal) {
       const res = await window.noteitAPI.openHelpExternal()
       if (res.ok) {
-        get().showToast('Membuka NoteIT Help Center di browser...')
+        get().showToast('Opening NoteIT Help Center in browser...')
       } else {
-        get().showToast(res.error || 'Gagal membuka Help Center')
+        get().showToast(res.error || 'Failed to open Help Center')
       }
     }
   },
@@ -729,20 +729,20 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const nb = await window.noteitAPI.createNotebook(input)
     await get().loadWorkspace()
     get().setActiveNotebook(nb.id)
-    get().showToast(`Notebook '${nb.name}' dibuat`)
+    get().showToast(`Notebook '${nb.name}' created`)
   },
 
   createSection: async (input) => {
     const sec = await window.noteitAPI.createSection(input)
     await get().loadWorkspace()
-    get().showToast(`Section '${sec.name}' (${sec.code}) ditambahkan`)
+    get().showToast(`Section '${sec.name}' (${sec.code}) added`)
   },
 
   createPage: async (input) => {
     const page = await window.noteitAPI.createPage(input)
     await get().loadWorkspace()
     get().openPageInTab(page.id)
-    get().showToast(`Halaman '${page.title}' (${page.code}) dibuat`)
+    get().showToast(`Page '${page.title}' (${page.code}) created`)
     return page
   },
 
@@ -781,8 +781,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     saveQueue.flushAll()
     get().showToast(
       mode === 'canvas'
-        ? 'Beralih ke Mode Kanvas Spasial (24px Crosshair Grid)'
-        : 'Beralih ke Mode Dokumen Blok'
+        ? 'Switched to Spatial Canvas mode (24px grid)'
+        : 'Switched to Block Document mode'
     )
   },
 
@@ -794,7 +794,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     get().closeTab(pageId)
     await get().loadWorkspace()
     if (target) {
-      get().showToast(`Halaman '${target.code}' dihapus`)
+      get().showToast(`Page '${target.code}' deleted`)
     }
   },
 

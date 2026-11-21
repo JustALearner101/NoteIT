@@ -81,7 +81,7 @@ export async function renderGraphvizToSvg(
       result.errors
         ?.filter((error) => error.level !== 'warning')
         .map((error) => error.message)
-        .join('\n') || 'Sintaks DOT tidak valid.'
+        .join('\n') || 'Invalid DOT syntax.'
     throw new Error(message)
   }
 

@@ -90,7 +90,7 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
     setPan({ x: 0, y: 0 })
     setZoom(1)
     onChange({ dbmlLayout: nextLayout })
-    showToast('Auto-Layout skema DBML diterapkan')
+    showToast('DBML schema auto-layout applied')
   }
 
   const handleMouseDownTable = (e: React.MouseEvent, table: DBMLTable): void => {
@@ -162,7 +162,7 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
       extension: 'sql'
     })
     if (res.saved) {
-      showToast(`Skema diekspor ke SQL (${dialect.toUpperCase()})`)
+      showToast(`Schema exported to SQL (${dialect.toUpperCase()})`)
     }
   }
 
@@ -198,9 +198,9 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
             variant="secondary"
             size="xs"
             onClick={handleAutoLayout}
-            title="Susun Ulang Posisi Tabel Otomatis"
+            title="Auto-arrange table positions"
           >
-            <Sparkles size={11.5} className="text-accent-amber" />
+            <Sparkles size={11.5} className="text-accent-amber" aria-hidden="true" />
             <span>Auto-layout</span>
           </Button>
 
@@ -209,7 +209,7 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
             size="xs"
             onClick={() => setSqlModalDialect(sqlModalDialect ? null : 'postgres')}
           >
-            <Download size={11.5} />
+            <Download size={11.5} aria-hidden="true" />
             <span>Export SQL</span>
           </Button>
 
@@ -217,9 +217,11 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
             variant="secondary"
             size="icon-xs"
             onClick={() => onChange({ wide: !wide })}
-            title={wide ? 'Kembalikan ke Lebar Standar' : 'Rentangkan Lebar Penuh'}
+            title={wide ? 'Restore standard width' : 'Expand to full width'}
+            aria-label={wide ? 'Restore standard width' : 'Expand to full width'}
+            aria-pressed={wide}
           >
-            {wide ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
+            {wide ? <Minimize2 size={11} aria-hidden="true" /> : <Maximize2 size={11} aria-hidden="true" />}
           </Button>
         </div>
       </div>
@@ -247,22 +249,22 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
                 size="xs"
                 onClick={() => {
                   navigator.clipboard.writeText(generateSQLFromDBML(parsed, sqlModalDialect))
-                  showToast('SQL DDL disalin ke clipboard')
+                  showToast('SQL DDL copied to clipboard')
                 }}
               >
-                <Copy size={11} />
-                <span>Salin SQL</span>
+                <Copy size={11} aria-hidden="true" />
+                <span>Copy SQL</span>
               </Button>
               <Button
                 variant="primary"
                 size="xs"
                 onClick={() => handleExportSQL(sqlModalDialect)}
               >
-                <Download size={11} />
-                <span>Simpan .sql</span>
+                <Download size={11} aria-hidden="true" />
+                <span>Save .sql</span>
               </Button>
               <Button variant="ghost" size="xs" onClick={() => setSqlModalDialect(null)}>
-                Tutup
+                Close
               </Button>
             </div>
           </div>
@@ -293,6 +295,7 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
                 ))}
               </div>
               <textarea
+                aria-label="DBML schema code"
                 value={code}
                 onChange={(e) => onChange({ content: e.target.value })}
                 spellCheck={false}
@@ -309,7 +312,7 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
                     key={i}
                     className="flex items-start gap-2 font-mono text-[11px] text-[var(--pill-red-text)]"
                   >
-                    <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                    <AlertTriangle size={13} className="shrink-0 mt-0.5" aria-hidden="true" />
                     <span>{err.message}</span>
                   </div>
                 ))}
@@ -333,16 +336,18 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
             <div className="absolute right-3.5 bottom-3.5 z-20 flex items-center gap-0.5 p-1 rounded-[9px] bg-surface-elevated/95 border border-border-hairline font-mono text-[11px] shadow-popover">
               <button
                 type="button"
+                aria-label="Zoom out ERD diagram"
                 onClick={(e) => {
                   e.stopPropagation()
                   setZoom((z) => Math.max(0.55, +(z - 0.1).toFixed(2)))
                 }}
                 className="h-6 w-6 rounded-[6px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
               >
-                <ZoomOut size={12.5} />
+                <ZoomOut size={12.5} aria-hidden="true" />
               </button>
               <button
                 type="button"
+                aria-label="Reset ERD diagram zoom"
                 onClick={(e) => {
                   e.stopPropagation()
                   setZoom(1)
@@ -354,13 +359,14 @@ export const DBMLStudio: React.FC<DBMLStudioProps> = ({
               </button>
               <button
                 type="button"
+                aria-label="Zoom in ERD diagram"
                 onClick={(e) => {
                   e.stopPropagation()
                   setZoom((z) => Math.min(1.6, +(z + 0.1).toFixed(2)))
                 }}
                 className="h-6 w-6 rounded-[6px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
               >
-                <ZoomIn size={12.5} />
+                <ZoomIn size={12.5} aria-hidden="true" />
               </button>
             </div>
 

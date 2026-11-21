@@ -268,17 +268,17 @@ export const BottomTerminalDrawer: React.FC = () => {
   const handleCaptureErrorToSpec = async (): Promise<void> => {
     const activeTab = tabs.find((t) => t.id === activeTabId)
     if (!activeTab || !activeTab.bufferText) {
-      showToast('Tidak ada buffer teks terminal untuk disalin.')
+      showToast('No terminal text buffer to copy.')
       return
     }
 
     const currentPage = pages.find((p) => p.id === activePageId)
     if (!currentPage) {
-      showToast('Buka halaman dokumen terlebih dahulu.')
+      showToast('Open a document page first.')
       return
     }
 
-    // Ambil baris-baris terakhir (maks 40 baris)
+    // Grab the latest 40 non-empty lines
     const lines = activeTab.bufferText.split(/\r?\n/)
     const tailLines = lines.slice(-40).filter((l) => l.trim().length > 0)
     const cleanContent = tailLines.join('\n').slice(-2500)
@@ -288,12 +288,12 @@ export const BottomTerminalDrawer: React.FC = () => {
       type: 'callout' as BlockType,
       calloutTitle: `Terminal Trace (${activeTab.title})`,
       calloutColor: 'red',
-      content: cleanContent || 'Tidak ada error teks yang tertangkap.'
+      content: cleanContent || 'No error output captured.'
     }
 
     const nextBlocks = [...currentPage.blocks, newBlock]
     await updatePage({ id: currentPage.id, blocks: nextBlocks })
-    showToast('Cuplikan error terminal disematkan ke halaman spesifikasi!')
+    showToast('Terminal error snippet embedded into the active specification page!')
   }
 
   // Helper membuat tab baru
@@ -348,7 +348,8 @@ export const BottomTerminalDrawer: React.FC = () => {
       <div
         role="separator"
         aria-orientation="horizontal"
-        title="Geser untuk mengubah tinggi terminal, double-click untuk reset (280px)"
+        aria-label="Resize terminal drawer height"
+        title="Drag to resize terminal height, double-click to reset (280px)"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

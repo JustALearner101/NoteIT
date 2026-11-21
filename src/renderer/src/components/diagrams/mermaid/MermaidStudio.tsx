@@ -57,7 +57,7 @@ export const MermaidStudio: React.FC<MermaidStudioProps> = ({
         if (active) {
           setErrorMsg(
             err?.message?.split('\n')[0] ||
-              'Sintaks diagram Mermaid tidak valid. Periksa deklarasi header (mis. sequenceDiagram, flowchart LR).'
+              'Invalid Mermaid diagram syntax. Check the header declaration (e.g. sequenceDiagram, flowchart LR).'
           )
         }
       }
@@ -77,7 +77,7 @@ export const MermaidStudio: React.FC<MermaidStudioProps> = ({
       extension: 'svg'
     })
     if (res.saved) {
-      showToast('Diagram Mermaid diekspor ke berkas .SVG')
+      showToast('Mermaid diagram exported to .SVG file')
     }
   }
 
@@ -125,6 +125,7 @@ export const MermaidStudio: React.FC<MermaidStudioProps> = ({
             } flex flex-col bg-surface-chrome/45`}
           >
             <textarea
+              aria-label="Mermaid diagram code"
               value={code}
               onChange={(e) => onChange({ content: e.target.value })}
               spellCheck={false}
@@ -132,7 +133,7 @@ export const MermaidStudio: React.FC<MermaidStudioProps> = ({
             />
             {errorMsg && (
               <div className="p-2.5 bg-[var(--pill-red-bg)] border-t border-[var(--pill-red-border)] flex items-start gap-2 font-mono text-[11px] text-[var(--pill-red-text)]">
-                <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                <AlertTriangle size={13} className="shrink-0 mt-0.5" aria-hidden="true" />
                 <span>{errorMsg}</span>
               </div>
             )}
@@ -148,13 +149,15 @@ export const MermaidStudio: React.FC<MermaidStudioProps> = ({
             <div className="absolute right-3.5 bottom-3.5 z-10 flex items-center gap-0.5 p-1 rounded-[9px] bg-surface-elevated/95 border border-border-hairline font-mono text-[11px] shadow-popover">
               <button
                 type="button"
+                aria-label="Zoom out Mermaid diagram"
                 onClick={() => setZoom((z) => Math.max(0.6, +(z - 0.15).toFixed(2)))}
                 className="h-6 w-6 rounded-[6px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary"
               >
-                <ZoomOut size={12} />
+                <ZoomOut size={12} aria-hidden="true" />
               </button>
               <button
                 type="button"
+                aria-label="Reset Mermaid diagram zoom"
                 onClick={() => setZoom(1)}
                 className="px-2 text-ink-primary tabular-nums"
               >
@@ -162,10 +165,11 @@ export const MermaidStudio: React.FC<MermaidStudioProps> = ({
               </button>
               <button
                 type="button"
+                aria-label="Zoom in Mermaid diagram"
                 onClick={() => setZoom((z) => Math.min(1.8, +(z + 0.15).toFixed(2)))}
                 className="h-6 w-6 rounded-[6px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary"
               >
-                <ZoomIn size={12} />
+                <ZoomIn size={12} aria-hidden="true" />
               </button>
             </div>
 
@@ -177,7 +181,7 @@ export const MermaidStudio: React.FC<MermaidStudioProps> = ({
               />
             ) : (
               <span className="text-xs text-ink-muted">
-                Ketik kode Mermaid untuk merender diagram secara langsung.
+                Type Mermaid code to render the diagram live.
               </span>
             )}
           </div>

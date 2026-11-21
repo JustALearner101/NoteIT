@@ -91,7 +91,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
             <Line
               type="monotone"
               dataKey="hours"
-              name="Estimasi Jam"
+              name="Estimated Hours"
               stroke="#2DD4BF"
               strokeWidth={2}
               dot={{ r: 3 }}
@@ -117,7 +117,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
             <Area
               type="monotone"
               dataKey="hours"
-              name="Estimasi Jam"
+              name="Estimated Hours"
               stroke="#2DD4BF"
               fill="#2DD4BF"
               fillOpacity={0.18}
@@ -168,7 +168,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
               fillOpacity={0.26}
             />
             <Radar
-              name="Estimasi Jam"
+              name="Estimated Hours"
               dataKey="hours"
               stroke="#2DD4BF"
               fill="#2DD4BF"
@@ -192,11 +192,11 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
             <YAxis
               type="number"
               dataKey="hours"
-              name="Estimasi Jam"
+              name="Estimated Hours"
               stroke="var(--text-secondary)"
               fontSize={11}
             />
-            <ZAxis type="number" dataKey="durationDays" name="Durasi (hari)" range={[60, 400]} />
+            <ZAxis type="number" dataKey="durationDays" name="Duration (days)" range={[60, 400]} />
             {tooltip}
             <Scatter name="Task" data={itemSeries}>
               {itemSeries.map((entry, index) => (
@@ -221,7 +221,7 @@ export const ChartView: React.FC<ChartViewProps> = ({ items, onChange, chartType
                 <Cell key={'cell-' + index} fill={entry.colorHex} />
               ))}
             </Bar>
-            <Bar dataKey="hours" name="Estimasi Jam" fill="#E5A93C" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="hours" name="Estimated Hours" fill="#E5A93C" radius={[6, 6, 0, 0]} />
           </BarChart>
         )
     }

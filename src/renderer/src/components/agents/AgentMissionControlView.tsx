@@ -31,12 +31,12 @@ import type { AgentSessionRecord, AgentSessionStatus } from '@shared/types/domai
 
 function formatTimeAgo(timestamp: number): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000)
-  if (seconds < 60) return `${Math.max(1, seconds)}d lalu`
+  if (seconds < 60) return `${Math.max(1, seconds)}s ago`
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m lalu`
+  if (minutes < 60) return `${minutes}m ago`
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}j lalu`
-  return `${Math.floor(hours / 24)}h lalu`
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
 }
 
 function renderStatusBadge(status: AgentSessionStatus): React.ReactNode {
@@ -358,12 +358,12 @@ export const AgentMissionControlView: React.FC = () => {
               <FolderGit2 size={26} className="opacity-65" />
             </div>
             <h3 className="font-display text-base font-semibold text-ink-primary mb-1">
-              {sessions.length === 0 ? 'Belum ada misi aktif' : 'Tidak ada hasil filter'}
+              {sessions.length === 0 ? 'No active missions yet' : 'No matching missions'}
             </h3>
             <p className="text-xs text-ink-secondary mb-6 leading-relaxed">
               {sessions.length === 0
-                ? 'Buka dokumen spesifikasi Anda di Workbench, lalu klik "Dispatch Spec" atau tekan Ctrl+Shift+D untuk meluncurkan agen.'
-                : 'Tidak ada sesi agen yang sesuai dengan kriteria filter saat ini.'}
+                ? 'Open your specification document in the Workbench, then click "Dispatch Spec" or press Ctrl+Shift+D to launch an agent.'
+                : 'No agent sessions match the current filter.'}
             </p>
             {sessions.length === 0 && (
               <Button
@@ -371,8 +371,8 @@ export const AgentMissionControlView: React.FC = () => {
                 size="md"
                 onClick={() => setActiveMainView('workbench')}
               >
-                <FileCode2 size={14} />
-                <span>Buka Workbench Spesifikasi</span>
+                <FileCode2 size={14} aria-hidden="true" />
+                <span>Open Specification Workbench</span>
               </Button>
             )}
           </div>
@@ -483,7 +483,7 @@ export const AgentMissionControlView: React.FC = () => {
                         </pre>
                       ) : (
                         <span className="text-ink-muted italic">
-                          Menunggu data keluaran dari terminal...
+                          Waiting for terminal output...
                         </span>
                       )}
                     </div>
@@ -498,7 +498,7 @@ export const AgentMissionControlView: React.FC = () => {
                           size="sm"
                           onClick={() => handleQuickApprove(session.id)}
                         >
-                          <Check size={12.5} />
+                          <Check size={12.5} aria-hidden="true" />
                           <span>Approve (y)</span>
                         </Button>
                       )}
@@ -508,8 +508,8 @@ export const AgentMissionControlView: React.FC = () => {
                         size="sm"
                         onClick={() => handleOpenTerminal(session)}
                       >
-                        <Terminal size={12} className="text-accent-cobalt" />
-                        <span>Buka Terminal</span>
+                        <Terminal size={12} className="text-accent-cobalt" aria-hidden="true" />
+                        <span>Open Terminal</span>
                       </Button>
                     </div>
 
@@ -520,7 +520,7 @@ export const AgentMissionControlView: React.FC = () => {
                             type="button"
                             disabled={isMerging}
                             onClick={() => handleMerge(session)}
-                            title="Gabungkan hasil kerja worktree ini ke cabang utama"
+                            title="Merge this worktree branch into the main branch"
                             className="h-7 px-2.5 rounded-[7px] bg-[var(--pill-teal-bg)] hover:brightness-110 border border-[var(--pill-teal-border)] text-[var(--pill-teal-text)] text-xs font-medium flex items-center gap-1.5 transition-all disabled:opacity-50"
                           >
                             <GitMerge size={12} />

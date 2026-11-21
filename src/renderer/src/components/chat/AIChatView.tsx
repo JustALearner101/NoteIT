@@ -69,15 +69,15 @@ const APPROVAL_MODES = [
 const STARTER_PROMPTS = [
   {
     label: 'Generate DBML schema',
-    prompt: 'Buatkan rancangan skema DBML relasional untuk modul autentikasi & sesi browser.'
+    prompt: 'Design a relational DBML schema for an authentication & browser session module.'
   },
   {
     label: 'Draft Mermaid flowchart',
-    prompt: 'Buatkan diagram alur Mermaid untuk sinkronisasi offline-first SQLite WAL & AI SDK.'
+    prompt: 'Draft a Mermaid flowchart for offline-first SQLite WAL & AI SDK synchronization.'
   },
   {
-    label: 'Review spesifikasi aktif',
-    prompt: 'Ringkas poin arsitektur utama dan ajukan blok spesifikasi baru untuk halaman aktif.'
+    label: 'Review active specification',
+    prompt: 'Summarize the key architectural points and propose new specification blocks for the active page.'
   }
 ]
 
@@ -102,7 +102,7 @@ export const AIChatView: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([
     {
       id: 'session-default',
-      title: 'Sesi Free Chat Baru',
+      title: 'New Free Chat Session',
       mode: 'Free chat',
       messages: [],
       updatedAt: Date.now()
@@ -201,7 +201,7 @@ export const AIChatView: React.FC = () => {
         if (event.type === 'auto-applied') {
           void loadWorkspace()
           showToast(
-            `Auto-insert: ${event.proposal.blocks.length} blok ditambahkan ke ${event.proposal.targetPageCode}`
+            `Auto-insert: ${event.proposal.blocks.length} blocks added to ${event.proposal.targetPageCode}`
           )
         }
       } else if (event.type === 'done') {
@@ -252,7 +252,7 @@ export const AIChatView: React.FC = () => {
     const newId = `session-${Date.now()}`
     const next: ChatSession = {
       id: newId,
-      title: 'Sesi Free Chat Baru',
+      title: 'New Free Chat Session',
       mode: chatMode,
       messages: [],
       updatedAt: Date.now()
@@ -350,7 +350,7 @@ export const AIChatView: React.FC = () => {
     const targetPage =
       pages.find((p) => p.id === proposal.targetPageId) || activePage
     if (!targetPage) {
-      showToast('Halaman target tidak ditemukan')
+      showToast('Target page not found')
       return
     }
 
@@ -385,7 +385,7 @@ export const AIChatView: React.FC = () => {
           : s
       )
     )
-    showToast(`Disetujui: ${proposal.blocks.length} blok ditambahkan ke ${targetPage.code}`)
+    showToast(`Approved: ${proposal.blocks.length} blocks added to ${targetPage.code}`)
   }
 
   const handleRejectProposal = (messageId: string, proposalId: string): void => {
@@ -408,7 +408,7 @@ export const AIChatView: React.FC = () => {
           : s
       )
     )
-    showToast('Usulan perubahan blok ditolak')
+    showToast('Block proposal rejected')
   }
 
   const handleCreateSpecFromMessage = async (msg: ChatMessage): Promise<void> => {
@@ -449,10 +449,11 @@ export const AIChatView: React.FC = () => {
               <span className="truncate max-w-[180px]">{browserContextForAI.title}</span>
               <button
                 type="button"
+                aria-label="Remove browser context"
                 onClick={() => setBrowserContextForAI(null)}
                 className="hover:opacity-75"
               >
-                <X size={11} />
+                <X size={11} aria-hidden="true" />
               </button>
             </Badge>
           )}
@@ -466,10 +467,11 @@ export const AIChatView: React.FC = () => {
               <span className="truncate max-w-[140px]">{mp.title}</span>
               <button
                 type="button"
+                aria-label={`Remove mention ${mp.title}`}
                 onClick={() => handleToggleMentionPage(mp.id)}
                 className="text-ink-muted hover:text-ink-primary"
               >
-                <X size={11} />
+                <X size={11} aria-hidden="true" />
               </button>
             </span>
           ))}
@@ -479,6 +481,7 @@ export const AIChatView: React.FC = () => {
       {/* Textarea */}
       <textarea
         ref={textareaRef}
+        aria-label="Chat message prompt"
         value={promptText}
         onChange={(e) => {
           const val = e.target.value
@@ -505,10 +508,11 @@ export const AIChatView: React.FC = () => {
             <span>Attach page (@mention)</span>
             <button
               type="button"
+              aria-label="Close mention menu"
               onClick={() => setIsMentionMenuOpen(false)}
               className="text-ink-muted hover:text-ink-primary"
             >
-              <X size={11} />
+              <X size={11} aria-hidden="true" />
             </button>
           </div>
           {pages.map((p) => {
@@ -547,10 +551,12 @@ export const AIChatView: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsMentionMenuOpen(!isMentionMenuOpen)}
-            title="Lampirkan Halaman NoteIT (@mention)"
+            title="Attach NoteIT page (@mention)"
+            aria-label="Attach NoteIT page (@mention)"
+            aria-expanded={isMentionMenuOpen}
             className="w-7 h-7 rounded-[7px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
-            <Plus size={15} />
+            <Plus size={15} aria-hidden="true" />
           </button>
 
           <div className="relative">
@@ -644,7 +650,8 @@ export const AIChatView: React.FC = () => {
             type="button"
             onClick={() => void handleSendMessage()}
             disabled={!promptText.trim() || isStreamingReply}
-            title="Kirim Pesan (Enter)"
+            title="Send message (Enter)"
+            aria-label="Send message"
             className={cn(
               'w-7 h-7 rounded-[8px] flex items-center justify-center transition-all',
               promptText.trim() && !isStreamingReply
@@ -652,7 +659,7 @@ export const AIChatView: React.FC = () => {
                 : 'bg-surface-hover text-ink-muted cursor-not-allowed'
             )}
           >
-            <ArrowUp size={14} />
+            <ArrowUp size={14} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -683,18 +690,28 @@ export const AIChatView: React.FC = () => {
             return (
               <div
                 key={sess.id}
+                role="tab"
+                aria-selected={active}
+                tabIndex={0}
                 onClick={() => setActiveSessionId(sess.id)}
+                onKeyDown={(e) => {
+                  if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault()
+                    setActiveSessionId(sess.id)
+                  }
+                }}
                 className={`px-2.5 py-1 rounded-md text-xs cursor-pointer flex items-center gap-2 transition-colors ${
                   active
                     ? 'bg-surface-elevated border border-border-hairline text-ink-primary font-medium'
                     : 'text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
                 }`}
               >
-                <Clock size={11} className="text-ink-muted" />
+                <Clock size={11} className="text-ink-muted" aria-hidden="true" />
                 <span className="truncate max-w-[150px]">{sess.title}</span>
                 {sessions.length > 1 && (
                   <button
                     type="button"
+                    aria-label={`Delete chat session ${sess.title}`}
                     onClick={(e) => {
                       e.stopPropagation()
                       const remaining = sessions.filter((s) => s.id !== sess.id)
@@ -703,7 +720,7 @@ export const AIChatView: React.FC = () => {
                     }}
                     className="text-ink-muted hover:text-[#EF4444]"
                   >
-                    <Trash2 size={11} />
+                    <Trash2 size={11} aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -839,7 +856,7 @@ export const AIChatView: React.FC = () => {
                   )}
 
                   <div className="text-xs text-ink-primary whitespace-pre-line leading-relaxed selectable-text">
-                    {msg.content || (msg.isStreaming ? 'Menyusun respons...' : '')}
+                    {msg.content || (msg.isStreaming ? 'Drafting response...' : '')}
                   </div>
 
                   {/* Orca-Style Approval Gate Cards for Proposed Blocks */}
@@ -895,8 +912,8 @@ export const AIChatView: React.FC = () => {
                               size="sm"
                             >
                               {prop.status === 'approved'
-                                ? `Disetujui & disisipkan ke ${prop.targetPageCode}`
-                                : 'Ditolak'}
+                                ? `Approved & inserted into ${prop.targetPageCode}`
+                                : 'Rejected'}
                             </Badge>
                           )}
                         </div>
@@ -911,8 +928,8 @@ export const AIChatView: React.FC = () => {
                           onClick={() => void handleCreateSpecFromMessage(msg)}
                           className="px-2.5 py-1 rounded bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-[11px] text-ink-primary flex items-center gap-1.5"
                         >
-                          <FilePlus2 size={11} className="text-accent-amber" />
-                          <span>Jadikan Halaman Spesifikasi Baru</span>
+                          <FilePlus2 size={11} className="text-accent-amber" aria-hidden="true" />
+                          <span>Save as New Specification Page</span>
                         </button>
                         {activePage && (
                           <button
@@ -920,8 +937,8 @@ export const AIChatView: React.FC = () => {
                             onClick={() => openPageInTab(activePage.id)}
                             className="px-2.5 py-1 rounded bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-[11px] text-ink-secondary hover:text-ink-primary flex items-center gap-1.5"
                           >
-                            <FileText size={11} className="text-accent-cobalt" />
-                            <span>Buka {activePage.code}</span>
+                            <FileText size={11} className="text-accent-cobalt" aria-hidden="true" />
+                            <span>Open {activePage.code}</span>
                           </button>
                         )}
                       </div>

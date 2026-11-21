@@ -77,6 +77,8 @@ const WorkCardNodeComponent: React.FC<WorkCardCustomNodeProps> = ({ id, selected
               key={c}
               type="button"
               title={MARKER_META[c].label}
+              aria-label={`Set node color to ${MARKER_META[c].label}`}
+              aria-pressed={data.color === c}
               onClick={() => data.onUpdateNode(id, { color: c })}
               className={cn(
                 'w-3 h-3 rounded-full transition-transform',
@@ -91,10 +93,11 @@ const WorkCardNodeComponent: React.FC<WorkCardCustomNodeProps> = ({ id, selected
           <button
             type="button"
             onClick={() => data.onDeleteNode(id)}
-            title="Hapus Node"
+            title="Delete node"
+            aria-label={`Delete node ${data.title}`}
             className="p-0.5 rounded-[5px] text-ink-muted hover:text-accent-rose hover:bg-[var(--pill-red-bg)] transition-colors"
           >
-            <Trash2 size={12.5} />
+            <Trash2 size={12.5} aria-hidden="true" />
           </button>
         </div>
       )}
@@ -151,6 +154,7 @@ const WorkCardNodeComponent: React.FC<WorkCardCustomNodeProps> = ({ id, selected
               </div>
               <input
                 type="text"
+                aria-label={`Node title for ${data.code || 'node'}`}
                 value={data.title}
                 onChange={(e) => data.onUpdateNode(id, { title: e.target.value })}
                 className="w-full bg-transparent font-display font-semibold text-[13.5px] leading-snug text-ink-primary focus:outline-none border-b border-transparent focus:border-accent-cobalt"
@@ -172,6 +176,7 @@ const WorkCardNodeComponent: React.FC<WorkCardCustomNodeProps> = ({ id, selected
 
           {/* Description Body */}
           <textarea
+            aria-label={`Node content for ${data.title}`}
             value={data.content}
             onChange={(e) => data.onUpdateNode(id, { content: e.target.value })}
             rows={2}
@@ -189,10 +194,11 @@ const WorkCardNodeComponent: React.FC<WorkCardCustomNodeProps> = ({ id, selected
                 <button
                   type="button"
                   onClick={() => data.onDeleteNode(id)}
-                  title="Hapus Node"
+                  title="Delete node"
+                  aria-label={`Delete node ${data.title}`}
                   className="nodrag opacity-0 group-hover:opacity-100 p-0.5 rounded text-ink-muted hover:text-accent-rose transition-opacity"
                 >
-                  <Trash2 size={11.5} />
+                  <Trash2 size={11.5} aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -214,9 +220,10 @@ const CanvasZoomPill: React.FC = () => {
         type="button"
         onClick={() => void zoomOut({ duration: 150 })}
         title="Zoom out"
+        aria-label="Zoom out canvas"
         className="h-6 w-6 rounded-[6px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
       >
-        <Minus size={12} />
+        <Minus size={12} aria-hidden="true" />
       </button>
       <span className="px-2 font-mono text-[11px] text-ink-primary tabular-nums min-w-[44px] text-center">
         {Math.round(zoom * 100)}%
@@ -225,18 +232,20 @@ const CanvasZoomPill: React.FC = () => {
         type="button"
         onClick={() => void zoomIn({ duration: 150 })}
         title="Zoom in"
+        aria-label="Zoom in canvas"
         className="h-6 w-6 rounded-[6px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
       >
-        <Plus size={12} />
+        <Plus size={12} aria-hidden="true" />
       </button>
       <span className="h-3.5 w-[1px] bg-border-hairline mx-0.5" />
       <button
         type="button"
         onClick={() => void fitView({ duration: 200, padding: 0.2 })}
         title="Fit canvas view"
+        aria-label="Fit canvas view"
         className="h-6 w-6 rounded-[6px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
       >
-        <Maximize2 size={11.5} />
+        <Maximize2 size={11.5} aria-hidden="true" />
       </button>
     </div>
   )
@@ -429,7 +438,7 @@ export const SpatialCanvas: React.FC<SpatialCanvasProps> = ({ page }) => {
         {
           ...connection,
           id: createId('edge'),
-          label: 'Relasi',
+          label: 'Relation',
           animated: true
         },
         flowEdges
@@ -443,7 +452,7 @@ export const SpatialCanvas: React.FC<SpatialCanvasProps> = ({ page }) => {
             id: e.id,
             source: e.source,
             target: e.target,
-            label: typeof e.label === 'string' ? e.label : 'Relasi',
+            label: typeof e.label === 'string' ? e.label : 'Relation',
             animated: true,
             color: 'cobalt'
           }))
@@ -468,14 +477,14 @@ export const SpatialCanvas: React.FC<SpatialCanvasProps> = ({ page }) => {
       data: {
         title:
           cardType === 'sticky'
-            ? 'Memo Arsitektur'
+            ? 'Architecture Memo'
             : cardType === 'metric'
-              ? 'Target SLA Sistem'
+              ? 'System SLA Target'
               : cardType === 'dbml'
-                ? 'Modul Tabel Skema'
-                : 'Kartu Spesifikasi Baru',
+                ? 'Schema Table Module'
+                : 'New Specification Card',
         content:
-          'Tarik titik port di sisi kiri/kanan kartu untuk menghubungkan node secara visual.',
+          'Drag the left/right port handles on the card to visually connect nodes.',
         color,
         cardType,
         code: `NODE-${String(count).padStart(2, '0')}`,
@@ -509,34 +518,38 @@ export const SpatialCanvas: React.FC<SpatialCanvasProps> = ({ page }) => {
         <button
           type="button"
           onClick={() => addCanvasCard('note', 'cobalt')}
-          title="Tambah Kartu Catatan"
+          title="Add note card"
+          aria-label="Add note card"
           className="w-8 h-8 rounded-[7px] hover:bg-surface-hover text-ink-secondary hover:text-accent-cobalt flex items-center justify-center transition-colors"
         >
-          <FileText size={15} />
+          <FileText size={15} aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={() => addCanvasCard('sticky', 'amber')}
-          title="Tambah Sticky Memo"
+          title="Add sticky memo"
+          aria-label="Add sticky memo"
           className="w-8 h-8 rounded-[7px] hover:bg-surface-hover text-ink-secondary hover:text-accent-amber flex items-center justify-center transition-colors"
         >
-          <StickyNote size={15} />
+          <StickyNote size={15} aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={() => addCanvasCard('dbml', 'violet')}
-          title="Tambah Node Modul DB"
+          title="Add DB module node"
+          aria-label="Add DB module node"
           className="w-8 h-8 rounded-[7px] hover:bg-surface-hover text-ink-secondary hover:text-accent-violet flex items-center justify-center transition-colors"
         >
-          <Database size={15} />
+          <Database size={15} aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={() => addCanvasCard('metric', 'teal')}
-          title="Tambah Kartu Metrik"
+          title="Add metric card"
+          aria-label="Add metric card"
           className="w-8 h-8 rounded-[7px] hover:bg-surface-hover text-ink-secondary hover:text-accent-teal flex items-center justify-center transition-colors"
         >
-          <Activity size={15} />
+          <Activity size={15} aria-hidden="true" />
         </button>
       </div>
 

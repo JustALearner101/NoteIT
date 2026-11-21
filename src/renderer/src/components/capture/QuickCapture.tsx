@@ -35,7 +35,7 @@ export const QuickCapture: React.FC = () => {
 
     if (!text.trim()) {
       setStatus('error')
-      setErrorMessage('Tulis catatan dulu sebelum menyimpan.')
+      setErrorMessage('Write a note before saving.')
       return
     }
 
@@ -50,7 +50,7 @@ export const QuickCapture: React.FC = () => {
       textareaRef.current?.focus()
     } catch (error) {
       setStatus('error')
-      setErrorMessage(error instanceof Error ? error.message : 'Gagal menyimpan catatan.')
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to save note.')
     }
   }
 
@@ -70,20 +70,21 @@ export const QuickCapture: React.FC = () => {
 
       <textarea
         ref={textareaRef}
+        aria-label="Quick capture note"
         value={text}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={handleKeyDown}
         autoFocus
         spellCheck={false}
-        placeholder="Tangkap ide mentah di sini..."
+        placeholder="Capture a raw thought here..."
         className="flex-1 mx-4 mt-2 mb-1 bg-transparent resize-none text-sm leading-relaxed text-ink-primary placeholder:text-ink-muted focus:outline-none [-webkit-app-region:no-drag]"
       />
 
       <div className="px-4 pb-3 flex items-center justify-between gap-3 text-[11px] text-ink-muted">
-        <span>Enter untuk simpan · Shift+Enter baris baru · Esc tutup</span>
-        {status === 'saved' && <span className="text-[var(--pill-teal-text)] font-medium">Tersimpan ke Inbox</span>}
+        <span>Enter to save · Shift+Enter newline · Esc close</span>
+        {status === 'saved' && <span role="status" className="text-[var(--pill-teal-text)] font-medium">Saved to Inbox</span>}
         {status === 'error' && errorMessage && (
-          <span className="text-[var(--pill-red-text)] truncate">{errorMessage}</span>
+          <span role="alert" className="text-[var(--pill-red-text)] truncate">{errorMessage}</span>
         )}
       </div>
     </div>

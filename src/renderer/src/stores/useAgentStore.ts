@@ -32,7 +32,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
       const sessions = await window.noteitAPI.listAgentSessions(notebookId)
       set({ sessions, isLoading: false })
     } catch (err: any) {
-      set({ isLoading: false, error: err?.message || 'Gagal memuat sesi agen' })
+      set({ isLoading: false, error: err?.message || 'Failed to load agent sessions' })
     }
   },
 
@@ -45,7 +45,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
       }
       return res
     } catch (err: any) {
-      return { ok: false, error: err?.message || 'Gagal merge worktree' }
+      return { ok: false, error: err?.message || 'Failed to merge worktree' }
     }
   },
 
@@ -60,7 +60,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
       }
       return res
     } catch (err: any) {
-      return { ok: false, error: err?.message || 'Gagal discard worktree' }
+      return { ok: false, error: err?.message || 'Failed to discard worktree' }
     }
   },
 

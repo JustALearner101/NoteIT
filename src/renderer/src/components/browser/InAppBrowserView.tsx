@@ -106,7 +106,7 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
     const onStopLoading = (): void => {
       const currentUrl = typeof wv.getURL === 'function' ? wv.getURL() : activeTab?.url || ''
       const currentTitle =
-        typeof wv.getTitle === 'function' ? wv.getTitle() : activeTab?.title || 'Tab Browser'
+        typeof wv.getTitle === 'function' ? wv.getTitle() : activeTab?.title || 'Browser Tab'
       setTabs((prev) =>
         prev.map((t) =>
           t.id === activeTabId
@@ -188,7 +188,7 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
       return {
         url: fallbackUrl,
         title: fallbackTitle,
-        excerpt: `Referensi halaman web dari ${fallbackTitle} (${fallbackUrl}).`
+        excerpt: `Web page reference from ${fallbackTitle} (${fallbackUrl}).`
       }
     }
 
@@ -209,20 +209,20 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
         url: extracted?.url || fallbackUrl,
         title: extracted?.title || fallbackTitle,
         excerpt:
-          extracted?.excerpt || `Referensi halaman web dari ${fallbackTitle} (${fallbackUrl}).`
+          extracted?.excerpt || `Web page reference from ${fallbackTitle} (${fallbackUrl}).`
       }
     } catch {
       return {
         url: fallbackUrl,
         title: fallbackTitle,
-        excerpt: `Referensi halaman web dari ${fallbackTitle} (${fallbackUrl}).`
+        excerpt: `Web page reference from ${fallbackTitle} (${fallbackUrl}).`
       }
     }
   }
 
   const handleClipToActiveSpec = async (): Promise<void> => {
     if (!activePage) {
-      showToast('Tidak ada halaman aktif untuk menyimpan klip')
+      showToast('No active page to save the clip')
       return
     }
     const info = await extractActivePageContent()
@@ -235,7 +235,7 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
       }
     ]
     await updatePage({ id: activePage.id, blocks: newBlocks })
-    showToast(`Klip web disimpan ke halaman ${activePage.code}`)
+    showToast(`Web clip saved to page ${activePage.code}`)
   }
 
   const handleSendToAIChat = async (): Promise<void> => {
@@ -244,7 +244,7 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
     if (!isSplitMode) {
       setActiveMainView('ai-chat')
     }
-    showToast(`Konteks '${info.title}' dikirim ke Vercel AI SDK Chat`)
+    showToast(`Context '${info.title}' sent to Vercel AI SDK Chat`)
   }
 
   const RootTag = isSplitMode ? 'section' : 'main'
@@ -256,13 +256,22 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
     >
       {/* Top Browser Tab Bar */}
       <div className="h-[38px] px-2.5 bg-surface-chrome border-b border-border-hairline flex items-center justify-between gap-2 select-none shrink-0">
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 min-w-0">
+        <div role="tablist" aria-label="Browser tabs" className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 min-w-0">
           {tabs.map((tab) => {
             const isActive = tab.id === activeTab.id
             return (
               <div
                 key={tab.id}
+                role="tab"
+                aria-selected={isActive}
+                tabIndex={0}
                 onClick={() => setActiveTabId(tab.id)}
+                onKeyDown={(e) => {
+                  if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault()
+                    setActiveTabId(tab.id)
+                  }
+                }}
                 className={`group h-7 px-2.5 rounded-[7px] border flex items-center gap-2 text-xs cursor-pointer transition-colors shrink-0 ${
                   isActive
                     ? 'bg-surface-elevated border-border-hairline text-ink-primary font-medium'
@@ -271,6 +280,7 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
               >
                 <Globe
                   size={11.5}
+                  aria-hidden="true"
                   className={
                     tab.isLoading ? 'text-accent-amber animate-spin' : 'text-accent-cobalt'
                   }
@@ -279,13 +289,14 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
                 {tabs.length > 1 && (
                   <button
                     type="button"
+                    aria-label={`Close ${tab.title}`}
                     onClick={(e) => {
                       e.stopPropagation()
                       handleCloseTab(tab.id)
                     }}
                     className="opacity-50 group-hover:opacity-100 hover:text-accent-rose"
                   >
-                    <X size={11} />
+                    <X size={11} aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -295,10 +306,11 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
           <button
             type="button"
             onClick={() => handleNewTab()}
-            title="Buka Tab Browser Baru"
+            title="Open new browser tab"
+            aria-label="Open new browser tab"
             className="h-7 w-7 rounded-[7px] hover:bg-surface-hover flex items-center justify-center text-ink-muted hover:text-ink-primary shrink-0 transition-colors"
           >
-            <Plus size={13} />
+            <Plus size={13} aria-hidden="true" />
           </button>
         </div>
 
@@ -317,12 +329,12 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
             }}
             title={
               isSplitMode
-                ? 'Tutup Split Browser'
-                : 'Sematkan Browser di Split-Pane Kanan sambil buka Catatan'
+                ? 'Close split browser'
+                : 'Dock browser in right split pane beside notes'
             }
           >
-            <Columns2 size={11.5} className="text-accent-cobalt" />
-            <span>{isSplitMode ? 'Tutup Split' : 'Dock to Split'}</span>
+            <Columns2 size={11.5} className="text-accent-cobalt" aria-hidden="true" />
+            <span>{isSplitMode ? 'Close Split' : 'Dock to Split'}</span>
           </Button>
         </div>
       </div>
@@ -333,26 +345,29 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
           <button
             type="button"
             onClick={() => webviewRefs.current[activeTabId]?.goBack?.()}
-            title="Kembali"
+            title="Back"
+            aria-label="Navigate back"
             className="h-7 w-7 rounded-[7px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
-            <ArrowLeft size={13} />
+            <ArrowLeft size={13} aria-hidden="true" />
           </button>
           <button
             type="button"
             onClick={() => webviewRefs.current[activeTabId]?.goForward?.()}
-            title="Maju"
+            title="Forward"
+            aria-label="Navigate forward"
             className="h-7 w-7 rounded-[7px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
-            <ArrowRight size={13} />
+            <ArrowRight size={13} aria-hidden="true" />
           </button>
           <button
             type="button"
             onClick={() => webviewRefs.current[activeTabId]?.reload?.()}
-            title="Muat Ulang"
+            title="Reload"
+            aria-label="Reload page"
             className="h-7 w-7 rounded-[7px] hover:bg-surface-hover flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
-            <RotateCw size={12} />
+            <RotateCw size={12} aria-hidden="true" />
           </button>
         </div>
 
@@ -365,9 +380,10 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
         >
           <input
             type="text"
+            aria-label="Browser address or search query"
             value={addressInput}
             onChange={(e) => setAddressInput(e.target.value)}
-            placeholder="Ketik URL (https://..., localhost:3000) atau kata kunci pencarian..."
+            placeholder="Type URL (https://..., localhost:3000) or search query..."
             className="w-full h-7 px-3 rounded-[7px] bg-surface-elevated border border-border-hairline font-mono text-xs text-ink-primary placeholder:text-ink-muted focus:border-accent-cobalt"
           />
         </form>
@@ -378,9 +394,9 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
             variant="secondary"
             size="sm"
             onClick={() => void handleClipToActiveSpec()}
-            title="Simpan teks/halaman ini sebagai blok di dokumen aktif"
+            title="Save this web page or selection as a block in the active document"
           >
-            <BookmarkPlus size={12} className="text-accent-amber" />
+            <BookmarkPlus size={12} className="text-accent-amber" aria-hidden="true" />
             <span className="hidden sm:inline">Clip to {activePage?.code || 'Spec'}</span>
           </Button>
 
@@ -388,29 +404,31 @@ export const InAppBrowserView: React.FC<{ isSplitMode?: boolean }> = ({ isSplitM
             variant="primary"
             size="sm"
             onClick={() => void handleSendToAIChat()}
-            title="Kirim isi halaman web ini sebagai konteks ke Vercel AI SDK Chat"
+            title="Send this web page content as context to Vercel AI SDK Chat"
           >
-            <Sparkles size={12} />
+            <Sparkles size={12} aria-hidden="true" />
             <span className="hidden sm:inline">Ask AI</span>
           </Button>
 
           <button
             type="button"
             onClick={() => webviewRefs.current[activeTabId]?.openDevTools?.()}
-            title="Buka Chromium DevTools untuk tab ini"
+            title="Open Chromium DevTools for this tab"
+            aria-label="Open Chromium DevTools"
             className="h-7 w-7 rounded-[7px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
-            <Bug size={12} />
+            <Bug size={12} aria-hidden="true" />
           </button>
 
           <a
             href={activeTab.url}
             target="_blank"
             rel="noreferrer"
-            title="Buka di Browser OS Eksternal"
+            title="Open in external OS browser"
+            aria-label="Open in external browser"
             className="h-7 w-7 rounded-[7px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline flex items-center justify-center text-ink-secondary hover:text-ink-primary transition-colors"
           >
-            <ExternalLink size={12} />
+            <ExternalLink size={12} aria-hidden="true" />
           </a>
         </div>
       </div>

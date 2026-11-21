@@ -221,18 +221,18 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
               <div className="min-w-0">
                 <div className="text-[10.5px] text-ink-muted">Target repository</div>
                 <div className="truncate text-ink-primary font-medium font-mono text-[12px] mt-0.5">
-                  {repoPath ? repoPath.split(/[/\\]/).pop() : '(Belum ada repo dihubungkan)'}
+                  {repoPath ? repoPath.split(/[/\\]/).pop() : '(No repository bound)'}
                 </div>
               </div>
             </div>
 
             {repoPath ? (
               <Badge tone="teal" size="sm">
-                <CheckCircle2 size={11} /> Siap
+                <CheckCircle2 size={11} aria-hidden="true" /> Ready
               </Badge>
             ) : (
               <Badge tone="red" size="sm">
-                <AlertCircle size={11} /> Butuh repo
+                <AlertCircle size={11} aria-hidden="true" /> Repo required
               </Badge>
             )}
           </div>
@@ -241,58 +241,58 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium text-ink-secondary flex items-center gap-1.5">
-                <Layers size={13} className="text-accent-amber" />
+                <Layers size={13} className="text-accent-amber" aria-hidden="true" />
                 <span>Compiled artifacts (.noteit/)</span>
               </span>
               <span className="text-[11px] text-[var(--pill-teal-text)] flex items-center gap-1">
-                <ShieldCheck size={12} /> Zero git pollution
+                <ShieldCheck size={12} aria-hidden="true" /> Zero git pollution
               </span>
             </div>
 
             <div className="p-3 rounded-[10px] bg-surface-chrome/70 border border-border-hairline space-y-2.5">
               {isCompiling ? (
                 <div className="py-4 text-center text-xs text-ink-muted animate-pulse">
-                  Mengompilasi DBML DDL &amp; blok spesifikasi...
+                  Compiling DBML DDL &amp; specification blocks...
                 </div>
               ) : (
                 <>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="p-2.5 rounded-[8px] bg-surface-elevated border border-border-subtle flex items-center gap-2.5">
-                      <FileText size={14} className="text-accent-amber shrink-0" />
+                      <FileText size={14} className="text-accent-amber shrink-0" aria-hidden="true" />
                       <div className="min-w-0">
                         <div className="font-mono text-[11.5px] text-ink-primary font-medium truncate">
                           active-task.md
                         </div>
-                        <div className="text-[10.5px] text-ink-muted">Kontrak PRD &amp; Spec</div>
+                        <div className="text-[10.5px] text-ink-muted">PRD &amp; spec contract</div>
                       </div>
                     </div>
 
                     <div className="p-2.5 rounded-[8px] bg-surface-elevated border border-border-subtle flex items-center gap-2.5">
-                      <FileCode size={14} className="text-accent-cobalt shrink-0" />
+                      <FileCode size={14} className="text-accent-cobalt shrink-0" aria-hidden="true" />
                       <div className="min-w-0">
                         <div className="font-mono text-[11.5px] text-ink-primary font-medium truncate">
                           schema.sql
                         </div>
                         <div className="text-[10.5px] text-ink-muted tabular-nums">
-                          {bundleSummary?.dbmlTableCount || 0} Tabel SQLite DDL
+                          {bundleSummary?.dbmlTableCount || 0} SQLite DDL tables
                         </div>
                       </div>
                     </div>
 
                     <div className="p-2.5 rounded-[8px] bg-surface-elevated border border-border-subtle flex items-center gap-2.5">
-                      <Sparkles size={14} className="text-accent-violet shrink-0" />
+                      <Sparkles size={14} className="text-accent-violet shrink-0" aria-hidden="true" />
                       <div className="min-w-0">
                         <div className="font-mono text-[11.5px] text-ink-primary font-medium truncate">
                           architecture.mmd
                         </div>
                         <div className="text-[10.5px] text-ink-muted tabular-nums">
-                          {bundleSummary?.diagramCount || 0} Diagram Mermaid
+                          {bundleSummary?.diagramCount || 0} Mermaid diagrams
                         </div>
                       </div>
                     </div>
 
                     <div className="p-2.5 rounded-[8px] bg-surface-elevated border border-border-subtle flex items-center gap-2.5">
-                      <CheckCircle2 size={14} className="text-accent-teal shrink-0" />
+                      <CheckCircle2 size={14} className="text-accent-teal shrink-0" aria-hidden="true" />
                       <div className="min-w-0">
                         <div className="font-mono text-[11.5px] text-ink-primary font-medium truncate">
                           task-contract.json
@@ -305,8 +305,8 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
                   </div>
 
                   <p className="text-[11px] text-ink-muted leading-relaxed pt-2 border-t border-border-subtle">
-                    Folder <code className="font-mono text-ink-secondary">.noteit/</code> otomatis
-                    dikecualikan lewat <code className="font-mono text-ink-secondary">.git/info/exclude</code>.
+                    The <code className="font-mono text-ink-secondary">.noteit/</code> folder is
+                    automatically excluded via <code className="font-mono text-ink-secondary">.git/info/exclude</code>.
                   </p>
                 </>
               )}
@@ -316,7 +316,7 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
           {/* Preset Selector */}
           <div className="space-y-2">
             <span className="font-medium text-ink-secondary text-xs flex items-center gap-1.5">
-              <Zap size={13} className="text-accent-cobalt" />
+              <Zap size={13} className="text-accent-cobalt" aria-hidden="true" />
               <span>CLI agent executor</span>
             </span>
 
@@ -343,11 +343,11 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
                           'w-2 h-2 rounded-full',
                           p.available ? 'bg-accent-emerald' : 'bg-ink-muted/50'
                         )}
-                        title={p.available ? 'Tersedia di PATH' : 'Belum terdeteksi di PATH'}
+                        title={p.available ? 'Available in PATH' : 'Not detected in PATH'}
                       />
                     </div>
                     <span className="font-mono text-[10.5px] text-ink-muted truncate">
-                      {p.available ? p.command : 'Belum terpasang'}
+                      {p.available ? p.command : 'Not installed'}
                     </span>
                   </button>
                 )
@@ -358,7 +358,7 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
           {/* Isolation & Worktree Mode */}
           <div className="space-y-2">
             <span className="font-medium text-ink-secondary text-xs flex items-center gap-1.5">
-              <GitBranch size={13} className="text-accent-teal" />
+              <GitBranch size={13} className="text-accent-teal" aria-hidden="true" />
               <span>Workspace isolation</span>
             </span>
 
@@ -395,7 +395,7 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
                 )}
               >
                 <span className="font-medium">Direct Repo</span>
-                <span className="text-[11px] text-ink-muted">Bekerja langsung di CWD aktif</span>
+                <span className="text-[11px] text-ink-muted">Work directly in active CWD</span>
               </button>
             </div>
           </div>
@@ -403,16 +403,16 @@ export const MissionBriefingDrawer: React.FC<MissionBriefingDrawerProps> = ({
           {/* Autonomy Level / Approval Gate */}
           <div className="space-y-2">
             <span className="font-medium text-ink-secondary text-xs flex items-center gap-1.5">
-              <Cpu size={13} className="text-accent-violet" />
+              <Cpu size={13} className="text-accent-violet" aria-hidden="true" />
               <span>Approval gate</span>
             </span>
 
             <div className="grid grid-cols-3 gap-2 text-xs">
               {(
                 [
-                  { id: 'plan-only', label: 'Plan-Only', desc: 'Rancang saja' },
-                  { id: 'ask-edit', label: 'Ask-Edit', desc: 'Minta konfirmasi' },
-                  { id: 'auto-edit', label: 'Auto-Edit', desc: 'Otonom penuh' }
+                  { id: 'plan-only', label: 'Plan-Only', desc: 'Design only' },
+                  { id: 'ask-edit', label: 'Ask-Edit', desc: 'Require confirmation' },
+                  { id: 'auto-edit', label: 'Auto-Edit', desc: 'Full autonomy' }
                 ] as const
               ).map((opt) => (
                 <button

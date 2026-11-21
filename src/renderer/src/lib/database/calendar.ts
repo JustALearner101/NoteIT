@@ -70,8 +70,8 @@ export function resizeTaskEnd(task: ProjectTaskItem, iso: string): ProjectTaskIt
   return { ...task, endDate: iso }
 }
 
-/** Label hari untuk grid dengan weekStartsOn = 1 (Senin). */
-export const WEEKDAY_LABELS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'] as const
+/** Weekday labels for a grid starting on Monday (weekStartsOn = 1). */
+export const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 
 /** Geser bulan tanpa melewati bulan 0 atau 13; delta boleh negatif. */
 export function shiftMonth(
@@ -83,9 +83,9 @@ export function shiftMonth(
   return { year: Math.floor(total / 12), month: (((total % 12) + 12) % 12) + 1 }
 }
 
-/** "Oktober 2026" menurut locale id-ID. Formatting sengaja di lib, bukan di JSX. */
+/** "October 2026" in en-US locale. */
 export function monthLabel(year: number, month: number): string {
-  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('id-ID', {
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-US', {
     month: 'long',
     year: 'numeric',
     timeZone: 'UTC'

@@ -34,10 +34,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             Runtime fault
           </span>
           <h1 className="mt-3 font-display text-xl font-semibold tracking-[-0.015em]">
-            Antarmuka berhenti karena kesalahan tak terduga.
+            The interface stopped due to an unexpected error.
           </h1>
           <p className="mt-2 text-sm text-ink-secondary">
-            Workspace tetap tersimpan di disk. Muat ulang aplikasi untuk melanjutkan.
+            Your workspace remains safely saved on disk. Reload the application to continue.
           </p>
           <pre className="mt-5 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-[10px] border border-border-hairline bg-canvas-primary p-4 font-mono text-xs text-ink-secondary">
             {error.message || String(error)}
@@ -47,7 +47,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             onClick={this.handleReload}
             className="mt-6 h-8 rounded-[7px] btn-primary-sheen px-4 text-xs font-medium transition-all"
           >
-            Muat Ulang Aplikasi
+            Reload Application
           </button>
         </div>
       </div>

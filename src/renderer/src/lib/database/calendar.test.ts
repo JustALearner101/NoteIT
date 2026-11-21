@@ -151,17 +151,17 @@ describe('shiftMonth', () => {
 })
 
 describe('monthLabel', () => {
-  it('memakai nama bulan dan tahun id-ID', () => {
-    expect(monthLabel(2026, 10)).toBe('Oktober 2026')
+  it('uses en-US month name and year', () => {
+    expect(monthLabel(2026, 10)).toBe('October 2026')
   })
 
-  it('Januari dan Desember tidak tertukar', () => {
-    expect(monthLabel(2026, 1)).toBe('Januari 2026')
-    expect(monthLabel(2026, 12)).toBe('Desember 2026')
+  it('January and December do not swap', () => {
+    expect(monthLabel(2026, 1)).toBe('January 2026')
+    expect(monthLabel(2026, 12)).toBe('December 2026')
   })
 
-  it('Februari tahun kabisat tetap Februari', () => {
-    expect(monthLabel(2028, 2)).toBe('Februari 2028')
+  it('leap-year February stays February', () => {
+    expect(monthLabel(2028, 2)).toBe('February 2028')
   })
 })
 
@@ -187,10 +187,10 @@ describe('isSameMonth', () => {
 })
 
 describe('WEEKDAY_LABELS', () => {
-  it('dimulai Senin dan berakhir Minggu', () => {
+  it('starts on Monday and ends on Sunday', () => {
     expect(WEEKDAY_LABELS).toHaveLength(7)
-    expect(WEEKDAY_LABELS[0]).toBe('Sen')
-    expect(WEEKDAY_LABELS[6]).toBe('Min')
+    expect(WEEKDAY_LABELS[0]).toBe('Mon')
+    expect(WEEKDAY_LABELS[6]).toBe('Sun')
   })
 })
 

@@ -49,7 +49,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
   {
     id: 'obsidian-studio',
     name: 'Obsidian Studio',
-    tagline: 'Matte obsidian netral yang tenang dengan aksen Periwinkle Indigo & pill pastel lembut',
+    tagline: 'Calm neutral matte obsidian with Periwinkle Indigo accents and soft pastel pills',
     badge: 'Default',
     colorScheme: 'dark',
     ambientGlow: false,
@@ -72,7 +72,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
   {
     id: 'graphite-slate',
     name: 'Graphite Slate',
-    tagline: 'Standar rekayasa presisi klasik dengan aksen Cobalt & Amber',
+    tagline: 'Classic precision engineering slate with Cobalt and Amber accents',
     badge: 'Classic',
     colorScheme: 'dark',
     ambientGlow: false,
@@ -95,7 +95,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
   {
     id: 'orca-carbon',
     name: 'Orca Carbon',
-    tagline: 'Matte carbon ultra-tenang terinspirasi workspace AI modern',
+    tagline: 'Ultra-calm matte carbon inspired by modern AI workspaces',
     badge: 'Ref #1',
     colorScheme: 'dark',
     ambientGlow: false,
@@ -118,7 +118,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
   {
     id: 'codezone-amber',
     name: 'Code.Zone Amber',
-    tagline: 'True OLED pitch black dengan aksen terminal Amber menyala',
+    tagline: 'True OLED pitch black with glowing Amber terminal accents',
     badge: 'Ref #2',
     colorScheme: 'dark',
     ambientGlow: true,
@@ -141,7 +141,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
   {
     id: 'finns-nebula',
     name: 'Finns Cosmic Nebula',
-    tagline: 'Deep space indigo dengan pendaran Aurora Violet & Sapphire',
+    tagline: 'Deep space indigo with Aurora Violet and Sapphire glow',
     badge: 'Ref #3 · Glow',
     colorScheme: 'dark',
     ambientGlow: true,
@@ -164,7 +164,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
   {
     id: 'tokyo-night',
     name: 'Tokyo Night',
-    tagline: 'Indigo malam Tokyo dengan aksen Cyber Cyan & Magenta',
+    tagline: 'Tokyo night indigo with Cyber Cyan and Magenta accents',
     colorScheme: 'dark',
     ambientGlow: true,
     colors: {
@@ -186,7 +186,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
   {
     id: 'catppuccin-mocha',
     name: 'Catppuccin Mocha',
-    tagline: 'Palet pastel hangat dengan aksen Lavender & Peach',
+    tagline: 'Warm pastel palette with Lavender and Peach accents',
     colorScheme: 'dark',
     ambientGlow: false,
     colors: {
@@ -208,7 +208,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
   {
     id: 'nordic-frost',
     name: 'Nordic Frost',
-    tagline: 'Biru kutub arktik dengan aksen Frost Cyan & Aurora Gold',
+    tagline: 'Arctic polar blue with Frost Cyan and Aurora Gold accents',
     colorScheme: 'dark',
     ambientGlow: false,
     colors: {
@@ -230,7 +230,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
   {
     id: 'archival-vellum',
     name: 'Archival Vellum',
-    tagline: 'Permukaan terang bersih & netral dengan aksen Indigo halus',
+    tagline: 'Clean neutral light surface with subtle Indigo accents',
     badge: 'Light',
     colorScheme: 'light',
     ambientGlow: false,
@@ -253,7 +253,7 @@ export const BUILTIN_THEMES: ThemeDefinition[] = [
   {
     id: 'solarized-paper',
     name: 'Solarized Studio',
-    tagline: 'Kertas perkamen klasik dengan kontras mata rendah',
+    tagline: 'Classic parchment paper with low-fatigue contrast',
     badge: 'Light',
     colorScheme: 'light',
     ambientGlow: false,

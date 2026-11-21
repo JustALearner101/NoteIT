@@ -52,100 +52,99 @@ const SLASH_OPTIONS: {
   label: string
   desc: string
   icon: React.ReactNode
-  /** Khusus 'columns': jumlah kolom yang dibuat createColumnGroup. */
   columnCount?: number
 }[] = [
   {
     type: 'paragraph',
-    label: 'Paragraf Teks',
-    desc: 'Blok penulisan standar mendukung [[Wiki-Link]]',
-    icon: <Type size={13} className="text-ink-secondary" />
+    label: 'Text Paragraph',
+    desc: 'Standard writing block supporting [[Wiki-Links]]',
+    icon: <Type size={13} className="text-ink-secondary" aria-hidden="true" />
   },
   {
     type: 'h1',
     label: 'Heading 1',
-    desc: 'Judul bagian utama (Space Grotesk 32px)',
-    icon: <Heading1 size={13} className="text-accent-cobalt" />
+    desc: 'Primary section title (Space Grotesk 32px)',
+    icon: <Heading1 size={13} className="text-accent-cobalt" aria-hidden="true" />
   },
   {
     type: 'h2',
     label: 'Heading 2',
-    desc: 'Sub-bagian spesifikasi (Space Grotesk 24px)',
-    icon: <Heading2 size={13} className="text-accent-cobalt" />
+    desc: 'Specification subsection (Space Grotesk 24px)',
+    icon: <Heading2 size={13} className="text-accent-cobalt" aria-hidden="true" />
   },
   {
     type: 'h3',
     label: 'Heading 3',
-    desc: 'Sub-judul teknis (Space Grotesk 19px)',
-    icon: <Heading3 size={13} className="text-accent-cobalt" />
+    desc: 'Technical subheading (Space Grotesk 19px)',
+    icon: <Heading3 size={13} className="text-accent-cobalt" aria-hidden="true" />
   },
   {
     type: 'columns',
-    label: '2 Kolom',
-    desc: 'Dua kolom berdampingan dengan divider yang bisa digeser',
-    icon: <Columns2 size={13} className="text-marker-teal" />,
+    label: '2 Columns',
+    desc: 'Two side-by-side columns with a resizable divider',
+    icon: <Columns2 size={13} className="text-marker-teal" aria-hidden="true" />,
     columnCount: 2
   },
   {
     type: 'columns',
-    label: '3 Kolom',
-    desc: 'Tiga kolom berdampingan untuk perbandingan cepat',
-    icon: <Columns3 size={13} className="text-marker-teal" />,
+    label: '3 Columns',
+    desc: 'Three side-by-side columns for quick comparison',
+    icon: <Columns3 size={13} className="text-marker-teal" aria-hidden="true" />,
     columnCount: 3
   },
   {
     type: 'checklist',
-    label: 'Daftar Periksa (Checklist)',
-    desc: 'Item tugas dengan kotak centang interaktif',
-    icon: <CheckSquare size={13} className="text-[#10B981]" />
+    label: 'Checklist',
+    desc: 'Task item with an interactive checkbox',
+    icon: <CheckSquare size={13} className="text-[#10B981]" aria-hidden="true" />
   },
   {
     type: 'callout',
-    label: 'Callout Spesifikasi',
-    desc: 'Kotak sorotan dengan strip warna Drafting Marker',
-    icon: <Info size={13} className="text-accent-amber" />
+    label: 'Specification Callout',
+    desc: 'Highlighted box with a Drafting Marker accent strip',
+    icon: <Info size={13} className="text-accent-amber" aria-hidden="true" />
   },
   {
     type: 'code',
-    label: 'Blok Kode Teknis',
-    desc: 'Potongan kode monospace (SQL, TypeScript, JSON)',
-    icon: <Code2 size={13} className="text-[#8B5CF6]" />
+    label: 'Technical Code Block',
+    desc: 'Monospace code snippet (SQL, TypeScript, JSON)',
+    icon: <Code2 size={13} className="text-[#8B5CF6]" aria-hidden="true" />
   },
   {
     type: 'dbml',
     label: 'Interactive DBML Studio',
-    desc: 'Editor skema DBML + ERD interaktif + SQL DDL Compiler',
-    icon: <Database size={13} className="text-accent-cobalt" />
+    desc: 'DBML schema editor + interactive ERD + SQL DDL compiler',
+    icon: <Database size={13} className="text-accent-cobalt" aria-hidden="true" />
   },
   {
     type: 'mermaid',
-    label: 'Diagram Mermaid Offline',
-    desc: 'Sequence, Flowchart, atau State Diagram live preview',
-    icon: <Sparkles size={13} className="text-[#10B981]" />
+    label: 'Offline Mermaid Diagram',
+    desc: 'Sequence, Flowchart, or State Diagram with live preview',
+    icon: <Sparkles size={13} className="text-[#10B981]" aria-hidden="true" />
   },
   {
     type: 'graphviz',
-    label: 'Diagram Graphviz (DOT)',
-    desc: 'DOT language dengan engine dot, neato, fdp, circo, twopi',
-    icon: <Network size={13} className="text-[#8B5CF6]" />
+    label: 'Graphviz Diagram (DOT)',
+    desc: 'DOT language with dot, neato, fdp, circo, and twopi engines',
+    icon: <Network size={13} className="text-[#8B5CF6]" aria-hidden="true" />
   },
   {
     type: 'database',
     label: 'Gantt Chart & Project Database',
-    desc: 'Tabel multi-view: Gantt Timeline, Kanban, & Data Chart',
-    icon: <GanttChart size={13} className="text-accent-amber" />
+    desc: 'Multi-view table: Gantt Timeline, Kanban, & Data Chart',
+    icon: <GanttChart size={13} className="text-accent-amber" aria-hidden="true" />
   },
   {
     type: 'image',
-    label: 'Gambar / Screenshot',
-    desc: 'Impor PNG, JPG, WebP, atau SVG ke workspace/assets',
-    icon: <ImageIcon size={13} className="text-[#10B981]" />
+    label: 'Image / Screenshot',
+    desc: 'Import PNG, JPG, WebP, or SVG into workspace/assets',
+    icon: <ImageIcon size={13} className="text-[#10B981]" aria-hidden="true" />
   },
   {
     type: 'file',
-    label: 'Berkas Lampiran',
-    desc: 'Lampirkan PDF atau berkas lain sebagai kartu berkas',
-    icon: <Paperclip size={13} className="text-accent-amber" />
+    label: 'File Attachment',
+    desc: 'Attach a PDF or other file as an embedded card',
+    icon: <Paperclip size={13} className="text-accent-amber" aria-hidden="true" />
   }
 ]
 
@@ -191,17 +190,17 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
             : type === 'graphviz'
               ? DEFAULT_DOT
               : type === 'code'
-                ? `-- Tulis kueri atau kode di sini\nSELECT * FROM pages_fts WHERE pages_fts MATCH 'dbml';`
+                ? `-- Write your query or code here\nSELECT * FROM pages_fts WHERE pages_fts MATCH 'dbml';`
                 : '',
       checked: false,
       calloutColor: 'cobalt',
-      calloutTitle: 'CATATAN SPESIFIKASI',
+      calloutTitle: 'SPECIFICATION NOTE',
       wide: type === 'dbml' || type === 'mermaid' || type === 'graphviz' || type === 'database',
       dbmlViewMode: 'split',
       mermaidViewMode: 'split',
       graphvizViewMode: 'split',
       graphvizEngine: 'dot',
-      databaseTitle: 'JADWAL & METRIK MODUL',
+      databaseTitle: 'MODULE SCHEDULE & METRICS',
       databaseActiveView: 'gantt',
       databaseChartType: 'bar',
       databaseItems:
@@ -210,7 +209,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
               {
                 id: firstTaskId,
                 code: 'TSK-01',
-                title: 'Rancang Kontrak Data',
+                title: 'Design Data Contract',
                 category: 'Core',
                 color: 'cobalt',
                 status: 'in_progress',
@@ -225,7 +224,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
               {
                 id: milestoneTaskId,
                 code: 'M1',
-                title: 'Sign-Off Arsitektur',
+                title: 'Architecture Sign-Off',
                 category: 'Milestone',
                 color: 'amber',
                 status: 'backlog',
@@ -292,7 +291,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
         const asset = await window.noteitAPI.importAssetBytes({ name, data })
         blocks.push(buildAssetBlock(asset, isImageMime(asset.mime) ? 'image' : 'file'))
       } catch (error) {
-        console.error('Gagal mengimpor aset:', error)
+        console.error('Failed to import asset:', error)
       }
     }
     insertBlocksAfter(afterId, blocks)
@@ -429,8 +428,8 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
               }}
               title={
                 targetPage
-                  ? `Buka ${targetPage.code}: ${targetPage.title} (Alt+Klik untuk Split-Pane)`
-                  : `Halaman '${targetTitle}' belum dibuat`
+                  ? `Open ${targetPage.code}: ${targetPage.title} (Alt+Click for Split Pane)`
+                  : `Page '${targetTitle}' has not been created yet`
               }
               className={cn(
                 'px-2 py-0.5 rounded-[6px] text-[11.5px] font-medium border flex items-center gap-1.5 transition-colors',
@@ -487,11 +486,11 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
               type="button"
               onPointerDown={() => setDraggingBlockId(block.id)}
               onPointerUp={() => setDraggingBlockId(null)}
-              title="Tarik ke kolom lain"
-              aria-label="Pegangan pindah blok"
+              title="Drag to another column"
+              aria-label="Drag handle to move block"
               className="p-1 rounded-[5px] hover:bg-surface-hover text-ink-secondary cursor-grab active:cursor-grabbing transition-colors"
             >
-              <GripVertical size={11} />
+              <GripVertical size={11} aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -500,45 +499,50 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
                   wikiPickerForBlockId === block.id ? null : block.id
                 )
               }
-              title="Sisipkan [[Wiki-Link]] ke Halaman Lain"
+              title="Insert [[Wiki-Link]] to another page"
+              aria-label="Insert Wiki-Link to another page"
               className="p-1 rounded-[5px] hover:bg-surface-hover text-ink-secondary hover:text-accent-cobalt transition-colors"
             >
-              <Link2 size={11} />
+              <Link2 size={11} aria-hidden="true" />
             </button>
             <button
               type="button"
               onClick={() =>
                 setSlashMenuForBlockId(slashMenuForBlockId === block.id ? null : block.id)
               }
-              title="Sisipkan Blok di Bawah (/)"
+              title="Insert block below (/)"
+              aria-label="Insert block below"
               className="p-1 rounded-[5px] hover:bg-surface-hover text-ink-secondary hover:text-accent-cobalt transition-colors"
             >
-              <Plus size={11} />
+              <Plus size={11} aria-hidden="true" />
             </button>
             <button
               type="button"
               onClick={() => moveBlock(block.id, -1)}
-              title="Pindah ke Atas"
+              title="Move up"
+              aria-label="Move block up"
               className="p-1 rounded-[5px] hover:bg-surface-hover text-ink-secondary hover:text-ink-primary transition-colors"
             >
-              <ArrowUp size={11} />
+              <ArrowUp size={11} aria-hidden="true" />
             </button>
             <button
               type="button"
               onClick={() => moveBlock(block.id, 1)}
-              title="Pindah ke Bawah"
+              title="Move down"
+              aria-label="Move block down"
               className="p-1 rounded-[5px] hover:bg-surface-hover text-ink-secondary hover:text-ink-primary transition-colors"
             >
-              <ArrowDown size={11} />
+              <ArrowDown size={11} aria-hidden="true" />
             </button>
             {page.blocks.length > 1 && (
               <button
                 type="button"
                 onClick={() => removeBlock(block.id)}
-                title="Hapus Blok"
+                title="Delete block"
+                aria-label="Delete block"
                 className="p-1 rounded-[5px] hover:bg-[var(--pill-red-bg)] text-ink-secondary hover:text-[var(--pill-red-text)] transition-colors"
               >
-                <Trash2 size={11} />
+                <Trash2 size={11} aria-hidden="true" />
               </button>
             )}
           </div>
@@ -580,6 +584,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
         {block.type === 'h1' && (
           <input
             type="text"
+            aria-label="Heading 1 text"
             value={block.content}
             onChange={(e) => updateBlock(block.id, { content: e.target.value })}
             placeholder="Heading 1..."
@@ -590,6 +595,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
         {block.type === 'h2' && (
           <input
             type="text"
+            aria-label="Heading 2 text"
             value={block.content}
             onChange={(e) => updateBlock(block.id, { content: e.target.value })}
             placeholder="Heading 2..."
@@ -600,6 +606,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
         {block.type === 'h3' && (
           <input
             type="text"
+            aria-label="Heading 3 text"
             value={block.content}
             onChange={(e) => updateBlock(block.id, { content: e.target.value })}
             placeholder="Heading 3..."
@@ -610,6 +617,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
         {block.type === 'paragraph' && (
           <div>
             <textarea
+              aria-label="Paragraph text"
               value={block.content}
               onChange={(e) => {
                 const val = e.target.value
@@ -619,7 +627,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
                 }
               }}
               rows={Math.max(2, Math.ceil(block.content.length / 85))}
-              placeholder="Ketik catatan atau tekan '/' untuk menyisipkan blok DBML, Mermaid, atau Gantt Chart..."
+              placeholder="Write notes or type '/' to insert a DBML, Mermaid, or Gantt Chart block..."
               className="w-full bg-transparent text-[14.5px] leading-[1.7] text-ink-primary placeholder:text-ink-muted resize-none focus:outline-none selectable-text"
             />
             {renderWikiLinkBadges(block.content)}
@@ -630,6 +638,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
           <div className="flex items-start gap-2.5 py-1">
             <input
               type="checkbox"
+              aria-label={`Complete checklist item ${block.content || 'item'}`}
               checked={Boolean(block.checked)}
               onChange={(e) => updateBlock(block.id, { checked: e.target.checked })}
               className="mt-1 w-4 h-4 accent-[var(--accent-cobalt)] rounded cursor-pointer"
@@ -637,9 +646,10 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
             <div className="flex-1">
               <input
                 type="text"
+                aria-label="Checklist item text"
                 value={block.content}
                 onChange={(e) => updateBlock(block.id, { content: e.target.value })}
-                placeholder="Item daftar periksa..."
+                placeholder="Checklist item..."
                 className={`w-full bg-transparent text-[14.5px] focus:outline-none ${
                   block.checked ? 'line-through text-ink-muted' : 'text-ink-primary'
                 }`}
@@ -659,11 +669,13 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
             <div className="flex-1 space-y-1.5">
               <input
                 type="text"
-                value={block.calloutTitle || 'Catatan Spesifikasi'}
+                aria-label="Callout title"
+                value={block.calloutTitle || 'Specification Note'}
                 onChange={(e) => updateBlock(block.id, { calloutTitle: e.target.value })}
                 className="w-full bg-transparent text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pill-cobalt-text)] focus:outline-none"
               />
               <textarea
+                aria-label="Callout body"
                 value={block.content}
                 onChange={(e) => updateBlock(block.id, { content: e.target.value })}
                 rows={Math.max(2, Math.ceil(block.content.length / 80))}
@@ -680,12 +692,14 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
               <span className="font-medium">Code snippet</span>
               <input
                 type="text"
+                aria-label="Code snippet language"
                 value={block.language || 'sql'}
                 onChange={(e) => updateBlock(block.id, { language: e.target.value })}
                 className="w-20 bg-transparent text-right font-mono uppercase text-accent-amber focus:outline-none"
               />
             </div>
             <textarea
+              aria-label="Code snippet content"
               value={block.content}
               onChange={(e) => updateBlock(block.id, { content: e.target.value })}
               rows={Math.max(3, block.content.split('\n').length)}
@@ -794,10 +808,11 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
                   <button
                     type="button"
                     onClick={() => removeBlock(node.header.id)}
-                    title="Hapus Grup Kolom"
+                    title="Delete column group"
+                    aria-label="Delete column group"
                     className="p-1 rounded-[6px] bg-surface-elevated hover:bg-[var(--pill-red-bg)] border border-border-hairline text-ink-secondary hover:text-[var(--pill-red-text)]"
                   >
-                    <Trash2 size={11} />
+                    <Trash2 size={11} aria-hidden="true" />
                   </button>
                 )}
               </div>

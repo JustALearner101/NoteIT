@@ -42,18 +42,17 @@ interface DiffView {
 const SNIPPET_MAX = 80
 
 function errorMessage(error: unknown): string {
-  if (!(error instanceof Error)) return 'Aksi gagal.'
-  // Electron membungkus error main process: "Error invoking remote method '...': Error: <pesan>".
+  if (!(error instanceof Error)) return 'Action failed.'
   return error.message.split('Error: ').pop() || error.message
 }
 
 function formatRelativeTime(timestamp: number): string {
   const elapsed = Date.now() - timestamp
-  if (elapsed < 60_000) return 'baru saja'
-  if (elapsed < 3_600_000) return `${Math.floor(elapsed / 60_000)} menit lalu`
-  if (elapsed < 86_400_000) return `${Math.floor(elapsed / 3_600_000)} jam lalu`
-  if (elapsed < 7 * 86_400_000) return `${Math.floor(elapsed / 86_400_000)} hari lalu`
-  return new Date(timestamp).toLocaleDateString('id-ID', {
+  if (elapsed < 60_000) return 'just now'
+  if (elapsed < 3_600_000) return `${Math.floor(elapsed / 60_000)}m ago`
+  if (elapsed < 86_400_000) return `${Math.floor(elapsed / 3_600_000)}h ago`
+  if (elapsed < 7 * 86_400_000) return `${Math.floor(elapsed / 86_400_000)}d ago`
+  return new Date(timestamp).toLocaleDateString('en-US', {
     day: '2-digit',
     month: 'short',
     year: 'numeric'
@@ -164,7 +163,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
         )
       })
       .catch(() => {
-        if (mounted) showToast('Gagal memuat riwayat snapshot')
+        if (mounted) showToast('Failed to load snapshot history')
       })
       .finally(() => {
         if (mounted) setVersionsLoading(false)
@@ -209,7 +208,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
       )
       await refreshVersions()
       setSnapshotLabel('')
-      showToast(`${created.label} disimpan ke SQLite`)
+      showToast(`${created.label} saved to SQLite`)
     } catch (error) {
       showToast(errorMessage(error))
     }
@@ -221,7 +220,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
       await useWorkspaceStore.getState().loadWorkspace()
       await refreshVersions()
       setDiffView(null)
-      showToast(`Dipulihkan ke v${ver.versionNumber} — ${ver.label}`)
+      showToast(`Restored to v${ver.versionNumber} — ${ver.label}`)
     } catch (error) {
       showToast(errorMessage(error))
     }
@@ -241,7 +240,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
       await window.noteitAPI.deletePageSnapshot(page.id, ver.id)
       await refreshVersions()
       setDiffView(null)
-      showToast(`Snapshot v${ver.versionNumber} dihapus`)
+      showToast(`Snapshot v${ver.versionNumber} deleted`)
     } catch (error) {
       showToast(errorMessage(error))
     }
@@ -268,7 +267,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
     try {
       const updated = await window.noteitAPI.renamePageSnapshot(page.id, ver.id, clean)
       await refreshVersions()
-      showToast(`Label v${updated.versionNumber} diubah`)
+      showToast(`Label for v${updated.versionNumber} updated`)
     } catch (error) {
       showToast(errorMessage(error))
     }
@@ -276,11 +275,11 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
 
   const handleCompare = async (): Promise<void> => {
     if (!diffBase) {
-      showToast('Pilih versi pembanding dulu')
+      showToast('Select a base version to compare first')
       return
     }
     if (diffTarget !== 'current' && diffTarget === diffBase) {
-      showToast('Pilih dua versi yang berbeda')
+      showToast('Select two different versions to compare')
       return
     }
 
@@ -331,8 +330,8 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
     const result = await window.noteitAPI.exportMarkdown({ scope: 'page', pageId: page.id })
     showToast(
       result.saved && result.filePath
-        ? `Markdown tersimpan: ${result.filePath}`
-        : 'Ekspor halaman dibatalkan'
+        ? `Markdown saved: ${result.filePath}`
+        : 'Page export canceled'
     )
   }
 
@@ -475,7 +474,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
             <span className="text-ink-muted inline-flex items-center gap-1 tabular-nums">
               <Clock size={11.5} aria-hidden="true" />
               Updated{' '}
-              {new Date(page.updatedAt).toLocaleTimeString('id-ID', {
+              {new Date(page.updatedAt).toLocaleTimeString('en-US', {
                 hour: '2-digit',
                 minute: '2-digit'
               })}
@@ -635,12 +634,12 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
           <div className="space-y-1.5 max-h-56 overflow-y-auto pr-0.5">
             {versionsLoading && versions.length === 0 ? (
               <div className="flex items-center gap-2 py-3 text-xs text-ink-muted">
-                <Loader2 size={12} className="animate-spin" />
-                <span>Memuat riwayat snapshot...</span>
+                <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                <span>Loading snapshot history...</span>
               </div>
             ) : versions.length === 0 ? (
               <p className="py-2 text-xs text-ink-secondary">
-                Belum ada snapshot. Simpan snapshot pertama lewat kolom di atas.
+                No snapshots yet. Save your first snapshot using the field above.
               </p>
             ) : (
               versions.map((ver, index) => (
@@ -685,11 +684,11 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                       <button
                         type="button"
                         onClick={() => startRename(ver)}
-                        title="Klik untuk ubah label"
+                        title="Click to rename label"
                         className="flex items-center gap-1.5 min-w-0 font-medium text-ink-primary hover:text-accent-cobalt"
                       >
                         <span className="truncate max-w-[220px]">{ver.label}</span>
-                        <Pencil size={10.5} className="opacity-40 shrink-0" />
+                        <Pencil size={10.5} className="opacity-40 shrink-0" aria-hidden="true" />
                       </button>
                     )}
 
@@ -698,9 +697,9 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                     {ver.tags === null && (
                       <Badge
                         tone="neutral"
-                        title="Snapshot legacy: dibuat sebelum tags tersimpan, jadi tags halaman tidak dipulihkan"
+                        title="Legacy snapshot: created before tags were saved, so page tags will not be restored"
                       >
-                        tanpa tags
+                        no tags
                       </Badge>
                     )}
 
@@ -708,7 +707,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                       {formatRelativeTime(ver.createdAt)}
                     </span>
                     <span className="text-[11px] text-ink-muted tabular-nums">
-                      · {ver.blockCount} blok
+                      · {ver.blockCount} {ver.blockCount === 1 ? 'block' : 'blocks'}
                     </span>
                   </div>
 
@@ -718,8 +717,8 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                       size="xs"
                       onClick={() => handleRestoreClick(ver)}
                     >
-                      <RotateCcw size={11} />
-                      <span>{pendingRestoreId === ver.id ? 'Yakin? Klik lagi' : 'Pulihkan'}</span>
+                      <RotateCcw size={11} aria-hidden="true" />
+                      <span>{pendingRestoreId === ver.id ? 'Sure? Click again' : 'Restore'}</span>
                     </Button>
 
                     <Button
@@ -742,7 +741,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
             )}
           </div>
 
-          {/* Panel diff inline */}
+          {/* Inline diff panel */}
           <div className="mt-3 pt-3 border-t border-border-subtle">
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <GitCompare size={13} className="text-accent-amber" aria-hidden="true" />
@@ -780,26 +779,26 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                 onClick={() => void handleCompare()}
                 disabled={diffLoading || versions.length === 0}
               >
-                {diffLoading ? <Loader2 size={11} className="animate-spin" /> : null}
-                <span>Bandingkan</span>
+                {diffLoading ? <Loader2 size={11} className="animate-spin" aria-hidden="true" /> : null}
+                <span>Compare</span>
               </Button>
             </div>
 
             {diffView && (
               <div className="mt-2.5 p-3 rounded-[8px] bg-surface-elevated border border-border-hairline space-y-2">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <Badge tone="teal">+{diffView.diff.added.length} ditambah</Badge>
-                  <Badge tone="red">-{diffView.diff.removed.length} dihapus</Badge>
-                  <Badge tone="amber">~{diffView.diff.changed.length} diubah</Badge>
-                  <span className="text-ink-muted text-[11px]">{diffView.diff.unchanged} sama</span>
-                  {diffView.diff.titleChanged && <Badge tone="cobalt">Judul berubah</Badge>}
+                  <Badge tone="teal">+{diffView.diff.added.length} added</Badge>
+                  <Badge tone="red">-{diffView.diff.removed.length} removed</Badge>
+                  <Badge tone="amber">~{diffView.diff.changed.length} changed</Badge>
+                  <span className="text-ink-muted text-[11px]">{diffView.diff.unchanged} unchanged</span>
+                  {diffView.diff.titleChanged && <Badge tone="cobalt">Title changed</Badge>}
                 </div>
 
                 {diffView.diff.added.length === 0 &&
                 diffView.diff.removed.length === 0 &&
                 diffView.diff.changed.length === 0 ? (
                   <p className="text-xs text-ink-secondary">
-                    Tidak ada perbedaan blok pada dua versi ini.
+                    No block differences between these two versions.
                   </p>
                 ) : (
                   <div className="space-y-1 max-h-40 overflow-y-auto pr-0.5 font-mono text-[11px]">
@@ -820,7 +819,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                         <span className="text-[var(--pill-amber-text)] shrink-0">~</span>
                         <span className="min-w-0">
                           <span className="text-ink-secondary truncate block">{row.after}</span>
-                          <span className="text-ink-muted truncate block">sebelum: {row.before}</span>
+                          <span className="text-ink-muted truncate block">before: {row.before}</span>
                         </span>
                       </div>
                     ))}
