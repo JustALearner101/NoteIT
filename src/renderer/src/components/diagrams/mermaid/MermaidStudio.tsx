@@ -1,5 +1,4 @@
 import React, { useEffect, useId, useState } from 'react'
-import mermaid from 'mermaid'
 import {
   AlertTriangle,
   Code2,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { Button, SegmentedControl } from '@renderer/components/ui'
+import { sanitizeSvg } from '@shared/svg-sanitize'
 
 interface MermaidStudioProps {
   code: string
@@ -42,15 +42,20 @@ export const MermaidStudio: React.FC<MermaidStudioProps> = ({
         return
       }
       try {
-        mermaid.initialize({
+        const mermaidModule = await import('mermaid')
+        const mermaidInstance = mermaidModule.default
+        mermaidInstance.initialize({
           startOnLoad: false,
           theme: theme === 'dark' ? 'dark' : 'neutral',
-          securityLevel: 'loose',
+          securityLevel: 'strict',
           fontFamily: 'JetBrains Mono, monospace'
         })
-        const { svg } = await mermaid.render(`mermaid-svg-${uniqueId}-${Date.now()}`, code)
+        const { svg } = await mermaidInstance.render(
+          `mermaid-svg-${uniqueId}-${Date.now()}`,
+          code
+        )
         if (active) {
-          setSvgOutput(svg)
+          setSvgOutput(sanitizeSvg(svg))
           setErrorMsg(null)
         }
       } catch (err: any) {

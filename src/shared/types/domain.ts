@@ -57,6 +57,8 @@ export type BlockType =
   | 'image'
   | 'file'
   | 'columns'
+  | 'toggle'
+  | 'divider'
 
 export interface DBMLTableLayout {
   [tableName: string]: { x: number; y: number; color?: MarkerColor }
@@ -70,6 +72,8 @@ export interface DocumentBlock {
   language?: string
   calloutColor?: MarkerColor
   calloutTitle?: string
+  toggleTitle?: string
+  toggleOpen?: boolean
   wide?: boolean
   // For 'dbml' block
   dbmlViewMode?: 'code' | 'split' | 'diagram'

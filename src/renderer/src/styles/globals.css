@@ -24,10 +24,10 @@
   --border-strong: #CECED9;
 
   --text-primary: #141418;
-  --text-secondary: #525260;
-  --text-muted: #767686;
+  --text-secondary: #4A4A58;
+  --text-muted: #5C5C6C;
 
-  --accent-cobalt: #5B67E8;
+  --accent-cobalt: #4A56D4;
   --accent-amber: #C98212;
   --accent-emerald: #10B981;
 
@@ -98,10 +98,10 @@
   --border-strong: #34343E;
 
   --text-primary: #EDEDEF;
-  --text-secondary: #9A9AA6;
-  --text-muted: #787886;
+  --text-secondary: #A8A8B6;
+  --text-muted: #9191A1;
 
-  --accent-cobalt: #6E7BF2;
+  --accent-cobalt: #7A86F8;
   --accent-amber: #E5A93C;
   --accent-emerald: #22C55E;
 
@@ -118,7 +118,7 @@
 
   /* Soft Tinted Pastel Pills (Dark — matching reference Images 1 & 2) */
   --pill-cobalt-bg: rgba(110, 123, 242, 0.14);
-  --pill-cobalt-text: #A2ACFA;
+  --pill-cobalt-text: #BAC2FF;
   --pill-cobalt-border: rgba(110, 123, 242, 0.24);
 
   --pill-amber-bg: rgba(229, 169, 60, 0.14);
@@ -229,7 +229,7 @@ code {
 
 /* Tactile Periwinkle Primary CTA Sheen (matches reference + Add / Publish / + Ask AI buttons) */
 .btn-primary-sheen {
-  background-color: var(--accent-cobalt);
+  background-color: #4A56D4;
   color: #ffffff;
   box-shadow: var(--shadow-primary-cta);
   border: 1px solid rgba(255, 255, 255, 0.12);

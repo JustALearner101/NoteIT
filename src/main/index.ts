@@ -90,7 +90,13 @@ import {
   updateAgentSession
 } from './services/worktree.service'
 import { executeAIChatStream, executeApprovedProposal } from './services/ai.service'
+import { deleteSecret, hasSecret, setSecret } from './services/secret.service'
+import { readUiState, writeUiState } from './services/ui-state.service'
 import type { AIApprovalProposal, AIChatStreamRequest } from '@shared/ipc-channels'
+
+if (process.env.NOTEIT_USER_DATA_DIR) {
+  app.setPath('userData', process.env.NOTEIT_USER_DATA_DIR)
+}
 
 function writeLog(level: 'INFO' | 'WARN' | 'ERROR', message: string, detail?: unknown): void {
   try {
@@ -699,6 +705,18 @@ function registerIpcHandlers(): void {
   ipcMain.handle('mcp:testConnection', (_e, serverIdOrConfig) =>
     testMcpConnection(serverIdOrConfig)
   )
+
+  // Encrypted Secrets (Electron safeStorage) & Durable UI State
+  ipcMain.handle('secrets:set', (_e, input: { key: string; value: string }) =>
+    setSecret(input.key, input.value)
+  )
+  ipcMain.handle('secrets:has', (_e, key: string) => hasSecret(key))
+  ipcMain.handle('secrets:delete', (_e, key: string) => deleteSecret(key))
+  ipcMain.handle('workspace:getUiState', () => readUiState())
+  ipcMain.handle('workspace:saveUiState', (_e, input) => {
+    writeUiState(input)
+    return { ok: true }
+  })
 
   // ADE Pilar 1: Embedded PTY Terminal Multiplexer
   ipcMain.handle('terminal:detectClis', () => detectInstalledClis())

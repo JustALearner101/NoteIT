@@ -269,6 +269,17 @@ const writePersistedTabs = (state: WorkspaceStore): void => {
   } catch (error) {
     console.warn('[tabs] localStorage tidak bisa ditulis', error)
   }
+  if (window.noteitAPI?.saveUiState) {
+    void window.noteitAPI.saveUiState({
+      openTabIds: state.openTabIds,
+      activePageId: state.activePageId,
+      splitPageId: state.splitPageId,
+      splitRatio: state.splitRatio,
+      closedTabIds: state.closedTabIds,
+      isSidebarCollapsed: state.isSidebarCollapsed,
+      activeNotebookId: state.activeNotebookId
+    })
+  }
 }
 
 /** Tab yang hilang dari daftar lama masuk riwayat reopen, urutan asli dipertahankan. */
@@ -354,7 +365,67 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     // parseTabs butuh daftar id halaman yang benar-benar ada di SQLite.
     if (!tabsHydrated) {
       tabsHydrated = true
-      const restored = readPersistedTabs(snap.pages.map((p) => p.id))
+      // One-time automatic migration: if legacy plaintext aiApiKeyMasked exists in localStorage, encrypt via safeStorage and wipe
+      const curPrefs = get().preferences
+      if (curPrefs.aiApiKeyMasked && curPrefs.aiApiKeyMasked.trim().length > 0) {
+        const legacyKey = curPrefs.aiApiKeyMasked.trim()
+        if (window.noteitAPI?.setSecret) {
+          void window.noteitAPI.setSecret({
+            key: `ai.provider.${curPrefs.aiProvider}`,
+            value: legacyKey
+          })
+        }
+        get().updatePreferences({ aiApiKeyMasked: '' })
+      }
+
+      const validPageIds = snap.pages.map((p) => p.id)
+      const validSet = new Set(validPageIds)
+      let durableState: Awaited<ReturnType<typeof window.noteitAPI.getUiState>> = null
+      if (window.noteitAPI?.getUiState) {
+        try {
+          durableState = await window.noteitAPI.getUiState()
+        } catch {
+          durableState = null
+        }
+      }
+
+      if (durableState && durableState.openTabIds.some((id) => validSet.has(id))) {
+        const validOpenTabs = durableState.openTabIds.filter((id) => validSet.has(id))
+        const restoredActiveId = validSet.has(durableState.activePageId)
+          ? durableState.activePageId
+          : validOpenTabs[0]
+        const restoredSplitId =
+          durableState.splitPageId && validSet.has(durableState.splitPageId)
+            ? durableState.splitPageId
+            : null
+        const restoredClosedIds = (durableState.closedTabIds || []).filter((id) =>
+          validSet.has(id)
+        )
+        const restoredNotebookId =
+          durableState.activeNotebookId &&
+          snap.notebooks.some((n) => n.id === durableState.activeNotebookId)
+            ? durableState.activeNotebookId
+            : defaultNotebookId
+
+        set({
+          notebooks: snap.notebooks,
+          sections: snap.sections,
+          pages: snap.pages,
+          tags: snap.tags,
+          stats: snap.stats,
+          activeNotebookId: restoredNotebookId,
+          activePageId: restoredActiveId,
+          openTabIds: validOpenTabs,
+          splitPageId: restoredSplitId,
+          splitRatio: tabRules.clampSplitRatio(durableState.splitRatio),
+          closedTabIds: restoredClosedIds,
+          isSidebarCollapsed: Boolean(durableState.isSidebarCollapsed),
+          isLoading: false
+        })
+        return
+      }
+
+      const restored = readPersistedTabs(validPageIds)
       if (restored) {
         set({
           notebooks: snap.notebooks,
@@ -369,6 +440,18 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
           splitRatio: restored.splitRatio,
           isLoading: false
         })
+        // Migrate localStorage tabs to durable ui-state.json immediately
+        if (window.noteitAPI?.saveUiState) {
+          void window.noteitAPI.saveUiState({
+            openTabIds: restored.openTabIds,
+            activePageId: restored.activePageId,
+            splitPageId: restored.splitPageId,
+            splitRatio: restored.splitRatio,
+            closedTabIds: [],
+            isSidebarCollapsed: get().isSidebarCollapsed,
+            activeNotebookId: defaultNotebookId
+          })
+        }
         return
       }
     }
@@ -848,7 +931,10 @@ useWorkspaceStore.subscribe((state, prev) => {
     state.openTabIds === prev.openTabIds &&
     state.activePageId === prev.activePageId &&
     state.splitPageId === prev.splitPageId &&
-    state.splitRatio === prev.splitRatio
+    state.splitRatio === prev.splitRatio &&
+    state.closedTabIds === prev.closedTabIds &&
+    state.isSidebarCollapsed === prev.isSidebarCollapsed &&
+    state.activeNotebookId === prev.activeNotebookId
   ) {
     return
   }

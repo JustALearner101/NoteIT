@@ -8,6 +8,52 @@ import { getDb, getDbPath } from '../db/client'
 /** Batas keras ukuran satu aset. 120 MB ditolak sebelum dibaca ke memori. */
 export const MAX_ASSET_BYTES = 100 * 1024 * 1024
 
+/** Dangerous executable extensions blocked from asset import. */
+export const BLOCKED_ASSET_EXTENSIONS = new Set([
+  'exe',
+  'dll',
+  'bat',
+  'cmd',
+  'msi',
+  'scr',
+  'com',
+  'pif',
+  'vbs',
+  'vbe',
+  'jse',
+  'wsf',
+  'wsh',
+  'ps1',
+  'psm1'
+])
+
+export function assertSafeAssetExtension(fileName: string): string {
+  const ext = extensionFromFileName(fileName)
+  if (BLOCKED_ASSET_EXTENSIONS.has(ext.toLowerCase())) {
+    throw new Error(`Executable extension ".${ext}" is blocked for security.`)
+  }
+  return ext
+}
+
+/** Computes SHA-256 hash of a file on disk using fixed-size chunked reads (avoiding a full 100 MB buffer spike). */
+export function hashFileChunkedSync(filePath: string): string {
+  const hash = crypto.createHash('sha256')
+  const fd = fs.openSync(filePath, 'r')
+  const chunk = Buffer.allocUnsafe(64 * 1024)
+  try {
+    let bytesRead = 0
+    do {
+      bytesRead = fs.readSync(fd, chunk, 0, chunk.length, null)
+      if (bytesRead > 0) {
+        hash.update(chunk.subarray(0, bytesRead))
+      }
+    } while (bytesRead > 0)
+  } finally {
+    fs.closeSync(fd)
+  }
+  return hash.digest('hex')
+}
+
 const ASSET_ID_PATTERN = /^[0-9a-f]{64}$/
 const ASSET_REQUEST_PATTERN = /^[0-9a-f]{64}\.[a-z0-9]{1,10}$/
 
@@ -124,6 +170,7 @@ export function importAsset(input: { data: Buffer; name: string }): AssetRecord 
   if (data.length > MAX_ASSET_BYTES) {
     throw new Error(`Aset melebihi batas ${MAX_ASSET_BYTES} byte.`)
   }
+  const ext = assertSafeAssetExtension(input.name)
 
   const id = hashAssetContent(data)
   const existing = getAsset(id)
@@ -137,7 +184,6 @@ export function importAsset(input: { data: Buffer; name: string }): AssetRecord 
     return existing
   }
 
-  const ext = extensionFromFileName(input.name)
   const filePath = resolveAssetPath(id, ext)
   if (!filePath) {
     throw new Error('Nama berkas aset tidak valid.')
@@ -155,16 +201,47 @@ export function importAsset(input: { data: Buffer; name: string }): AssetRecord 
   return getAsset(id) as AssetRecord
 }
 
-/** Impor dari path di disk; ukuran diperiksa lebih dulu supaya berkas besar tidak dibaca. */
+/** Impor dari path di disk; ukuran diperiksa lebih dulu dan di-hash secara chunked. */
 export function importAssetFromPath(filePath: string): AssetRecord {
   const stat = fs.statSync(filePath)
   if (!stat.isFile()) {
     throw new Error('Path impor bukan berkas.')
   }
+  if (stat.size === 0) {
+    throw new Error('Aset kosong tidak bisa diimpor.')
+  }
   if (stat.size > MAX_ASSET_BYTES) {
     throw new Error(`Aset melebihi batas ${MAX_ASSET_BYTES} byte.`)
   }
-  return importAsset({ data: fs.readFileSync(filePath), name: path.basename(filePath) })
+  const baseName = path.basename(filePath)
+  const ext = assertSafeAssetExtension(baseName)
+  const id = hashFileChunkedSync(filePath)
+
+  const existing = getAsset(id)
+  if (existing) {
+    const existingTarget = resolveAssetPath(existing.id, existing.ext)
+    if (existingTarget && !fs.existsSync(existingTarget)) {
+      fs.mkdirSync(path.dirname(existingTarget), { recursive: true })
+      fs.copyFileSync(filePath, existingTarget)
+    }
+    return existing
+  }
+
+  const targetPath = resolveAssetPath(id, ext)
+  if (!targetPath) {
+    throw new Error('Nama berkas aset tidak valid.')
+  }
+
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true })
+  fs.copyFileSync(filePath, targetPath)
+
+  getDb()
+    .prepare(
+      'INSERT INTO assets (id, ext, mime, name, size, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+    )
+    .run(id, ext, mimeForExtension(ext), baseName, stat.size, Date.now())
+
+  return getAsset(id) as AssetRecord
 }
 
 export function deleteAsset(assetId: string): { ok: boolean } {

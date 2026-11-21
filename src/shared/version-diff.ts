@@ -22,7 +22,8 @@ function isBlockChanged(current: DocumentBlock, snapshot: DocumentBlock): boolea
   return (
     current.type !== snapshot.type ||
     current.content !== snapshot.content ||
-    Boolean(current.checked) !== Boolean(snapshot.checked)
+    Boolean(current.checked) !== Boolean(snapshot.checked) ||
+    (current.toggleTitle ?? '') !== (snapshot.toggleTitle ?? '')
   )
 }
 

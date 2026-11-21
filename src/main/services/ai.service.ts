@@ -27,6 +27,7 @@ import {
   discoverEnabledMcpServerTools,
   jsonSchemaToZod
 } from './mcp.service'
+import { getProviderSecretKeyName, getSecret } from './secret.service'
 
 const execFileAsync = promisify(execFile)
 
@@ -318,7 +319,8 @@ function buildSystemInstruction(
 }
 
 function resolveLanguageModel(req: AIChatStreamRequest) {
-  const rawKey = req.apiKey?.trim() || ''
+  const storedSecret = getSecret(getProviderSecretKeyName(req.provider))
+  const rawKey = (storedSecret || req.apiKey || '').trim()
   if (!rawKey) {
     return null
   }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { Suspense, useEffect, useRef, useState } from 'react'
 import { Columns2, Plus, X } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { MARKER_META } from '@renderer/lib/marker-colors'
@@ -10,22 +10,73 @@ import { SpecHeader } from '@renderer/components/layout/SpecHeader'
 import { TabContextMenu } from '@renderer/components/layout/TabContextMenu'
 import { TabOverflowMenu } from '@renderer/components/layout/TabOverflowMenu'
 import { TelemetryStatusBar } from '@renderer/components/layout/TelemetryStatusBar'
-import { BlockEditor } from '@renderer/components/editor-block/BlockEditor'
-import { SpatialCanvas } from '@renderer/components/editor-canvas/SpatialCanvas'
 import { CommandPalette } from '@renderer/components/command/CommandPalette'
 import { ShortcutCheatsheetModal } from '@renderer/components/command/ShortcutCheatsheetModal'
-import { SettingsView } from '@renderer/components/settings/SettingsView'
-import { AIChatView } from '@renderer/components/chat/AIChatView'
-import { InAppBrowserView } from '@renderer/components/browser/InAppBrowserView'
-import { AgentMissionControlView } from '@renderer/components/agents/AgentMissionControlView'
-import { MissionBriefingDrawer } from '@renderer/components/agents/MissionBriefingDrawer'
-import { BottomTerminalDrawer } from '@renderer/components/terminal/BottomTerminalDrawer'
-import { RepoExplorerTree } from '@renderer/components/repo/RepoExplorerTree'
-import { RepoDiffInspectorPane } from '@renderer/components/repo/RepoDiffInspectorPane'
 import { useTerminalStore } from '@renderer/stores/useTerminalStore'
 import { resolveUndoTarget } from '@renderer/lib/undo-target'
 import { SPLIT_RATIO_DEFAULT, nextTabId } from '@renderer/lib/tabs'
 import type { Page } from '@shared/types/domain'
+
+const BlockEditor = React.lazy(() =>
+  import('@renderer/components/editor-block/BlockEditor').then((m) => ({
+    default: m.BlockEditor
+  }))
+)
+const SpatialCanvas = React.lazy(() =>
+  import('@renderer/components/editor-canvas/SpatialCanvas').then((m) => ({
+    default: m.SpatialCanvas
+  }))
+)
+const SettingsView = React.lazy(() =>
+  import('@renderer/components/settings/SettingsView').then((m) => ({
+    default: m.SettingsView
+  }))
+)
+const AIChatView = React.lazy(() =>
+  import('@renderer/components/chat/AIChatView').then((m) => ({
+    default: m.AIChatView
+  }))
+)
+const InAppBrowserView = React.lazy(() =>
+  import('@renderer/components/browser/InAppBrowserView').then((m) => ({
+    default: m.InAppBrowserView
+  }))
+)
+const AgentMissionControlView = React.lazy(() =>
+  import('@renderer/components/agents/AgentMissionControlView').then((m) => ({
+    default: m.AgentMissionControlView
+  }))
+)
+const MissionBriefingDrawer = React.lazy(() =>
+  import('@renderer/components/agents/MissionBriefingDrawer').then((m) => ({
+    default: m.MissionBriefingDrawer
+  }))
+)
+const BottomTerminalDrawer = React.lazy(() =>
+  import('@renderer/components/terminal/BottomTerminalDrawer').then((m) => ({
+    default: m.BottomTerminalDrawer
+  }))
+)
+const RepoExplorerTree = React.lazy(() =>
+  import('@renderer/components/repo/RepoExplorerTree').then((m) => ({
+    default: m.RepoExplorerTree
+  }))
+)
+const RepoDiffInspectorPane = React.lazy(() =>
+  import('@renderer/components/repo/RepoDiffInspectorPane').then((m) => ({
+    default: m.RepoDiffInspectorPane
+  }))
+)
+
+const LazyViewFallback: React.FC<{ label?: string }> = ({ label = 'Loading view...' }) => (
+  <div
+    role="status"
+    aria-live="polite"
+    className="flex-1 flex items-center justify-center bg-canvas-primary text-ink-muted font-mono text-xs"
+  >
+    {label}
+  </div>
+)
 
 const WorkbenchPane: React.FC<{
   page: Page
@@ -40,9 +91,13 @@ const WorkbenchPane: React.FC<{
     >
       <SpecHeader page={page} />
       {page.mode === 'canvas' ? (
-        <SpatialCanvas key={`canvas-${page.id}-${isSplitPane}`} page={page} />
+        <Suspense fallback={<LazyViewFallback label="Loading Spatial Canvas..." />}>
+          <SpatialCanvas key={`canvas-${page.id}-${isSplitPane}`} page={page} />
+        </Suspense>
       ) : (
-        <BlockEditor key={`block-${page.id}-${isSplitPane}`} page={page} />
+        <Suspense fallback={<LazyViewFallback label="Loading Editor..." />}>
+          <BlockEditor key={`block-${page.id}-${isSplitPane}`} page={page} />
+        </Suspense>
       )}
     </div>
   )
@@ -361,17 +416,25 @@ export const App: React.FC = () => {
 
         {/* Main Desktop Body: Full-View Settings OR (Index Rail Sidebar + Main View) */}
         {activeMainView === 'settings' ? (
-          <SettingsView />
+          <Suspense fallback={<LazyViewFallback label="Loading Settings..." />}>
+            <SettingsView />
+          </Suspense>
         ) : (
           <div className="flex-1 flex min-h-0 overflow-hidden">
             <IndexRailSidebar collapsed={isSidebarCollapsed} />
 
             {activeMainView === 'ai-chat' ? (
-              <AIChatView />
+              <Suspense fallback={<LazyViewFallback label="Loading AI Chat..." />}>
+                <AIChatView />
+              </Suspense>
             ) : activeMainView === 'browser' ? (
-              <InAppBrowserView />
+              <Suspense fallback={<LazyViewFallback label="Loading Browser..." />}>
+                <InAppBrowserView />
+              </Suspense>
             ) : activeMainView === 'agent-board' ? (
-              <AgentMissionControlView />
+              <Suspense fallback={<LazyViewFallback label="Loading Mission Control..." />}>
+                <AgentMissionControlView />
+              </Suspense>
             ) : (
               <main
                 aria-label="Workspace"
@@ -629,19 +692,21 @@ export const App: React.FC = () => {
                         }`}
                       />
                       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-                        {isBrowserSplitOpen ? (
-                          <InAppBrowserView isSplitMode />
-                        ) : rightSplitMode === 'repo-explorer' ? (
-                          <RepoExplorerTree isSplitMode />
-                        ) : rightSplitMode === 'diff' ? (
-                          <RepoDiffInspectorPane />
-                        ) : splitPage ? (
-                          <WorkbenchPane
-                            page={splitPage}
-                            isSplitPane
-                            onActivate={() => setFocusedPane('split')}
-                          />
-                        ) : null}
+                        <Suspense fallback={<LazyViewFallback label="Loading Split Pane..." />}>
+                          {isBrowserSplitOpen ? (
+                            <InAppBrowserView isSplitMode />
+                          ) : rightSplitMode === 'repo-explorer' ? (
+                            <RepoExplorerTree isSplitMode />
+                          ) : rightSplitMode === 'diff' ? (
+                            <RepoDiffInspectorPane />
+                          ) : splitPage ? (
+                            <WorkbenchPane
+                              page={splitPage}
+                              isSplitPane
+                              onActivate={() => setFocusedPane('split')}
+                            />
+                          ) : null}
+                        </Suspense>
                       </div>
                     </>
                   )}
@@ -652,7 +717,9 @@ export const App: React.FC = () => {
         )}
 
         {/* Embedded ConPTY / Subprocess Terminal Drawer (Ctrl+`) */}
-        <BottomTerminalDrawer />
+        <Suspense fallback={null}>
+          <BottomTerminalDrawer />
+        </Suspense>
 
         {/* Bottom Monospace Telemetry Status Bar */}
         <TelemetryStatusBar />
@@ -665,11 +732,13 @@ export const App: React.FC = () => {
 
         {/* Slide-over Mission Briefing Command Deck (Ctrl+Shift+D) */}
         {missionBriefingPage && (
-          <MissionBriefingDrawer
-            page={missionBriefingPage}
-            isOpen={Boolean(missionBriefingPage)}
-            onClose={closeMissionBriefing}
-          />
+          <Suspense fallback={null}>
+            <MissionBriefingDrawer
+              page={missionBriefingPage}
+              isOpen={Boolean(missionBriefingPage)}
+              onClose={closeMissionBriefing}
+            />
+          </Suspense>
         )}
 
         {/* Tab Context Menu */}

@@ -89,6 +89,13 @@ const noteitAPI: NoteItAPI = {
   testMcpConnection: (serverIdOrConfig) =>
     ipcRenderer.invoke('mcp:testConnection', serverIdOrConfig),
 
+  // Encrypted Secrets & Durable UI State
+  setSecret: (input) => ipcRenderer.invoke('secrets:set', input),
+  hasSecret: (key: string) => ipcRenderer.invoke('secrets:has', key),
+  deleteSecret: (key: string) => ipcRenderer.invoke('secrets:delete', key),
+  getUiState: () => ipcRenderer.invoke('workspace:getUiState'),
+  saveUiState: (input) => ipcRenderer.invoke('workspace:saveUiState', input),
+
   // ADE Pilar 1: Embedded PTY Terminal Multiplexer
   detectCliPresets: () => ipcRenderer.invoke('terminal:detectClis'),
   createTerminalSession: (input) => ipcRenderer.invoke('terminal:createSession', input),

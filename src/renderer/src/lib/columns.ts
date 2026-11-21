@@ -6,13 +6,15 @@
  * (tidak memutasi input) supaya aman dipakai di store/undo.
  */
 
+import type { BlockType } from '@shared/types/domain'
+
 export const MIN_COLUMN_PCT = 15
 const MAX_COLUMN_PCT = 100
 
 /** Kontrak minimal blok; DocumentBlock dari @shared/types/domain kompatibel. */
 export interface ColumnBlock {
   id: string
-  type: string
+  type: BlockType
   content: string
   columnGroupId?: string
   columnIndex?: number
@@ -290,11 +292,11 @@ export function flattenColumns<B extends ColumnBlock>(
 }
 
 /** Sisipkan header grup baru (plus kolom kosong) setelah afterId. */
-export function createColumnGroup(
-  blocks: readonly ColumnBlock[],
+export function createColumnGroup<B extends ColumnBlock = ColumnBlock>(
+  blocks: readonly B[],
   afterId: string | null | undefined,
   count: number
-): ColumnBlock[] {
+): B[] {
   const columnCount = Math.max(1, toCount(count))
   const existing = new Set(blocks.map((block) => block.id))
   const headerId = uniqueId(existing, 'col-group')
@@ -320,7 +322,7 @@ export function createColumnGroup(
   const result = blocks.slice()
   const anchor = afterId ? result.findIndex((block) => block.id === afterId) : -1
   const insertAt = anchor >= 0 ? anchor + 1 : result.length
-  result.splice(insertAt, 0, header, ...cells)
+  result.splice(insertAt, 0, header as B, ...(cells as B[]))
   return result
 }
 

@@ -244,6 +244,29 @@ describe('export.service — pageToMarkdown', () => {
     const markdown = pageToMarkdown(makePage({ mode: 'block' }))
     expect(markdown).not.toContain('## Canvas')
   })
+
+  it('renders toggle and divider blocks into clean Markdown', () => {
+    const markdown = pageToMarkdown(
+      makePage({
+        blocks: [
+          makeBlock({
+            id: 'tg-1',
+            type: 'toggle',
+            toggleTitle: 'Edge Cases',
+            toggleOpen: true,
+            content: 'Handle offline reconnect.'
+          }),
+          makeBlock({
+            id: 'dv-1',
+            type: 'divider',
+            content: ''
+          })
+        ]
+      })
+    )
+    expect(markdown).toContain('<details open>\n<summary>Edge Cases</summary>\n\nHandle offline reconnect.\n</details>')
+    expect(markdown).toContain('\n\n---\n')
+  })
 })
 
 describe('export.service — blok kolom', () => {

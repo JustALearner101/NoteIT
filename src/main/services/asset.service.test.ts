@@ -136,6 +136,15 @@ describe('asset.service — impor dan dedupe', () => {
     const asset = importAsset({ data: Buffer.from('untuk-list'), name: 'list.pdf' })
     expect(listAssets().map((row) => row.id)).toContain(asset.id)
   })
+
+  it('rejects dangerous executable extensions (.exe, .bat, .ps1)', () => {
+    expect(() => importAsset({ data: Buffer.from('MZ...'), name: 'payload.exe' })).toThrow(
+      /blocked/i
+    )
+    expect(() => importAsset({ data: Buffer.from('echo hi'), name: 'run.bat' })).toThrow(
+      /blocked/i
+    )
+  })
 })
 
 describe('asset.service — keamanan path', () => {

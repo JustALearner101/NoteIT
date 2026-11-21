@@ -1,0 +1,81 @@
+name: NoteIT CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-and-build:
+    name: Typecheck, Unit Tests & Bundle Budget (<900 KB)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript typecheck (node & web)
+        run: npm run typecheck
+
+      - name: Run Vitest unit test suite
+        run: npm test
+
+      - name: Build Electron production bundles
+        run: npm run build
+
+      - name: Assert main renderer entry chunk is under 900 KB raw
+        shell: pwsh
+        run: |
+          $entryChunk = Get-ChildItem -Path "out/renderer/assets/index-*.js" | Select-Object -First 1
+          if (-not $entryChunk) {
+            Write-Error "Main renderer index-*.js chunk not found!"
+            exit 1
+          }
+          $sizeKb = [math]::Round($entryChunk.Length / 1024, 2)
+          Write-Host "Main renderer entry chunk: $($entryChunk.Name) = $sizeKb KB"
+          if ($entryChunk.Length -ge (900 * 1024)) {
+            Write-Error "Bundle budget exceeded: $sizeKb KB >= 900 KB"
+            exit 1
+          }
+
+  e2e-electron:
+    name: Playwright Electron E2E & WCAG 2.1 AA Audit
+    runs-on: windows-latest
+    needs: unit-and-build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron app for E2E launch
+        run: npm run build
+
+      - name: Run Playwright Electron E2E + axe-core WCAG 2.1 AA suite
+        run: npx playwright test
+
+      - name: Upload Playwright report on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-electron-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

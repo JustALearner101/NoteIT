@@ -181,6 +181,12 @@ export function renderBlock(block: DocumentBlock): string {
       // Header grup hanya metadata; anak-anaknya dirender sebagai blok biasa.
       // String kosong membuat pageToMarkdown melewatinya (tanpa paragraf kosong).
       return ''
+    case 'toggle': {
+      const summary = block.toggleTitle?.trim() || 'Details'
+      return `<details${block.toggleOpen ? ' open' : ''}>\n<summary>${summary}</summary>\n\n${content}\n</details>`
+    }
+    case 'divider':
+      return '---'
     case 'image': {
       if (!block.assetId || !block.assetExt) return content
       const alt = block.assetName || content || 'gambar'

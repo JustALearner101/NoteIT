@@ -708,47 +708,49 @@ export const AIChatView: React.FC = () => {
 
           <div className="h-3.5 w-[1px] bg-border-hairline mx-1" />
 
-          {sessions.map((sess) => {
-            const active = sess.id === activeSession.id
-            return (
-              <div
-                key={sess.id}
-                role="tab"
-                aria-selected={active}
-                tabIndex={0}
-                onClick={() => setActiveSessionId(sess.id)}
-                onKeyDown={(e) => {
-                  if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
-                    e.preventDefault()
-                    setActiveSessionId(sess.id)
-                  }
-                }}
-                className={`px-2.5 py-1 rounded-md text-xs cursor-pointer flex items-center gap-2 transition-colors ${
-                  active
-                    ? 'bg-surface-elevated border border-border-hairline text-ink-primary font-medium'
-                    : 'text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
-                }`}
-              >
-                <Clock size={11} className="text-ink-muted" aria-hidden="true" />
-                <span className="truncate max-w-[150px]">{sess.title}</span>
-                {sessions.length > 1 && (
-                  <button
-                    type="button"
-                    aria-label={`Delete chat session ${sess.title}`}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const remaining = sessions.filter((s) => s.id !== sess.id)
-                      setSessions(remaining)
-                      if (active && remaining[0]) setActiveSessionId(remaining[0].id)
-                    }}
-                    className="text-ink-muted hover:text-[#EF4444]"
-                  >
-                    <Trash2 size={11} aria-hidden="true" />
-                  </button>
-                )}
-              </div>
-            )
-          })}
+          <div role="tablist" aria-label="Chat sessions" className="flex items-center gap-2">
+            {sessions.map((sess) => {
+              const active = sess.id === activeSession.id
+              return (
+                <div
+                  key={sess.id}
+                  role="tab"
+                  aria-selected={active}
+                  tabIndex={0}
+                  onClick={() => setActiveSessionId(sess.id)}
+                  onKeyDown={(e) => {
+                    if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault()
+                      setActiveSessionId(sess.id)
+                    }
+                  }}
+                  className={`px-2.5 py-1 rounded-md text-xs cursor-pointer flex items-center gap-2 transition-colors ${
+                    active
+                      ? 'bg-surface-elevated border border-border-hairline text-ink-primary font-medium'
+                      : 'text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
+                  }`}
+                >
+                  <Clock size={11} className="text-ink-muted" aria-hidden="true" />
+                  <span className="truncate max-w-[150px]">{sess.title}</span>
+                  {sessions.length > 1 && (
+                    <button
+                      type="button"
+                      aria-label={`Delete chat session ${sess.title}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const remaining = sessions.filter((s) => s.id !== sess.id)
+                        setSessions(remaining)
+                        if (active && remaining[0]) setActiveSessionId(remaining[0].id)
+                      }}
+                      className="text-ink-muted hover:text-[#EF4444]"
+                    >
+                      <Trash2 size={11} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         <div className="hidden sm:flex items-center gap-2 text-xs">

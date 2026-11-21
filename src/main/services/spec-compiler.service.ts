@@ -76,6 +76,11 @@ export function generateActiveTaskMarkdown(page: Page, repoPath: string): string
     } else if (block.type === 'callout') {
       lines.push(`> [!NOTE] ${block.calloutTitle || 'CATATAN ARSITEKTUR'}`)
       lines.push(`> ${block.content.replace(/\n/g, '\n> ')}`, '')
+    } else if (block.type === 'toggle') {
+      lines.push(`### ${block.toggleTitle || 'Detail Teknis'}`)
+      lines.push(block.content, '')
+    } else if (block.type === 'divider') {
+      lines.push('---', '')
     } else if (block.type === 'code') {
       lines.push(`\`\`\`${block.language || 'text'}\n${block.content}\n\`\`\``, '')
     } else if (block.type === 'checklist') {

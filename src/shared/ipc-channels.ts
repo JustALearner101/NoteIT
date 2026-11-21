@@ -177,7 +177,6 @@ export interface ExportMarkdownResult {
   saved: boolean
   filePath?: string
   fileCount?: number
-  /** Jumlah berkas aset yang ikut disalin ke folder assets/ hasil ekspor. */
   assetCount?: number
 }
 
@@ -192,9 +191,7 @@ export interface NoteItAPI {
 
   // Backlinks & Version History (Snapshots)
   getBacklinks(pageId: string): Promise<BacklinkItem[]>
-  /** Metadata-only: tidak memuat blocks/canvas tiap versi. */
   getPageVersions(pageId: string): Promise<PageVersionSummary[]>
-  /** Versi penuh (blocks + canvas) untuk preview/diff. */
   getPageVersion(pageId: string, versionId: string): Promise<PageVersion>
   createPageSnapshot(pageId: string, label?: string): Promise<PageVersion>
   restorePageSnapshot(pageId: string, versionId: string): Promise<Page>
@@ -217,9 +214,7 @@ export interface NoteItAPI {
   exportMarkdown(input: ExportMarkdownInput): Promise<ExportMarkdownResult>
 
   // Assets (attachment/PDF, content-addressed)
-  /** Dialog pemilih berkas; aset identik otomatis didedupe. */
   importAssets(): Promise<AssetImportResult>
-  /** Impor byte langsung (paste screenshot / drag-drop tanpa path). */
   importAssetBytes(input: ImportAssetBytesInput): Promise<AssetRecord>
   saveAssetAs(input: SaveAssetAsInput): Promise<{ saved: boolean; filePath?: string }>
   openAssetExternal(assetId: string): Promise<{ ok: boolean; error?: string }>
@@ -227,7 +222,6 @@ export interface NoteItAPI {
   // Quick Capture & Daily Note
   createQuickNote(text: string): Promise<Page>
   openDailyNote(): Promise<Page>
-  /** Event dari main process (global hotkey daily note); return fungsi unsubscribe. */
   onNavigateToPage(callback: (pageId: string) => void): () => void
 
   // Desktop Window Controls
@@ -302,15 +296,19 @@ export interface NoteItAPI {
     requireApproval?: boolean
   }): Promise<McpServerConfig>
   deleteMcpServer(id: string): Promise<{ ok: boolean }>
-  testMcpConnection(serverIdOrConfig: string | {
-    id: string
-    name: string
-    transport: McpTransportType
-    command: string
-    args: string[]
-    url: string
-    envVars: Record<string, string>
-  }): Promise<McpConnectionTestResult>
+  testMcpConnection(
+    serverIdOrConfig:
+      | string
+      | {
+          id: string
+          name: string
+          transport: McpTransportType
+          command: string
+          args: string[]
+          url: string
+          envVars: Record<string, string>
+        }
+  ): Promise<McpConnectionTestResult>
 
   // ADE Pilar 1: Embedded PTY Terminal Multiplexer
   detectCliPresets(): Promise<DetectedCliPreset[]>
@@ -350,4 +348,27 @@ export interface NoteItAPI {
   discardWorktreeSession(sessionId: string): Promise<{ ok: boolean; error?: string }>
   quickApproveSession(sessionId: string): Promise<{ ok: boolean }>
   onAgentSessionUpdated(callback: (session: AgentSessionRecord) => void): () => void
+
+  // Encrypted Secrets (Electron safeStorage) & Durable UI State
+  setSecret(input: { key: string; value: string }): Promise<{ ok: boolean }>
+  hasSecret(key: string): Promise<boolean>
+  deleteSecret(key: string): Promise<{ ok: boolean }>
+  getUiState(): Promise<{
+    openTabIds: string[]
+    activePageId: string
+    splitPageId: string | null
+    splitRatio: number
+    closedTabIds: string[]
+    isSidebarCollapsed: boolean
+    activeNotebookId?: string
+  } | null>
+  saveUiState(input: {
+    openTabIds?: string[]
+    activePageId?: string
+    splitPageId?: string | null
+    splitRatio?: number
+    closedTabIds?: string[]
+    isSidebarCollapsed?: boolean
+    activeNotebookId?: string
+  }): Promise<{ ok: boolean }>
 }

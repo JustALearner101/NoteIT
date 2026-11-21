@@ -77,4 +77,27 @@ describe('sanitizeSvg', () => {
     const clean = sanitizeSvg('<svg><script>alert(1)</svg>')
     expect(clean).not.toContain('<script')
   })
+
+  it('strips Mermaid XSS payloads (script, onload, javascript: links, foreignObject)', () => {
+    const maliciousMermaidSvg = [
+      '<svg id="mermaid-svg-1" viewBox="0 0 400 200">',
+      '<script>window.__xss = true</script>',
+      '<g class="node" onload="alert(document.cookie)">',
+      '<a xlink:href="javascript:fetch(\'http://evil.local\')">',
+      '<foreignObject width="120" height="40"><div onclick="evil()">Node A</div></foreignObject>',
+      '<text class="nodeLabel">Safe Node Label</text>',
+      '</a>',
+      '</g>',
+      '</svg>'
+    ].join('')
+
+    const sanitized = sanitizeSvg(maliciousMermaidSvg)
+    expect(sanitized).not.toContain('<script')
+    expect(sanitized).not.toContain('window.__xss')
+    expect(sanitized).not.toContain('onload=')
+    expect(sanitized).not.toContain('onclick=')
+    expect(sanitized).not.toContain('javascript:')
+    expect(sanitized).not.toContain('foreignObject')
+    expect(sanitized).toContain('Safe Node Label')
+  })
 })

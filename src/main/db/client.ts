@@ -12,10 +12,11 @@ export function extractPlainTextFromPage(page: Pick<Page, 'title' | 'blocks' | '
   const parts: string[] = [page.title]
 
   for (const b of page.blocks || []) {
-    // Header grup kolom hanya metadata (content ''); teksnya ada di blok anak.
-    if (b.type === 'columns') continue
+    // Header grup kolom dan divider tidak punya teks konten.
+    if (b.type === 'columns' || b.type === 'divider') continue
     if (b.content) parts.push(b.content)
     if (b.calloutTitle) parts.push(b.calloutTitle)
+    if (b.toggleTitle) parts.push(b.toggleTitle)
     if (b.databaseTitle) parts.push(b.databaseTitle)
     if (b.databaseItems) {
       for (const item of b.databaseItems) {
@@ -254,6 +255,13 @@ export function initDatabase(workspaceDir: string): DatabaseSync {
       enabled INTEGER NOT NULL DEFAULT 1,
       require_approval INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS secrets (
+      key TEXT PRIMARY KEY,
+      ciphertext_base64 TEXT NOT NULL,
+      encryption_scheme TEXT NOT NULL DEFAULT 'dpapi',
       updated_at INTEGER NOT NULL
     );
   `)

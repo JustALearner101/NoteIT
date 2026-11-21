@@ -8,11 +8,11 @@ import {
   type ColumnBlock
 } from '@renderer/lib/columns'
 
-interface ColumnGroupProps {
-  header: ColumnBlock
+interface ColumnGroupProps<B extends ColumnBlock = ColumnBlock> {
+  header: B
   widths: number[]
-  columns: ColumnBlock[][]
-  renderBlock: (block: ColumnBlock, columnIndex: number) => React.ReactNode
+  columns: B[][]
+  renderBlock: (block: B, columnIndex: number) => React.ReactNode
   onWidthsChange: (widths: number[]) => void
   onRemoveColumn?: (columnIndex: number) => void
   /** Drop blok dari blok lain; tanpa prop ini sel kolom tidak punya handler drag. */
@@ -33,7 +33,7 @@ interface DragState {
  * di-drag/di-nudge. Lebar selama drag disimpan lokal, dan onWidthsChange
  * hanya dipanggil sekali saat pointer dilepas (satu entri undo per drag).
  */
-export function ColumnGroup({
+export function ColumnGroup<B extends ColumnBlock = ColumnBlock>({
   header,
   widths,
   columns,
@@ -42,7 +42,7 @@ export function ColumnGroup({
   onRemoveColumn,
   onDropBlock,
   readOnly = false
-}: ColumnGroupProps): React.JSX.Element {
+}: ColumnGroupProps<B>): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
   const pendingRef = useRef<number[] | null>(null)

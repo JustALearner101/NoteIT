@@ -198,7 +198,7 @@ export const AppearanceThemesTab: React.FC = () => {
                       <span className="font-mono text-[10px] truncate" style={{ color: t.colors.textPrimary }}>
                         Aa · {t.colorScheme.toUpperCase()}
                       </span>
-                      <span className="font-mono text-[9px]" style={{ color: t.colors.accentCobalt }}>
+                      <span className="font-mono text-[9px]" style={{ color: t.colors.textSecondary }}>
                         {t.colors.accentCobalt}
                       </span>
                     </div>
