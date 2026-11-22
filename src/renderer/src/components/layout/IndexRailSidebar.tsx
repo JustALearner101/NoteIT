@@ -11,6 +11,7 @@ import {
   FolderPlus,
   GanttChart,
   Globe,
+  GraduationCap,
   Hash,
   HelpCircle,
   LayoutGrid,
@@ -176,8 +177,8 @@ export const IndexRailSidebar: React.FC<IndexRailSidebarProps> = ({ collapsed = 
             className={cn(
               'w-8 h-8 rounded-[7px] flex items-center justify-center transition-colors',
               activeMainView === 'workbench'
-                ? 'bg-surface-hover text-ink-primary border border-border-hairline'
-                : 'text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
+                ? 'bg-[var(--pill-cobalt-bg)] text-[var(--pill-cobalt-text)] border border-[var(--pill-cobalt-border)]'
+                : 'text-[var(--marker-cobalt)] hover:bg-surface-hover'
             )}
           >
             <FileText size={15} aria-hidden="true" />
@@ -194,8 +195,8 @@ export const IndexRailSidebar: React.FC<IndexRailSidebarProps> = ({ collapsed = 
             className={cn(
               'w-8 h-8 rounded-[7px] flex items-center justify-center transition-colors',
               activeMainView === 'ai-chat'
-                ? 'bg-[var(--pill-cobalt-bg)] text-[var(--pill-cobalt-text)] border border-[var(--pill-cobalt-border)]'
-                : 'text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
+                ? 'bg-[var(--pill-violet-bg)] text-[var(--pill-violet-text)] border border-[var(--pill-violet-border)]'
+                : 'text-[var(--marker-violet)] hover:bg-surface-hover'
             )}
           >
             <MessageSquare size={15} aria-hidden="true" />
@@ -212,8 +213,10 @@ export const IndexRailSidebar: React.FC<IndexRailSidebarProps> = ({ collapsed = 
             className={cn(
               'relative w-8 h-8 rounded-[7px] flex items-center justify-center transition-colors',
               activeMainView === 'agent-board'
-                ? 'bg-[var(--pill-teal-bg)] text-[var(--pill-teal-text)] border border-[var(--pill-teal-border)]'
-                : 'text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
+                ? 'bg-[var(--pill-amber-bg)] text-[var(--pill-amber-text)] border border-[var(--pill-amber-border)]'
+                : activeMissionCount > 0
+                  ? 'text-accent-emerald hover:bg-surface-hover'
+                  : 'text-[var(--marker-amber)] hover:bg-surface-hover'
             )}
           >
             <Radio size={15} aria-hidden="true" />
@@ -239,11 +242,29 @@ export const IndexRailSidebar: React.FC<IndexRailSidebarProps> = ({ collapsed = 
             className={cn(
               'w-8 h-8 rounded-[7px] flex items-center justify-center transition-colors',
               activeMainView === 'browser'
-                ? 'bg-[var(--pill-cobalt-bg)] text-[var(--pill-cobalt-text)] border border-[var(--pill-cobalt-border)]'
-                : 'text-ink-secondary hover:text-ink-primary hover:bg-surface-hover'
+                ? 'bg-[var(--pill-teal-bg)] text-accent-emerald border border-[var(--pill-teal-border)]'
+                : 'text-accent-emerald hover:bg-surface-hover'
             )}
           >
             <Globe size={15} aria-hidden="true" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              setActiveMainView(activeMainView === 'learn' ? 'workbench' : 'learn')
+            }
+            title="Learn Workbench & Knowledge Graph"
+            aria-label="Learn Workbench"
+            aria-current={activeMainView === 'learn' ? 'page' : undefined}
+            className={cn(
+              'w-8 h-8 rounded-[7px] flex items-center justify-center transition-colors',
+              activeMainView === 'learn'
+                ? 'bg-[var(--pill-teal-bg)] text-[var(--pill-teal-text)] border border-[var(--pill-teal-border)]'
+                : 'text-[var(--marker-teal)] hover:bg-surface-hover'
+            )}
+          >
+            <GraduationCap size={15} aria-hidden="true" />
           </button>
         </div>
 
@@ -516,7 +537,7 @@ export const IndexRailSidebar: React.FC<IndexRailSidebarProps> = ({ collapsed = 
             )}
           >
             <span className="flex items-center gap-2.5">
-              <FileText size={14} className="text-ink-muted" aria-hidden="true" />
+              <FileText size={14} className="text-[var(--marker-cobalt)]" aria-hidden="true" />
               <span>Notes &amp; Specs</span>
             </span>
             <span className="px-1.5 py-[1px] rounded-[5px] bg-surface-elevated border border-border-subtle font-mono text-[10px] text-ink-muted tabular-nums">
@@ -541,7 +562,7 @@ export const IndexRailSidebar: React.FC<IndexRailSidebarProps> = ({ collapsed = 
               <Radio
                 size={14}
                 aria-hidden="true"
-                className={activeMissionCount > 0 ? 'text-accent-emerald' : 'text-ink-muted'}
+                className={activeMissionCount > 0 ? 'text-accent-emerald' : 'text-[var(--marker-amber)]'}
               />
               <span>Mission Control</span>
             </span>
@@ -577,8 +598,27 @@ export const IndexRailSidebar: React.FC<IndexRailSidebarProps> = ({ collapsed = 
             )}
           >
             <span className="flex items-center gap-2.5">
-              <MessageSquare size={14} className="text-ink-muted" aria-hidden="true" />
+              <MessageSquare size={14} className="text-[var(--marker-violet)]" aria-hidden="true" />
               <span>AI Assistant</span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              setActiveMainView(activeMainView === 'learn' ? 'workbench' : 'learn')
+            }
+            aria-current={activeMainView === 'learn' ? 'page' : undefined}
+            className={cn(
+              'w-full px-2 py-[6px] rounded-[7px] text-[12.5px] flex items-center justify-between transition-colors',
+              activeMainView === 'learn'
+                ? 'bg-surface-hover text-ink-primary font-medium'
+                : 'text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
+            )}
+          >
+            <span className="flex items-center gap-2.5">
+              <GraduationCap size={14} className="text-[var(--marker-teal)]" aria-hidden="true" />
+              <span>Learn &amp; Graph</span>
             </span>
           </button>
 
@@ -596,7 +636,7 @@ export const IndexRailSidebar: React.FC<IndexRailSidebarProps> = ({ collapsed = 
             )}
           >
             <span className="flex items-center gap-2.5">
-              <Globe size={14} className="text-ink-muted" aria-hidden="true" />
+              <Globe size={14} className="text-accent-emerald" aria-hidden="true" />
               <span>Reference Web</span>
             </span>
           </button>

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type {
+  LearnSeedSource,
   MarkerColor,
   Notebook,
   Page,
@@ -20,7 +21,7 @@ import {
   type WorkbenchPreferences
 } from '@renderer/lib/themes'
 
-export type MainViewMode = 'workbench' | 'settings' | 'ai-chat' | 'browser' | 'agent-board'
+export type MainViewMode = 'workbench' | 'settings' | 'ai-chat' | 'browser' | 'agent-board' | 'learn'
 export type RightSplitMode = 'page' | 'browser' | 'repo-explorer' | 'diff'
 
 export interface DiffInspectorTarget {
@@ -75,6 +76,7 @@ interface WorkspaceStore {
   rightSplitMode: RightSplitMode
   diffTarget: DiffInspectorTarget | null
   browserContextForAI: BrowserContextPayload | null
+  pendingLearnSeed: LearnSeedSource | null
   theme: 'dark' | 'light'
   preferences: WorkbenchPreferences
   telemetry: TelemetryState
@@ -107,6 +109,8 @@ interface WorkspaceStore {
   updateNotebookRepo: (notebookId: string, repoPath: string | null, defaultBranch?: string) => Promise<void>
   updateSectionRepo: (sectionId: string, repoPathOverride: string | null) => Promise<void>
   setBrowserContextForAI: (ctx: BrowserContextPayload | null) => void
+  startLearnFromSource: (seed: LearnSeedSource) => void
+  clearPendingLearnSeed: () => void
   toggleTheme: () => void
   setActiveTheme: (themeId: string) => void
   saveCustomTheme: (theme: ThemeDefinition) => void
@@ -328,6 +332,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   rightSplitMode: 'page',
   diffTarget: null,
   browserContextForAI: null,
+  pendingLearnSeed: null,
   theme: initialThemeDef.colorScheme,
   preferences: initialPrefs,
   telemetry: {
@@ -697,6 +702,14 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   },
 
   setBrowserContextForAI: (ctx) => set({ browserContextForAI: ctx }),
+
+  startLearnFromSource: (seed) =>
+    set({
+      pendingLearnSeed: seed,
+      activeMainView: 'learn'
+    }),
+
+  clearPendingLearnSeed: () => set({ pendingLearnSeed: null }),
 
   toggleTheme: () => {
     set((state) => {

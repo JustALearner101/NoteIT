@@ -10,3 +10,4 @@ backups/
 Thumbs.db
 playwright-report/
 test-results/
+reference/

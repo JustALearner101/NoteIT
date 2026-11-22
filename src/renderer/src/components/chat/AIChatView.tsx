@@ -21,7 +21,7 @@ import {
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { Badge, Button, cn } from '@renderer/components/ui'
 import type { AIApprovalProposal, AIChatStreamEvent } from '@shared/ipc-channels'
-import type { Page } from '@shared/types/domain'
+import type { AIProviderKind, AIProviderProfile, Page } from '@shared/types/domain'
 
 interface ToolCallBadge {
   toolName: string
@@ -122,6 +122,18 @@ export const AIChatView: React.FC = () => {
   const [promptText, setPromptText] = useState('')
   const [mentionedPageIds, setMentionedPageIds] = useState<string[]>([])
   const [isStreamingReply, setIsStreamingReply] = useState(false)
+  const [customProfiles, setCustomProfiles] = useState<AIProviderProfile[]>([])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const profs = (await window.noteitAPI?.listProviderProfiles?.()) ?? []
+        setCustomProfiles(profs)
+      } catch {
+        // ignore in test env
+      }
+    })()
+  }, [])
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const activeRequestMap = useRef<Record<string, { sessionId: string; assistantMsgId: string }>>({})
@@ -336,6 +348,7 @@ export const AIChatView: React.FC = () => {
     await window.noteitAPI.startAIChatStream({
       requestId,
       provider: preferences.aiProvider,
+      profileId: preferences.aiProfileId,
       modelId: preferences.aiModel,
       apiKey: preferences.aiApiKeyMasked,
       approvalMode: preferences.aiApprovalMode,
@@ -634,18 +647,83 @@ export const AIChatView: React.FC = () => {
             </button>
 
             {isModelMenuOpen && (
-              <div className="absolute right-0 bottom-9 z-30 w-64 rounded-[10px] bg-surface-elevated border border-border-hairline shadow-popover p-1.5 space-y-0.5 animate-popover-enter">
+              <div className="absolute right-0 bottom-9 z-30 w-72 rounded-[10px] bg-surface-elevated border border-border-hairline shadow-popover p-1.5 space-y-0.5 animate-popover-enter max-h-80 overflow-y-auto">
+                <div className="px-2.5 py-1 text-[10px] font-mono uppercase text-ink-muted">
+                  Zero-API-Key CLI Bridges
+                </div>
+                {(
+                  [
+                    { label: 'Claude Code CLI · Sonnet', provider: 'cli-claude' as AIProviderKind, model: 'sonnet' },
+                    { label: 'Gemini CLI · Native Auth', provider: 'cli-gemini' as AIProviderKind, model: 'default' },
+                    { label: 'Codex CLI · Native Auth', provider: 'cli-codex' as AIProviderKind, model: 'default' }
+                  ] as const
+                ).map((item) => (
+                  <button
+                    key={item.provider}
+                    type="button"
+                    onClick={() => {
+                      updatePreferences({
+                        aiProvider: item.provider,
+                        aiProfileId: undefined,
+                        aiModel: item.model
+                      })
+                      setIsModelMenuOpen(false)
+                    }}
+                    className={cn(
+                      'w-full px-2.5 py-1.5 rounded-[7px] text-left text-xs transition-colors',
+                      preferences.aiProvider === item.provider && !preferences.aiProfileId
+                        ? 'bg-surface-hover text-ink-primary font-medium'
+                        : 'text-ink-secondary hover:bg-surface-hover hover:text-ink-primary'
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+
+                {customProfiles.length > 0 && (
+                  <>
+                    <div className="border-t border-border-subtle pt-1 mt-1 px-2.5 py-1 text-[10px] font-mono uppercase text-ink-muted">
+                      Custom Endpoints &amp; CLIs
+                    </div>
+                    {customProfiles.map((prof) => (
+                      <button
+                        key={prof.id}
+                        type="button"
+                        onClick={() => {
+                          updatePreferences({
+                            aiProvider: prof.kind,
+                            aiProfileId: prof.id,
+                            aiModel: prof.defaultModel || 'default'
+                          })
+                          setIsModelMenuOpen(false)
+                        }}
+                        className={cn(
+                          'w-full px-2.5 py-1.5 rounded-[7px] text-left text-xs transition-colors truncate',
+                          preferences.aiProfileId === prof.id
+                            ? 'bg-surface-hover text-ink-primary font-medium'
+                            : 'text-ink-secondary hover:bg-surface-hover hover:text-ink-primary'
+                        )}
+                      >
+                        {prof.name} · {prof.defaultModel || prof.kind}
+                      </button>
+                    ))}
+                  </>
+                )}
+
+                <div className="border-t border-border-subtle pt-1 mt-1 px-2.5 py-1 text-[10px] font-mono uppercase text-ink-muted">
+                  Built-in Cloud &amp; Local API
+                </div>
                 {MODEL_OPTIONS.map((mdl) => (
                   <button
                     key={mdl}
                     type="button"
                     onClick={() => {
-                      updatePreferences({ aiModel: mdl })
+                      updatePreferences({ aiProfileId: undefined, aiModel: mdl })
                       setIsModelMenuOpen(false)
                     }}
                     className={cn(
                       'w-full px-2.5 py-1.5 rounded-[7px] text-left text-xs transition-colors',
-                      preferences.aiModel === mdl
+                      !preferences.aiProfileId && preferences.aiModel === mdl
                         ? 'bg-surface-hover text-ink-primary font-medium'
                         : 'text-ink-secondary hover:bg-surface-hover hover:text-ink-primary'
                     )}
@@ -662,7 +740,7 @@ export const AIChatView: React.FC = () => {
                     }}
                     className="w-full px-2.5 py-1.5 rounded-[7px] text-left text-[11px] font-medium text-accent-cobalt hover:bg-surface-hover transition-colors"
                   >
-                    Configure API Key / Ollama →
+                    Configure Endpoints / CLI Bridges →
                   </button>
                 </div>
               </div>

@@ -8,6 +8,7 @@ import {
   FolderDown,
   GanttChart,
   Globe,
+  GraduationCap,
   HelpCircle,
   Keyboard,
   LayoutGrid,
@@ -270,6 +271,22 @@ export const CommandPalette: React.FC = () => {
         transfersFocus: true,
         icon: <Globe size={13} className="text-accent-teal shrink-0" />,
         run: () => setActiveMainView('browser')
+      },
+      {
+        id: 'open-learn',
+        label: 'Open Learn Workbench & Knowledge Graph',
+        keywords: 'learn study tutor quiz practice knowledge graph learnharness',
+        transfersFocus: true,
+        icon: <GraduationCap size={13} className="text-accent-teal shrink-0" />,
+        run: () => setActiveMainView('learn')
+      },
+      {
+        id: 'open-ai-providers',
+        label: 'AI Providers, Custom Endpoints & CLI Bridges',
+        keywords: 'ai provider api key custom openai anthropic claude cli gemini codex',
+        transfersFocus: true,
+        icon: <Settings size={13} className="text-accent-cobalt shrink-0" />,
+        run: () => setActiveMainView('settings', 'ai-providers')
       },
       {
         id: 'open-settings',

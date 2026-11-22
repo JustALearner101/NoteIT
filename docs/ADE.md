@@ -361,3 +361,20 @@ Ketika siap dieksekusi ke kode, pembangunan dibagi menjadi 4 paket kerja berurut
 1. Instal paket `@codemirror/view`, `@codemirror/state`, `@codemirror/merge`, dan paket bahasa terkait.
 2. Bangun `src/renderer/src/components/repo/RepoDiffInspectorPane.tsx` (pohon file di kiri/atas, CodeMirror 6 viewer & *Side-by-Side / Inline Diff* di kanan, tombol *Accept/Reject File & Hunk*, serta dukungan lompat baris dari WikiLink `[[path/to/file.ts#L120]]`).
 3. Perluas `src/main/services/ai.service.ts` dengan 7 tools repo/git/terminal/orchestrator (dengan Approval Gate untuk operasi tulis/eksekusi) dan hubungkan dengan `src/main/services/mcp.service.ts` (`@modelcontextprotocol/sdk`).
+
+---
+
+## 9. Ekstensi v2.3 — Unified Provider Registry, Zero-API-Key CLI Bridges & Learn Workbench
+
+Sejak rilis **v2.3** (rincian di [LOG-v2.3.md](./LOG-v2.3.md)), lapisan eksekusi AI In-App dan riset diperluas sebagai berikut:
+
+1. **Unified Provider Registry (`src/main/services/provider.service.ts`)**:
+   - Menghapus hardcoding model ID tetap pada provider bawaan (`gemini`, `openai`, `anthropic`, `ollama`).
+   - Mendukung profil **Custom OpenAI-Compatible** (`/v1`) dan **Custom Anthropic-Compatible** (Messages API) yang tersimpan di tabel SQLite `ai_provider_profiles` dengan API key terenkripsi lewat `safeStorage` (`secret.service.ts`).
+   - Memisahkan **Model Slots** (`primary` untuk AI Chat & Learn Tutor vs `background` untuk ekstraksi Knowledge Graph) di tabel `app_kv`.
+2. **Zero-API-Key Headless CLI Bridges (`src/main/services/cli-bridge/`)**:
+   - Menjalankan CLI yang sudah terautentikasi di mesin pengguna (`claude`, `gemini`, `codex`, atau custom CLI seperti `agy`) secara headless tanpa menyalin API key milik NoteIT ke lingkungan proses anak (`buildCleanCliEnv`).
+   - Untuk **Claude Code**, `mcp-loopback.ts` menyalakan server JSON-RPC MCP sementara di `127.0.0.1:0` dengan Bearer token acak per sesi, mengekspos tool workspace NoteIT (`search_workspace_fts5`, `read_page_spec`, `propose_spec_blocks`, `get_git_diff_summary`) secara aman.
+3. **Web Workbench & Learn Integration**:
+   - `InAppBrowserView.tsx` mendukung tab & bookmark persisten, popup-to-tab, Find-in-Page, Zoom, Smart Markdown & Code-Block Clipper (`src/shared/web-clipper.ts`), Localhost Console Inspector, dan tombol **Learn** untuk meluncurkan sesi belajar langsung dari halaman dokumentasi web.
+   - `learn.service.ts` + `LearnWorkbenchView.tsx` + `KnowledgeGraphView.tsx` menjalankan loop **Measure → Plan (Mermaid SVG) → Teach → Practice** dan **Propositional Knowledge Graph** di atas `runTextCompletion()` milik Unified Provider Registry.

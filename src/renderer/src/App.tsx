@@ -46,6 +46,11 @@ const AgentMissionControlView = React.lazy(() =>
     default: m.AgentMissionControlView
   }))
 )
+const LearnWorkbenchView = React.lazy(() =>
+  import('@renderer/components/learn/LearnWorkbenchView').then((m) => ({
+    default: m.LearnWorkbenchView
+  }))
+)
 const MissionBriefingDrawer = React.lazy(() =>
   import('@renderer/components/agents/MissionBriefingDrawer').then((m) => ({
     default: m.MissionBriefingDrawer
@@ -432,6 +437,10 @@ export const App: React.FC = () => {
             ) : activeMainView === 'agent-board' ? (
               <Suspense fallback={<LazyViewFallback label="Loading Mission Control..." />}>
                 <AgentMissionControlView />
+              </Suspense>
+            ) : activeMainView === 'learn' ? (
+              <Suspense fallback={<LazyViewFallback label="Loading Learn Workbench..." />}>
+                <LearnWorkbenchView />
               </Suspense>
             ) : (
               <main

@@ -26,9 +26,9 @@ Karena itu definisi "selesai" bukan rilis, tapi: **berhenti membuka Notion**.
 
 Bukan fitur. Tanpa ini Fase 1 cuma judi.
 
-- [ ] `git init` + `.gitignore` (`node_modules`, `out`, `*.db`, `*.db-wal`, `*.db-shm`, `backups/`, `*.log`)
-- [ ] Vitest + test untuk `src/shared/dbml-parser.ts` dan fungsi murni di `src/main/db/client.ts`
-- [ ] Error boundary renderer + `uncaughtException`/`unhandledRejection` di main → log ke file
+- [x] `git init` + `.gitignore` (`node_modules`, `out`, `*.db`, `*.db-wal`, `*.db-shm`, `backups/`, `*.log`, `reference/`)
+- [x] Vitest + test untuk `src/shared/dbml-parser.ts` dan fungsi murni di `src/main/db/client.ts`
+- [x] Error boundary renderer + `uncaughtException`/`unhandledRejection` di main → log ke file
 
 ## Fase 1 — Durability (gerbang adopsi)
 
@@ -44,9 +44,9 @@ Bukan fitur. Tanpa ini Fase 1 cuma judi.
 
 ## Fase 2 — Satu-satunya fitur baru yang diizinkan
 
-- [ ] **Quick capture** — `globalShortcut` Ctrl+Shift+Space → window frameless kecil → simpan ke Inbox
-- [ ] **Inbox section** otomatis untuk menampung capture mentah
-- [ ] **Daily note** — hotkey → halaman `YYYY-MM-DD` di section Daily, dibuat otomatis
+- [x] **Quick capture** — `globalShortcut` Ctrl+Shift+Space → window frameless kecil → simpan ke Inbox
+- [x] **Inbox section** otomatis untuk menampung capture mentah
+- [x] **Daily note** — hotkey (`Ctrl+Alt+D`) → halaman `YYYY-MM-DD` di section Daily, dibuat otomatis
 
 ## Fase 3 — Tiptap (baru boleh mulai setelah gate lolos)
 
@@ -108,3 +108,16 @@ Target test: 87 → ≥110 → ≥132 → ≥168 → ≥190. Status: 315 test / 
 - Smoke manual Electron belum dijalankan.
 
 Aturan gate Langkah 0: kalau app gagal boot atau ada kehilangan data saat smoke, BERHENTI — perbaiki durability dulu, 7 fitur ditunda.
+
+---
+
+## v2.3 — Unified AI Providers, Web Workbench & Learn Workbench (selesai)
+
+Log lengkap: [LOG-v2.3.md](./LOG-v2.3.md). Status test: **392 test / 37 berkas** hijau, typecheck & build produksi hijau.
+
+| Gelombang | Fitur | Ringkasan |
+|---|---|---|
+| 1 ✅ | **Unified AI Provider Registry & Zero-API-Key CLI Bridges** | Profil Custom OpenAI-compat & Anthropic-compat (kredensial terenkripsi `safeStorage`), Model ID dinamis, Model Slots (`primary` / `background`), serta Headless CLI Bridges (`claude`, `gemini`, `codex`, `agy`) dengan token-protected loopback MCP server. |
+| 2 ✅ | **Web Workbench (In-App Browser Upgrade)** | Tab & sesi persisten (`persist:noteit-browser` + `ui-state.json`), bookmark editable per notebook, popup-to-tab, Find-in-Page (`Ctrl+F`), Zoom, Smart Markdown & Code-Block Clipper, Localhost Console Inspector, mesin pencari default Google (dapat diubah di Settings → Browser), dan perbaikan loop `ERR_ABORTED (-3)`. |
+| 3 ✅ | **Native Learning Workbench & Propositional Knowledge Graph** | Loop pedagogis 4 fase (**Measure → Plan → Teach → Practice**), *Think out loud*, skala *Confidence 1–5*, **Side Questions**, renderer Markdown + Mermaid SVG ter-sanitasi (`LearnMarkdown.tsx`), Knowledge Graph interaktif (`@xyflow/react`) dengan deduplikasi deterministik, dan **Crystallize to NoteIT Page**. |
+| 4 ✅ | **Core Polish & Semantic Sidebar** | Warna ikon semantik adaptif untuk 5 menu utama sidebar (expanded & collapsed), entri Command Palette baru, serta verifikasi penuh Quick Capture, Daily Notes, Mermaid strict sanitizer, dan drag-and-drop Kanban/Gantt. |

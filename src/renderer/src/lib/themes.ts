@@ -1,3 +1,6 @@
+import type { AIProviderKind } from '@shared/types/domain'
+import type { BrowserSearchEngine } from '@shared/web-clipper'
+
 export interface ThemeColors {
   bgCanvasPrimary: string
   bgSurfaceChrome: string
@@ -36,10 +39,12 @@ export interface WorkbenchPreferences {
   autoSaveDelayMs: number
   spellcheck: boolean
   defaultPageMode: 'block' | 'canvas'
-  aiProvider: 'gemini' | 'openai' | 'anthropic' | 'ollama'
+  aiProvider: AIProviderKind
+  aiProfileId?: string
   aiModel: string
   aiApprovalMode: 'ask' | 'auto-edit' | 'plan-only'
   aiApiKeyMasked: string
+  browserSearchEngine?: BrowserSearchEngine
   onboardingDone: string[]
 }
 

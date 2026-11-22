@@ -1,11 +1,23 @@
 import type {
   AgentSessionRecord,
+  AIModelSlots,
+  AIProviderKind,
+  AIProviderProfile,
+  AIProviderProfileInput,
+  AIProviderTestResult,
   AssetRecord,
   BacklinkItem,
   BlockType,
+  BrowserBookmark,
+  CliBridgeStatus,
   DetectedCliPreset,
   DispatchMissionInput,
   DispatchMissionResult,
+  KgSnapshot,
+  LearnPhase,
+  LearnSession,
+  LearnSideThread,
+  LearnTurn,
   MarkerColor,
   McpConnectionTestResult,
   McpServerConfig,
@@ -15,6 +27,7 @@ import type {
   PageMode,
   PageVersion,
   PageVersionSummary,
+  PersistedBrowserTab,
   RepoEntry,
   RepoFileDiffResult,
   RepoGitStatusSummary,
@@ -86,7 +99,8 @@ export interface AIApprovalProposal {
 
 export interface AIChatStreamRequest {
   requestId: string
-  provider: 'gemini' | 'openai' | 'anthropic' | 'ollama'
+  provider: AIProviderKind
+  profileId?: string
   modelId: string
   apiKey?: string
   approvalMode: 'ask' | 'auto-edit' | 'plan-only'
@@ -348,6 +362,15 @@ export interface NoteItAPI {
   setSecret(input: { key: string; value: string }): Promise<{ ok: boolean }>
   hasSecret(key: string): Promise<boolean>
   deleteSecret(key: string): Promise<{ ok: boolean }>
+
+  // v2.3 Wave 1: Unified AI Provider Registry & Headless CLI Bridges
+  listProviderProfiles(): Promise<AIProviderProfile[]>
+  upsertProviderProfile(input: AIProviderProfileInput): Promise<AIProviderProfile>
+  deleteProviderProfile(id: string): Promise<{ ok: boolean }>
+  testProviderProfile(idOrConfig: string | AIProviderProfileInput): Promise<AIProviderTestResult>
+  getModelSlots(): Promise<AIModelSlots>
+  saveModelSlots(slots: Partial<AIModelSlots>): Promise<AIModelSlots>
+  detectCliBridges(): Promise<CliBridgeStatus[]>
   getUiState(): Promise<{
     openTabIds: string[]
     activePageId: string
@@ -356,6 +379,8 @@ export interface NoteItAPI {
     closedTabIds: string[]
     isSidebarCollapsed: boolean
     activeNotebookId?: string
+    browserTabs?: PersistedBrowserTab[]
+    activeBrowserTabId?: string
   } | null>
   saveUiState(input: {
     openTabIds?: string[]
@@ -365,5 +390,73 @@ export interface NoteItAPI {
     closedTabIds?: string[]
     isSidebarCollapsed?: boolean
     activeNotebookId?: string
+    browserTabs?: PersistedBrowserTab[]
+    activeBrowserTabId?: string
   }): Promise<{ ok: boolean }>
+
+  // v2.3 Wave 2: Web Workbench (Bookmarks & Popup-to-Tab)
+  listBrowserBookmarks(notebookId?: string): Promise<BrowserBookmark[]>
+  addBrowserBookmark(input: {
+    title: string
+    url: string
+    notebookId?: string | null
+  }): Promise<BrowserBookmark>
+  deleteBrowserBookmark(id: string): Promise<{ ok: boolean }>
+  onBrowserOpenInNewTab(callback: (url: string) => void): () => void
+
+  // v2.3 Wave 3: Native Learning Workbench & Propositional Knowledge Graph
+  listLearnSessions(): Promise<LearnSession[]>
+  getLearnSession(
+    sessionId: string
+  ): Promise<{ session: LearnSession; turns: LearnTurn[]; sideThreads: LearnSideThread[] } | null>
+  createLearnSession(input: {
+    title: string
+    goal: string
+    kind?: 'teach' | 'practice'
+    sourcePageIds?: string[]
+    sourceUrl?: string
+    sourceExcerpt?: string
+    providerOverride?: AIProviderKind
+    profileIdOverride?: string
+    modelIdOverride?: string
+  }): Promise<{
+    session: LearnSession
+    turns: LearnTurn[]
+    providerLabel: string
+    usedLiveProvider: boolean
+  }>
+  submitLearnResponse(input: {
+    sessionId: string
+    answer: string
+    thinkingText?: string
+    confidence?: number
+    requestedPhase?: LearnPhase
+    providerOverride?: AIProviderKind
+    profileIdOverride?: string
+    modelIdOverride?: string
+  }): Promise<{
+    session: LearnSession
+    turns: LearnTurn[]
+    providerLabel: string
+    usedLiveProvider: boolean
+  }>
+  askLearnSideQuestion(input: {
+    sessionId: string
+    anchorTurnId?: string
+    selectedQuote?: string
+    question: string
+    threadId?: string
+    providerOverride?: AIProviderKind
+    profileIdOverride?: string
+    modelIdOverride?: string
+  }): Promise<LearnSideThread>
+  deleteLearnSession(sessionId: string): Promise<{ ok: boolean }>
+  crystallizeLearnSessionToPage(input: { sessionId: string; sectionId?: string }): Promise<Page>
+  getKnowledgeGraph(): Promise<KgSnapshot>
+  extractKnowledgeGraph(input: {
+    sessionId?: string
+    pageId?: string
+  }): Promise<{ addedPropositions: number; addedChains: number; snapshot: KgSnapshot }>
+  updateKgNodePosition(input: { id: string; x: number; y: number }): Promise<{ ok: boolean }>
+  deleteKgProposition(id: string): Promise<{ ok: boolean }>
 }

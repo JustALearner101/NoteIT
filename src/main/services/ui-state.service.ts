@@ -2,6 +2,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { getDbPath } from '../db/client'
 
+export interface PersistedBrowserTab {
+  id: string
+  title: string
+  url: string
+}
+
 export interface PersistedUiState {
   openTabIds: string[]
   activePageId: string
@@ -10,6 +16,8 @@ export interface PersistedUiState {
   closedTabIds: string[]
   isSidebarCollapsed: boolean
   activeNotebookId?: string
+  browserTabs?: PersistedBrowserTab[]
+  activeBrowserTabId?: string
 }
 
 const DEFAULT_UI_STATE: PersistedUiState = {
@@ -64,6 +72,20 @@ export function readUiState(customWorkspaceDir?: string): PersistedUiState | nul
     const isSidebarCollapsed = Boolean(parsed.isSidebarCollapsed)
     const activeNotebookId =
       typeof parsed.activeNotebookId === 'string' ? parsed.activeNotebookId : undefined
+    const browserTabs = Array.isArray(parsed.browserTabs)
+      ? parsed.browserTabs
+          .filter(
+            (t): t is PersistedBrowserTab =>
+              Boolean(t) &&
+              typeof t.id === 'string' &&
+              typeof t.url === 'string' &&
+              t.url.length > 0
+          )
+          .slice(0, 20)
+          .map((t) => ({ id: t.id, title: String(t.title || t.url), url: t.url }))
+      : undefined
+    const activeBrowserTabId =
+      typeof parsed.activeBrowserTabId === 'string' ? parsed.activeBrowserTabId : undefined
 
     return {
       openTabIds,
@@ -72,7 +94,9 @@ export function readUiState(customWorkspaceDir?: string): PersistedUiState | nul
       splitRatio,
       closedTabIds,
       isSidebarCollapsed,
-      activeNotebookId
+      activeNotebookId,
+      browserTabs,
+      activeBrowserTabId
     }
   } catch {
     return null
@@ -106,7 +130,14 @@ export function writeUiState(
     activeNotebookId:
       state.activeNotebookId !== undefined
         ? state.activeNotebookId
-        : existing.activeNotebookId
+        : existing.activeNotebookId,
+    browserTabs: Array.isArray(state.browserTabs)
+      ? state.browserTabs.slice(0, 20)
+      : existing.browserTabs,
+    activeBrowserTabId:
+      state.activeBrowserTabId !== undefined
+        ? state.activeBrowserTabId
+        : existing.activeBrowserTabId
   }
 
   fs.mkdirSync(path.dirname(filePath), { recursive: true })

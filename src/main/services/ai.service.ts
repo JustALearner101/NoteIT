@@ -1,7 +1,4 @@
-import { stepCountIs, streamText, tool } from 'ai'
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createOpenAI } from '@ai-sdk/openai'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { generateText, stepCountIs, streamText, tool } from 'ai'
 import { execFile } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -13,7 +10,7 @@ import type {
   AIChatStreamRequest,
   ProposedSpecBlock
 } from '@shared/ipc-channels'
-import type { BlockType, Page, TaskStatus } from '@shared/types/domain'
+import type { AIProviderKind, BlockType, Page, TaskStatus } from '@shared/types/domain'
 import { getWorkspaceSnapshot, searchWorkspace, updatePage } from './workspace.service'
 import {
   getFileGitDiff,
@@ -29,7 +26,13 @@ import {
   discoverEnabledMcpServerTools,
   jsonSchemaToZod
 } from './mcp.service'
-import { getProviderSecretKeyName, getSecret } from './secret.service'
+import {
+  getModelSlots,
+  getProviderProfileById,
+  resolveExecutionTarget
+} from './provider.service'
+import { executeCliBridgeStream } from './cli-bridge/cli-bridge.service'
+import type { LoopbackMcpToolDefinition } from './cli-bridge/mcp-loopback'
 
 const execFileAsync = promisify(execFile)
 
@@ -364,43 +367,107 @@ function buildSystemInstruction(
 }
 
 function resolveLanguageModel(req: AIChatStreamRequest) {
-  const storedSecret = getSecret(getProviderSecretKeyName(req.provider))
-  const rawKey = (storedSecret || req.apiKey || '').trim()
-  if (!rawKey) {
-    return null
+  return resolveExecutionTarget({
+    provider: req.provider,
+    modelId: req.modelId,
+    profileId: req.profileId,
+    apiKey: req.apiKey
+  })
+}
+
+/**
+ * Reusable single-shot text completion using the Unified Provider Registry (Primary or Background slot).
+ * Used by Learn Workbench (Wave 3) and Knowledge Graph extraction so both work with
+ * Custom OpenAI/Anthropic endpoints and Zero-API-Key CLI bridges.
+ */
+export async function runTextCompletion(params: {
+  slot?: 'primary' | 'background'
+  system: string
+  prompt: string
+  providerOverride?: AIProviderKind
+  profileIdOverride?: string
+  modelIdOverride?: string
+}): Promise<{ ok: boolean; text: string; providerLabel: string; usedLiveProvider: boolean }> {
+  const slots = getModelSlots()
+  const chosenProfileId =
+    params.profileIdOverride ||
+    (params.slot === 'background' ? slots.backgroundProfileId : slots.primaryProfileId)
+  const chosenModelId =
+    params.modelIdOverride ||
+    (params.slot === 'background' ? slots.backgroundModelId : slots.primaryModelId)
+
+  let provider: AIProviderKind = params.providerOverride || 'gemini'
+  if (chosenProfileId.startsWith('builtin:')) {
+    provider = chosenProfileId.replace('builtin:', '') as AIProviderKind
+  } else {
+    const prof = getProviderProfileById(chosenProfileId)
+    if (prof) provider = prof.kind
   }
 
-  if (req.provider === 'ollama') {
-    const normalizedBase = rawKey.startsWith('http')
-      ? rawKey.endsWith('/v1')
-        ? rawKey
-        : `${rawKey.replace(/\/+$/, '')}/v1`
-      : 'http://localhost:11434/v1'
-    const ollama = createOpenAI({
-      baseURL: normalizedBase,
-      apiKey: 'ollama'
-    })
-    const modelName = req.modelId.toLowerCase().includes('llama') ? 'llama3.2' : 'qwen2.5-coder'
-    return { model: ollama(modelName), label: `Vercel AI SDK · Ollama (${modelName})` }
-  }
+  const target = resolveExecutionTarget({
+    provider,
+    profileId: chosenProfileId,
+    modelId: chosenModelId
+  })
 
-  if (req.provider === 'openai') {
-    const openai = createOpenAI({ apiKey: rawKey })
-    return { model: openai('gpt-4o-mini'), label: 'Vercel AI SDK · OpenAI (gpt-4o-mini)' }
-  }
-
-  if (req.provider === 'anthropic') {
-    const anthropic = createAnthropic({ apiKey: rawKey })
+  if (!target) {
     return {
-      model: anthropic('claude-3-5-sonnet-latest'),
-      label: 'Vercel AI SDK · Anthropic (Claude Sonnet)'
+      ok: false,
+      text: '',
+      providerLabel: 'Local Fallback (No AI Provider Configured)',
+      usedLiveProvider: false
     }
   }
 
-  const google = createGoogleGenerativeAI({ apiKey: rawKey })
-  return {
-    model: google('gemini-2.5-flash'),
-    label: 'Vercel AI SDK · Google Gemini (gemini-2.5-flash)'
+  if (target.mode === 'cli') {
+    let accumulated = ''
+    let providerLabel = `CLI Bridge · ${target.profile.name}`
+    let errMsg = ''
+    await executeCliBridgeStream({
+      req: {
+        requestId: `slot-${Date.now()}`,
+        provider: target.profile.kind,
+        profileId: chosenProfileId,
+        modelId: chosenModelId,
+        approvalMode: 'plan-only',
+        chatMode: 'Learn & Background',
+        messages: [{ role: 'user', content: params.prompt }],
+        mentionedPageIds: []
+      },
+      profile: target.profile,
+      systemPrompt: params.system,
+      tools: [],
+      emit: (ev) => {
+        if (ev.type === 'text-delta') accumulated += ev.textDelta
+        else if (ev.type === 'done') providerLabel = ev.providerLabel
+        else if (ev.type === 'error') errMsg = ev.error
+      }
+    })
+    if (errMsg && !accumulated) {
+      return { ok: false, text: errMsg, providerLabel, usedLiveProvider: true }
+    }
+    return { ok: true, text: accumulated, providerLabel, usedLiveProvider: true }
+  }
+
+  try {
+    const res = await generateText({
+      model: target.model,
+      system: params.system,
+      prompt: params.prompt
+    })
+    return {
+      ok: true,
+      text: res.text,
+      providerLabel: target.label,
+      usedLiveProvider: true
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      text: err instanceof Error ? err.message : String(err),
+      providerLabel: target.label,
+      usedLiveProvider: true
+    }
   }
 }
 
@@ -671,6 +738,116 @@ export async function executeAIChatStream(
   const activePage = resolveTargetPage(snapshot.pages, undefined, req.activePageId)
   const mentionedPages = snapshot.pages.filter((p) => req.mentionedPageIds.includes(p.id))
   const boundRepoPath = resolveActiveRepoPath(activePage)
+
+  if (resolved.mode === 'cli') {
+    const cliTools: LoopbackMcpToolDefinition[] = [
+      {
+        name: 'search_workspace_fts5',
+        description: 'Search specification pages, notes, or DBML schemas in NoteIT SQLite FTS5.',
+        inputSchema: {
+          type: 'object',
+          properties: { query: { type: 'string', description: 'FTS5 search keywords' } },
+          required: ['query']
+        },
+        execute: async ({ query }) => {
+          const q = String(query || '')
+          emit({ requestId: req.requestId, type: 'tool-call', toolName: 'search_workspace_fts5', argsSummary: `query="${q}"` })
+          return searchWorkspace(q).slice(0, 6).map((h) => ({
+            pageId: h.pageId,
+            code: h.pageCode,
+            title: h.title,
+            snippet: h.snippet
+          }))
+        }
+      },
+      {
+        name: 'read_page_spec',
+        description: 'Read full document blocks or DBML schema from a NoteIT page.',
+        inputSchema: {
+          type: 'object',
+          properties: { pageCodeOrTitle: { type: 'string' } },
+          required: ['pageCodeOrTitle']
+        },
+        execute: async ({ pageCodeOrTitle }) => {
+          const targetName = String(pageCodeOrTitle || '')
+          emit({ requestId: req.requestId, type: 'tool-call', toolName: 'read_page_spec', argsSummary: `target="${targetName}"` })
+          const snap = getWorkspaceSnapshot()
+          const target = resolveTargetPage(snap.pages, targetName, req.activePageId)
+          if (!target) return { error: 'Page not found' }
+          return {
+            id: target.id,
+            code: target.code,
+            title: target.title,
+            mode: target.mode,
+            blocks: target.blocks.map((b) => ({ type: b.type, content: b.content }))
+          }
+        }
+      },
+      {
+        name: 'propose_spec_blocks',
+        description: 'Propose new blocks to insert into the active NoteIT specification page.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            summary: { type: 'string' },
+            blocks: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  type: { type: 'string' },
+                  content: { type: 'string' }
+                },
+                required: ['type', 'content']
+              }
+            }
+          },
+          required: ['summary', 'blocks']
+        },
+        execute: async ({ summary, blocks }) => {
+          const target = activePage || snapshot.pages[0]
+          if (!target) return { ok: false, error: 'No active target page.' }
+          const parsedBlocks: ProposedSpecBlock[] = Array.isArray(blocks)
+            ? blocks.map((b: any) => ({
+                type: (['paragraph', 'code', 'dbml', 'mermaid', 'graphviz', 'callout'].includes(b?.type)
+                  ? b.type
+                  : 'paragraph') as BlockType,
+                content: String(b?.content || '')
+              }))
+            : []
+          const proposal: AIApprovalProposal = {
+            proposalId: `prop-cli-${Date.now()}`,
+            kind: 'spec-blocks',
+            targetPageId: target.id,
+            targetPageCode: target.code,
+            targetPageTitle: target.title,
+            summary: String(summary || 'Proposed blocks from CLI agent'),
+            blocks: parsedBlocks,
+            status: 'pending'
+          }
+          return handleProposalEmission(req, proposal, emit)
+        }
+      }
+    ]
+
+    if (boundRepoPath) {
+      cliTools.push({
+        name: 'get_git_diff_summary',
+        description: 'Get working-tree git status for the bound repository.',
+        inputSchema: { type: 'object', properties: {} },
+        execute: async () => getRepoGitStatus(boundRepoPath)
+      })
+    }
+
+    await executeCliBridgeStream({
+      req,
+      profile: resolved.profile,
+      systemPrompt: buildSystemInstruction(req, mentionedPages, activePage, boundRepoPath),
+      tools: cliTools,
+      emit
+    })
+    return
+  }
 
   // Discover enabled MCP server tools and wrap them for Vercel AI SDK
   const mcpToolMap: Record<string, any> = {}

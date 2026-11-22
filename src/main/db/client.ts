@@ -254,6 +254,94 @@ export function initDatabase(workspaceDir: string): DatabaseSync {
       encryption_scheme TEXT NOT NULL DEFAULT 'dpapi',
       updated_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS ai_provider_profiles (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      base_url TEXT NOT NULL DEFAULT '',
+      default_model TEXT NOT NULL DEFAULT '',
+      extra_headers_json TEXT NOT NULL DEFAULT '{}',
+      cli_command TEXT NOT NULL DEFAULT '',
+      cli_args_json TEXT NOT NULL DEFAULT '[]',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS app_kv (
+      key TEXT PRIMARY KEY,
+      value_json TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS browser_bookmarks (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      url TEXT NOT NULL,
+      notebook_id TEXT DEFAULT NULL REFERENCES notebooks(id) ON DELETE CASCADE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS learn_sessions (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      goal TEXT NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'teach',
+      phase TEXT NOT NULL DEFAULT 'probe',
+      source_page_ids_json TEXT NOT NULL DEFAULT '[]',
+      source_url TEXT NOT NULL DEFAULT '',
+      source_excerpt TEXT NOT NULL DEFAULT '',
+      plan_mermaid TEXT NOT NULL DEFAULT '',
+      active_node_id TEXT NOT NULL DEFAULT '',
+      visited_nodes_json TEXT NOT NULL DEFAULT '[]',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS learn_turns (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES learn_sessions(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      phase TEXT NOT NULL,
+      card_kind TEXT NOT NULL DEFAULT 'message',
+      content TEXT NOT NULL,
+      thinking_text TEXT NOT NULL DEFAULT '',
+      confidence INTEGER DEFAULT NULL,
+      metadata_json TEXT NOT NULL DEFAULT '{}',
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS learn_side_threads (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES learn_sessions(id) ON DELETE CASCADE,
+      anchor_turn_id TEXT NOT NULL DEFAULT '',
+      selected_quote TEXT NOT NULL DEFAULT '',
+      messages_json TEXT NOT NULL DEFAULT '[]',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS kg_propositions (
+      id TEXT PRIMARY KEY,
+      statement TEXT NOT NULL,
+      domain_tag TEXT NOT NULL DEFAULT 'General',
+      source_session_id TEXT DEFAULT NULL,
+      source_page_id TEXT DEFAULT NULL,
+      pos_x REAL NOT NULL DEFAULT 0,
+      pos_y REAL NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS kg_chains (
+      id TEXT PRIMARY KEY,
+      premise_ids_json TEXT NOT NULL DEFAULT '[]',
+      conclusion_id TEXT NOT NULL REFERENCES kg_propositions(id) ON DELETE CASCADE,
+      relation_label TEXT NOT NULL DEFAULT 'entails',
+      source_session_id TEXT DEFAULT NULL,
+      created_at INTEGER NOT NULL
+    );
   `)
 
   const countRow = db.prepare('SELECT COUNT(*) as cnt FROM notebooks').get() as { cnt: number }

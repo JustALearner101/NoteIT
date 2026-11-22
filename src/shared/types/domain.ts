@@ -295,7 +295,7 @@ export interface RepoSearchMatch {
 }
 
 export interface DetectedCliPreset {
-  id: 'claude' | 'codex' | 'gemini' | 'aider' | 'pwsh' | 'cmd' | 'bash'
+  id: 'claude' | 'codex' | 'gemini' | 'aider' | 'agy' | 'pwsh' | 'cmd' | 'bash'
   name: string
   command: string
   available: boolean
@@ -334,7 +334,7 @@ export interface SpecBundleSummary {
 
 export interface DispatchMissionInput {
   pageId: string
-  presetId: 'claude' | 'codex' | 'gemini' | 'aider' | 'in-app' | 'pwsh' | 'cmd' | 'bash'
+  presetId: 'claude' | 'codex' | 'gemini' | 'aider' | 'agy' | 'in-app' | 'pwsh' | 'cmd' | 'bash'
   isolationMode: 'direct' | 'worktree'
   approvalMode: 'plan-only' | 'ask-edit' | 'auto-edit'
   customDirective?: string
@@ -380,4 +380,169 @@ export interface AgentSessionRecord {
   lastOutputTail: string
   createdAt: number
   updatedAt: number
+}
+
+// v2.3 Wave 1: Unified AI Provider Registry & Headless CLI Bridges
+export type AIProviderKind =
+  | 'gemini'
+  | 'openai'
+  | 'anthropic'
+  | 'ollama'
+  | 'openai-compat'
+  | 'anthropic-compat'
+  | 'cli-claude'
+  | 'cli-gemini'
+  | 'cli-codex'
+  | 'cli-custom'
+
+export interface AIProviderProfile {
+  id: string
+  name: string
+  kind: AIProviderKind
+  baseUrl: string
+  defaultModel: string
+  extraHeaders: Record<string, string>
+  cliCommand: string
+  cliArgsTemplate: string[]
+  enabled: boolean
+  hasApiKey: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+export interface AIProviderProfileInput {
+  id?: string
+  name: string
+  kind: AIProviderKind
+  baseUrl?: string
+  defaultModel?: string
+  apiKey?: string
+  extraHeaders?: Record<string, string>
+  cliCommand?: string
+  cliArgsTemplate?: string[]
+  enabled?: boolean
+}
+
+export interface AIProviderTestResult {
+  ok: boolean
+  latencyMs: number
+  message: string
+  models?: string[]
+}
+
+export interface AIModelSlots {
+  primaryProfileId: string
+  primaryModelId: string
+  backgroundProfileId: string
+  backgroundModelId: string
+}
+
+export interface CliBridgeStatus {
+  id: 'claude' | 'gemini' | 'codex' | 'agy'
+  name: string
+  command: string
+  available: boolean
+  path?: string
+  version?: string
+  supportsMcpBridge: boolean
+}
+
+// v2.3 Wave 2: Web Workbench (Bookmarks & Persistent Browser Tabs)
+export interface BrowserBookmark {
+  id: string
+  title: string
+  url: string
+  notebookId: string | null
+  sortOrder: number
+  createdAt: number
+}
+
+export interface PersistedBrowserTab {
+  id: string
+  title: string
+  url: string
+}
+
+export interface LearnSeedSource {
+  title: string
+  goal?: string
+  sourceType: 'page' | 'web' | 'asset' | 'custom'
+  pageId?: string
+  url?: string
+  contentExcerpt?: string
+}
+
+// v2.3 Wave 3: Native Learning Workbench & Propositional Knowledge Graph
+export type LearnPhase = 'probe' | 'plan' | 'teach' | 'practice'
+export type LearnCardKind = 'probe' | 'plan' | 'quiz' | 'explain' | 'problem' | 'conclude' | 'message'
+
+export interface LearnSession {
+  id: string
+  title: string
+  goal: string
+  kind: 'teach' | 'practice'
+  phase: LearnPhase
+  sourcePageIds: string[]
+  sourceUrl: string
+  sourceExcerpt: string
+  planMermaid: string
+  activeNodeId: string
+  visitedNodes: string[]
+  createdAt: number
+  updatedAt: number
+}
+
+export interface LearnTurn {
+  id: string
+  sessionId: string
+  role: 'user' | 'assistant'
+  phase: LearnPhase
+  cardKind: LearnCardKind
+  content: string
+  thinkingText: string
+  confidence: number | null
+  metadata: Record<string, unknown>
+  createdAt: number
+}
+
+export interface LearnSideMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  createdAt: number
+}
+
+export interface LearnSideThread {
+  id: string
+  sessionId: string
+  anchorTurnId: string
+  selectedQuote: string
+  messages: LearnSideMessage[]
+  createdAt: number
+  updatedAt: number
+}
+
+export interface KgProposition {
+  id: string
+  statement: string
+  domainTag: string
+  sourceSessionId: string | null
+  sourcePageId: string | null
+  posX: number
+  posY: number
+  createdAt: number
+}
+
+export interface KgChain {
+  id: string
+  premiseIds: string[]
+  conclusionId: string
+  relationLabel: string
+  sourceSessionId: string | null
+  createdAt: number
+}
+
+export interface KgSnapshot {
+  propositions: KgProposition[]
+  chains: KgChain[]
 }

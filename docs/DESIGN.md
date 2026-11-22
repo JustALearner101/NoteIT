@@ -91,7 +91,13 @@ Seluruh permukaan UI dibangun di atas primitif composable berbasis Tailwind + `c
 
 1. **Desktop Shell & Dual-State Sidebar (`Titlebar`, `IndexRailSidebar`, `App`, `TelemetryStatusBar`)**:
    - Sidebar **Expanded (`240px`)**: Workspace switcher card + embedded search bar + flat navigation dengan right-aligned count pills + collapsible sections + pinned footer (`Workspace settings`, `Help & docs`).
-   - Sidebar **Collapsed (`48px` Icon Rail)**: Saat `Ctrl+\` ditekan, sidebar mengecil menjadi rail ikon vertikal yang tetap memberi akses cepat ke Search, Workbench, AI Chat, Mission Control, Browser, Settings, dan Help.
+   - Sidebar **Collapsed (`48px` Icon Rail)**: Saat `Ctrl+\` ditekan, sidebar mengecil menjadi rail ikon vertikal yang tetap memberi akses cepat ke Search, Workbench, AI Chat, Mission Control, Learn & Graph, Browser, Settings, dan Help.
+   - **Semantic Primary Menu Icon Palette** (konsisten di mode Expanded & Collapsed, adaptif Dark/Light):
+     - **Notes & Specs** (`FileText`): Cobalt (`--marker-cobalt`)
+     - **Mission Control** (`Radio`): Amber (`--marker-amber`, beralih ke `accent-emerald` saat agen aktif)
+     - **AI Assistant** (`MessageSquare`): Violet (`--marker-violet`)
+     - **Learn & Graph** (`GraduationCap`): Teal (`--marker-teal`)
+     - **Reference Web** (`Globe`): Emerald (`accent-emerald`)
    - Footer `TelemetryStatusBar` (`28px`): Terminal toggle & active spec di kiri, metrik tenang di tengah, indikator titik hijau SQLite WAL online di kanan.
 2. **Project Database Views (`ProjectDatabaseBlock`, `TableView`, `KanbanView`, `GanttView`, `CalendarView`, `ChartView`)**:
    - **List (`TableView`)**: Baris lega (`42px`) dikelompokkan berdasarkan stage (`Backlog`, `In Progress`, `In Review`, `Completed`) dengan total jam per grup, badge pastel, hairline `ProgressBar`, dan summary footer bar.
@@ -101,3 +107,8 @@ Seluruh permukaan UI dibangun di atas primitif composable berbasis Tailwind + `c
    - Kartu node `rounded-[12px]` dengan tile ikon, eyebrow kategori, dan footer pill. Node terpilih menampilkan isian indigo (`--node-selected-bg`), border glow `#6E7BF2`, konektor bulat Periwinkle, serta **floating quick-action pill toolbar** di atas node.
    - Kontrol melayang: vertical dock kiri, action pill bar bawah-tengah, serta **ReactFlow `<MiniMap />` + custom zoom pill** di kanan bawah.
    - Relasi Foreign Key di `DBMLStudio` dirender sebagai kurva bezier halus yang menyala Periwinkle saat di-hover.
+4. **Learn & Graph Workbench (`LearnWorkbenchView`, `LearnMarkdown`, `KnowledgeGraphView`)**:
+   - **Tanpa 3-Sidebar Squeeze**: Daftar sesi belajar diletakkan sebagai dropdown **Session Switcher** ringkas di topbar sehingga aliran membaca utama tetap lega (`max-w-3xl mx-auto`).
+   - **Rendered Markdown & Live Mermaid SVG**: Pesan tutor dan panel **Dependency Plan** dirender dengan `LearnMarkdown` + `MermaidDiagramPreview` (SVG ter-sanitasi `sanitizeSvg`), bukan teks Markdown/kode mentah.
+   - **Transparansi Provider**: Topbar menampilkan **Provider Status Pill** (aktif vs peringatan *Offline Fallback* amber yang terhubung langsung ke Settings → AI providers).
+   - **Propositional Knowledge Graph**: Memakai `@xyflow/react` dengan kartu proposisi bergaya konsisten (`--bg-surface-elevated`, `--border-hairline`), edge berlabel penalaran, filter domain, dan panel provenance ke halaman/sesi asal.

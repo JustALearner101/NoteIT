@@ -7,6 +7,7 @@ import {
   FileText,
   FolderGit2,
   GitCompare,
+  GraduationCap,
   History,
   LayoutGrid,
   Loader2,
@@ -93,6 +94,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
     updatePage,
     switchPageMode,
     openPageInTab,
+    startLearnFromSource,
     showToast
   } = useWorkspaceStore()
 
@@ -338,8 +340,25 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
           </Badge>
         </div>
 
-        {/* Utility Metadata Controls: Backlinks, Snapshots, Favorite, Export */}
+        {/* Utility Metadata Controls: Learn, Backlinks, Snapshots, Favorite, Export */}
         <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() =>
+              startLearnFromSource({
+                title: page.title,
+                goal: `Understand and practice the concepts in "${page.title}"`,
+                sourceType: 'page',
+                pageId: page.id
+              })
+            }
+            title="Start a Learn Workbench session from this page"
+            className="h-6 px-2 rounded-[6px] border bg-surface-elevated/80 hover:bg-surface-hover border-border-hairline text-[11.5px] font-medium text-accent-teal flex items-center gap-1 transition-colors"
+          >
+            <GraduationCap size={11.5} aria-hidden="true" />
+            <span>Learn</span>
+          </button>
+
           <button
             type="button"
             aria-expanded={activeDrawer === 'backlinks'}

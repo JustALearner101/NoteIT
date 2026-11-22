@@ -92,8 +92,42 @@ const noteitAPI: NoteItAPI = {
   setSecret: (input) => ipcRenderer.invoke('secrets:set', input),
   hasSecret: (key: string) => ipcRenderer.invoke('secrets:has', key),
   deleteSecret: (key: string) => ipcRenderer.invoke('secrets:delete', key),
+
+  // v2.3 Wave 1: Unified AI Provider Registry & Headless CLI Bridges
+  listProviderProfiles: () => ipcRenderer.invoke('providers:list'),
+  upsertProviderProfile: (input) => ipcRenderer.invoke('providers:upsert', input),
+  deleteProviderProfile: (id: string) => ipcRenderer.invoke('providers:delete', id),
+  testProviderProfile: (idOrConfig) => ipcRenderer.invoke('providers:test', idOrConfig),
+  getModelSlots: () => ipcRenderer.invoke('providers:getSlots'),
+  saveModelSlots: (slots) => ipcRenderer.invoke('providers:saveSlots', slots),
+  detectCliBridges: () => ipcRenderer.invoke('providers:detectCliBridges'),
+
   getUiState: () => ipcRenderer.invoke('workspace:getUiState'),
   saveUiState: (input) => ipcRenderer.invoke('workspace:saveUiState', input),
+
+  // v2.3 Wave 2: Web Workbench (Bookmarks & Popup-to-Tab)
+  listBrowserBookmarks: (notebookId?: string) =>
+    ipcRenderer.invoke('browser:listBookmarks', notebookId),
+  addBrowserBookmark: (input) => ipcRenderer.invoke('browser:addBookmark', input),
+  deleteBrowserBookmark: (id: string) => ipcRenderer.invoke('browser:deleteBookmark', id),
+  onBrowserOpenInNewTab: (callback: (url: string) => void) => {
+    const listener = (_event: IpcRendererEvent, url: string): void => callback(url)
+    ipcRenderer.on('browser:openInNewTab', listener)
+    return () => ipcRenderer.removeListener('browser:openInNewTab', listener)
+  },
+
+  // v2.3 Wave 3: Native Learning Workbench & Propositional Knowledge Graph
+  listLearnSessions: () => ipcRenderer.invoke('learn:listSessions'),
+  getLearnSession: (sessionId: string) => ipcRenderer.invoke('learn:getSession', sessionId),
+  createLearnSession: (input) => ipcRenderer.invoke('learn:createSession', input),
+  submitLearnResponse: (input) => ipcRenderer.invoke('learn:submitResponse', input),
+  askLearnSideQuestion: (input) => ipcRenderer.invoke('learn:askSideQuestion', input),
+  deleteLearnSession: (sessionId: string) => ipcRenderer.invoke('learn:deleteSession', sessionId),
+  crystallizeLearnSessionToPage: (input) => ipcRenderer.invoke('learn:crystallizeToPage', input),
+  getKnowledgeGraph: () => ipcRenderer.invoke('learn:getKnowledgeGraph'),
+  extractKnowledgeGraph: (input) => ipcRenderer.invoke('learn:extractKnowledgeGraph', input),
+  updateKgNodePosition: (input) => ipcRenderer.invoke('learn:updateKgNodePosition', input),
+  deleteKgProposition: (id: string) => ipcRenderer.invoke('learn:deleteKgProposition', id),
 
   // ADE Pilar 1: Embedded PTY Terminal Multiplexer
   detectCliPresets: () => ipcRenderer.invoke('terminal:detectClis'),

@@ -89,6 +89,33 @@ import {
   updateAgentSession
 } from './services/worktree.service'
 import { executeAIChatStream, executeApprovedProposal } from './services/ai.service'
+import {
+  deleteProviderProfile,
+  getModelSlots,
+  listProviderProfiles,
+  saveModelSlots,
+  testProviderProfile,
+  upsertProviderProfile
+} from './services/provider.service'
+import { detectCliBridges } from './services/cli-bridge/cli-bridge.service'
+import {
+  addBrowserBookmark,
+  deleteBrowserBookmark,
+  listBrowserBookmarks
+} from './services/browser.service'
+import {
+  askLearnSideQuestion,
+  createLearnSession,
+  crystallizeLearnSessionToPage,
+  deleteKgProposition,
+  deleteLearnSession,
+  extractKnowledgeGraph,
+  getKnowledgeGraph,
+  getLearnSessionDetail,
+  listLearnSessions,
+  submitLearnResponse,
+  updateKgNodePosition
+} from './services/learn.service'
 import { deleteSecret, hasSecret, setSecret } from './services/secret.service'
 import { readUiState, writeUiState } from './services/ui-state.service'
 import type { AIApprovalProposal, AIChatStreamRequest } from '@shared/ipc-channels'
@@ -861,6 +888,37 @@ function registerIpcHandlers(): void {
     writeTerminal(sessionId, 'y\n')
     return { ok: true }
   })
+
+  // v2.3 Wave 1: Unified AI Provider Registry & Headless CLI Bridges
+  ipcMain.handle('providers:list', () => listProviderProfiles())
+  ipcMain.handle('providers:upsert', (_e, input) => upsertProviderProfile(input))
+  ipcMain.handle('providers:delete', (_e, id: string) => deleteProviderProfile(id))
+  ipcMain.handle('providers:test', (_e, idOrConfig) => testProviderProfile(idOrConfig))
+  ipcMain.handle('providers:getSlots', () => getModelSlots())
+  ipcMain.handle('providers:saveSlots', (_e, slots) => saveModelSlots(slots))
+  ipcMain.handle('providers:detectCliBridges', () => detectCliBridges())
+
+  // v2.3 Wave 2: Web Workbench Bookmarks
+  ipcMain.handle('browser:listBookmarks', (_e, notebookId?: string) =>
+    listBrowserBookmarks(notebookId)
+  )
+  ipcMain.handle('browser:addBookmark', (_e, input) => addBrowserBookmark(input))
+  ipcMain.handle('browser:deleteBookmark', (_e, id: string) => deleteBrowserBookmark(id))
+
+  // v2.3 Wave 3: Native Learning Workbench & Propositional Knowledge Graph
+  ipcMain.handle('learn:listSessions', () => listLearnSessions())
+  ipcMain.handle('learn:getSession', (_e, sessionId: string) => getLearnSessionDetail(sessionId))
+  ipcMain.handle('learn:createSession', (_e, input) => createLearnSession(input))
+  ipcMain.handle('learn:submitResponse', (_e, input) => submitLearnResponse(input))
+  ipcMain.handle('learn:askSideQuestion', (_e, input) => askLearnSideQuestion(input))
+  ipcMain.handle('learn:deleteSession', (_e, sessionId: string) => deleteLearnSession(sessionId))
+  ipcMain.handle('learn:crystallizeToPage', (_e, input) => crystallizeLearnSessionToPage(input))
+  ipcMain.handle('learn:getKnowledgeGraph', () => getKnowledgeGraph())
+  ipcMain.handle('learn:extractKnowledgeGraph', (_e, input) => extractKnowledgeGraph(input))
+  ipcMain.handle('learn:updateKgNodePosition', (_e, input: { id: string; x: number; y: number }) =>
+    updateKgNodePosition(input.id, input.x, input.y)
+  )
+  ipcMain.handle('learn:deleteKgProposition', (_e, id: string) => deleteKgProposition(id))
 }
 
 app.on('web-contents-created', (_event, contents) => {
@@ -876,7 +934,11 @@ app.on('web-contents-created', (_event, contents) => {
     })
     contents.setWindowOpenHandler(({ url }) => {
       if (url.startsWith('http://') || url.startsWith('https://')) {
-        void shell.openExternal(url)
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('browser:openInNewTab', url)
+        } else {
+          void shell.openExternal(url)
+        }
       }
       return { action: 'deny' }
     })
