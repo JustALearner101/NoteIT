@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { z } from 'zod'
 import type {
   AIProviderKind,
   DocumentBlock,
@@ -14,7 +15,7 @@ import type {
   Page
 } from '@shared/types/domain'
 import { getDb } from '../db/client'
-import { runTextCompletion } from './ai.service'
+import { runStructuredObject, runTextCompletion } from './ai.service'
 import { createPage, getWorkspaceSnapshot } from './workspace.service'
 
 interface SessionRow {
@@ -718,19 +719,55 @@ export async function extractKnowledgeGraph(input: {
     return { addedPropositions: 0, addedChains: 0, snapshot: getKnowledgeGraph() }
   }
 
-  const completion = await runTextCompletion({
+  const kgSchema = z.object({
+    propositions: z
+      .array(
+        z.object({
+          statement: z.string(),
+          domainTag: z.string().optional()
+        })
+      )
+      .max(6),
+    chains: z
+      .array(
+        z.object({
+          premises: z.array(z.string()),
+          conclusion: z.string(),
+          relationLabel: z.string().optional()
+        })
+      )
+      .default([])
+  })
+
+  // Prefer Vercel AI SDK v7 Output.object() structured extraction when SDK provider is configured
+  const structured = await runStructuredObject({
     slot: 'background',
+    schema: kgSchema,
     system:
-      'Extract objective propositions and reasoning chains as strict JSON: {"propositions":[{"statement":"...","domainTag":"..."}],"chains":[{"premises":["..."],"conclusion":"...","relationLabel":"entails"}]}. Maximum 6 propositions.',
+      'Extract objective propositions and jointly-entailing reasoning chains from the source text. Maximum 6 crisp propositions.',
     prompt: `Domain: ${domainTag}\n\nSource text:\n${sourceText.slice(0, 5000)}`
   })
 
-  const parsed = completion.ok
-    ? parseJsonBlockFromText<{
-        propositions?: Array<{ statement?: string; domainTag?: string }>
-        chains?: Array<{ premises?: string[]; conclusion?: string; relationLabel?: string }>
-      }>(completion.text)
-    : null
+  let parsed: {
+    propositions?: Array<{ statement?: string; domainTag?: string }>
+    chains?: Array<{ premises?: string[]; conclusion?: string; relationLabel?: string }>
+  } | null = structured.ok && structured.object ? structured.object : null
+
+  if (!parsed) {
+    const completion = await runTextCompletion({
+      slot: 'background',
+      system:
+        'Extract objective propositions and reasoning chains as strict JSON: {"propositions":[{"statement":"...","domainTag":"..."}],"chains":[{"premises":["..."],"conclusion":"...","relationLabel":"entails"}]}. Maximum 6 propositions.',
+      prompt: `Domain: ${domainTag}\n\nSource text:\n${sourceText.slice(0, 5000)}`
+    })
+
+    parsed = completion.ok
+      ? parseJsonBlockFromText<{
+          propositions?: Array<{ statement?: string; domainTag?: string }>
+          chains?: Array<{ premises?: string[]; conclusion?: string; relationLabel?: string }>
+        }>(completion.text)
+      : null
+  }
 
   const extracted =
     parsed && Array.isArray(parsed.propositions) && parsed.propositions.length > 0

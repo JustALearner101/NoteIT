@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Activity,
   ArrowUp,
+  Brain,
   Check,
   ChevronDown,
+  ChevronRight,
   Clock,
   FileCode,
   FilePlus2,
@@ -10,7 +13,10 @@ import {
   GitCompare,
   Globe,
   Hand,
+  Image as ImageIcon,
+  Layers,
   MessageSquarePlus,
+  Paperclip,
   Plug,
   Plus,
   Sparkles,
@@ -20,8 +26,18 @@ import {
 } from 'lucide-react'
 import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { Badge, Button, cn } from '@renderer/components/ui'
+import { LearnMarkdown } from '@renderer/components/learn/LearnMarkdown'
+import { IntelligentUiCard } from '@renderer/components/ai-ui/IntelligentUiCard'
 import type { AIApprovalProposal, AIChatStreamEvent } from '@shared/ipc-channels'
-import type { AIProviderKind, AIProviderProfile, Page } from '@shared/types/domain'
+import type {
+  AIAttachment,
+  AIMessageTelemetry,
+  AIProviderKind,
+  AIProviderProfile,
+  AIUiArtifact,
+  AIUiMode,
+  Page
+} from '@shared/types/domain'
 
 interface ToolCallBadge {
   toolName: string
@@ -32,6 +48,10 @@ interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
+  reasoningText?: string
+  uiArtifact?: AIUiArtifact | null
+  attachments?: AIAttachment[]
+  telemetry?: AIMessageTelemetry
   isStreaming?: boolean
   providerLabel?: string
   toolCalls?: ToolCallBadge[]
@@ -45,9 +65,16 @@ interface ChatSession {
   id: string
   title: string
   mode: string
+  uiMode?: AIUiMode
   messages: ChatMessage[]
   updatedAt: number
 }
+
+const UI_MODES: Array<{ id: AIUiMode; label: string }> = [
+  { id: 'auto', label: 'Auto GenUI' },
+  { id: 'intelligent-ui', label: 'Interactive UI' },
+  { id: 'markdown', label: 'Markdown' }
+]
 
 const CHAT_MODES = [
   'Free chat',
@@ -71,12 +98,16 @@ const APPROVAL_MODES = [
 
 const STARTER_PROMPTS = [
   {
-    label: 'Generate DBML schema',
-    prompt: 'Design a relational DBML schema for an authentication & browser session module.'
+    label: 'Interactive Loan Calculator (OpenUI)',
+    prompt: 'Build an interactive loan & interest calculator with sliders and a live breakdown card.'
   },
   {
-    label: 'Draft Mermaid flowchart',
-    prompt: 'Draft a Mermaid flowchart for offline-first SQLite WAL & AI SDK synchronization.'
+    label: 'Wave Simulation (Sandboxed Canvas)',
+    prompt: 'Create an interactive canvas wave simulation where I can adjust speed and frequency.'
+  },
+  {
+    label: 'Generate DBML schema',
+    prompt: 'Design a relational DBML schema for an authentication & browser session module.'
   },
   {
     label: 'Review active specification',
@@ -123,12 +154,49 @@ export const AIChatView: React.FC = () => {
   const [mentionedPageIds, setMentionedPageIds] = useState<string[]>([])
   const [isStreamingReply, setIsStreamingReply] = useState(false)
   const [customProfiles, setCustomProfiles] = useState<AIProviderProfile[]>([])
+  const [uiMode, setUiMode] = useState<AIUiMode>('auto')
+  const [attachments, setAttachments] = useState<AIAttachment[]>([])
+  const [expandedReasoningIds, setExpandedReasoningIds] = useState<Record<string, boolean>>({})
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     void (async () => {
       try {
-        const profs = (await window.noteitAPI?.listProviderProfiles?.()) ?? []
+        const [profs, persistedThreads] = await Promise.all([
+          window.noteitAPI?.listProviderProfiles?.() ?? Promise.resolve([]),
+          window.noteitAPI?.listAiThreads?.() ?? Promise.resolve([])
+        ])
         setCustomProfiles(profs)
+        if (persistedThreads.length > 0) {
+          const loadedSessions: ChatSession[] = await Promise.all(
+            persistedThreads.slice(0, 15).map(async (t) => {
+              const full = await window.noteitAPI.getAiThread(t.id)
+              return {
+                id: t.id,
+                title: t.title,
+                mode: t.chatMode || 'Free chat',
+                uiMode: t.uiMode,
+                updatedAt: t.updatedAt,
+                messages: (full?.messages || []).map((m) => ({
+                  id: m.id,
+                  role: m.role,
+                  content: m.content,
+                  reasoningText: m.reasoningText || undefined,
+                  uiArtifact: m.uiArtifact,
+                  attachments: m.attachments,
+                  toolCalls: m.toolCalls,
+                  proposals: (m.proposals || []) as AIApprovalProposal[],
+                  telemetry: m.telemetry,
+                  providerLabel: m.telemetry?.providerLabel,
+                  createdAt: m.createdAt
+                }))
+              }
+            })
+          )
+          setSessions(loadedSessions)
+          setActiveSessionId(loadedSessions[0].id)
+          if (loadedSessions[0].uiMode) setUiMode(loadedSessions[0].uiMode)
+        }
       } catch {
         // ignore in test env
       }
@@ -175,6 +243,53 @@ export const AIChatView: React.FC = () => {
               : s
           )
         )
+      } else if (event.type === 'reasoning-delta') {
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === target.sessionId
+              ? {
+                  ...s,
+                  messages: s.messages.map((m) =>
+                    m.id === target.assistantMsgId
+                      ? { ...m, reasoningText: (m.reasoningText || '') + event.reasoningDelta }
+                      : m
+                  )
+                }
+              : s
+          )
+        )
+      } else if (event.type === 'ui-artifact') {
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === target.sessionId
+              ? {
+                  ...s,
+                  messages: s.messages.map((m) =>
+                    m.id === target.assistantMsgId
+                      ? { ...m, uiArtifact: event.artifact }
+                      : m
+                  )
+                }
+              : s
+          )
+        )
+      } else if (event.type === 'telemetry') {
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === target.sessionId
+              ? {
+                  ...s,
+                  messages: s.messages.map((m) =>
+                    m.id === target.assistantMsgId
+                      ? { ...m, telemetry: event.telemetry }
+                      : m
+                  )
+                }
+              : s
+          )
+        )
+      } else if (event.type === 'fallback-notice') {
+        showToast(event.message, 'info')
       } else if (event.type === 'tool-call') {
         setSessions((prev) =>
           prev.map((s) =>
@@ -223,22 +338,35 @@ export const AIChatView: React.FC = () => {
       } else if (event.type === 'done') {
         setIsStreamingReply(false)
         setSessions((prev) =>
-          prev.map((s) =>
-            s.id === target.sessionId
-              ? {
-                  ...s,
-                  messages: s.messages.map((m) =>
-                    m.id === target.assistantMsgId
-                      ? {
-                          ...m,
-                          isStreaming: false,
-                          providerLabel: event.providerLabel
-                        }
-                      : m
-                  )
-                }
-              : s
-          )
+          prev.map((s) => {
+            if (s.id !== target.sessionId) return s
+            const nextMsgs = s.messages.map((m) => {
+              if (m.id !== target.assistantMsgId) return m
+              const finalized: ChatMessage = {
+                ...m,
+                isStreaming: false,
+                providerLabel: event.providerLabel
+              }
+              if (window.noteitAPI?.saveAiMessage && !s.id.startsWith('session-')) {
+                void window.noteitAPI.saveAiMessage({
+                  id: finalized.id,
+                  threadId: s.id,
+                  role: 'assistant',
+                  content: finalized.content,
+                  reasoningText: finalized.reasoningText,
+                  uiArtifact: finalized.uiArtifact,
+                  toolCalls: finalized.toolCalls,
+                  proposals: finalized.proposals,
+                  telemetry: {
+                    ...finalized.telemetry,
+                    providerLabel: event.providerLabel
+                  }
+                })
+              }
+              return finalized
+            })
+            return { ...s, messages: nextMsgs }
+          })
         )
       } else if (event.type === 'error') {
         setIsStreamingReply(false)
@@ -264,12 +392,23 @@ export const AIChatView: React.FC = () => {
     })
   }, [loadWorkspace, showToast])
 
-  const handleNewSession = (): void => {
-    const newId = `session-${Date.now()}`
+  const handleNewSession = async (): Promise<void> => {
+    let newId = `session-${Date.now()}`
+    if (window.noteitAPI?.createAiThread) {
+      const created = await window.noteitAPI.createAiThread({
+        title: 'New AI Studio Thread',
+        chatMode,
+        uiMode,
+        providerId: preferences.aiProfileId || preferences.aiProvider,
+        modelId: preferences.aiModel
+      })
+      newId = created.id
+    }
     const next: ChatSession = {
       id: newId,
-      title: 'New Free Chat Session',
+      title: 'New AI Studio Thread',
       mode: chatMode,
+      uiMode,
       messages: [],
       updatedAt: Date.now()
     }
@@ -277,6 +416,64 @@ export const AIChatView: React.FC = () => {
     setActiveSessionId(newId)
     setPromptText('')
     setMentionedPageIds([])
+    setAttachments([])
+  }
+
+  const readFileAsAttachment = (file: File): Promise<AIAttachment | null> =>
+    new Promise((resolve) => {
+      if (file.size > 10 * 1024 * 1024) {
+        showToast(`"${file.name}" exceeds 10 MB attachment limit`, 'error')
+        resolve(null)
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = typeof reader.result === 'string' ? reader.result : undefined
+        const kind: AIAttachment['kind'] = file.type.startsWith('image/')
+          ? 'image'
+          : file.type === 'application/pdf'
+            ? 'pdf'
+            : 'file'
+        resolve({
+          id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          kind,
+          name: file.name || 'pasted-image.png',
+          mime: file.type || 'application/octet-stream',
+          dataUrl
+        })
+      }
+      reader.onerror = () => resolve(null)
+      reader.readAsDataURL(file)
+    })
+
+  const handleAttachFileList = async (files: FileList | File[]): Promise<void> => {
+    const arr = Array.from(files).slice(0, 4)
+    const parsed = (await Promise.all(arr.map(readFileAsAttachment))).filter(
+      (a): a is AIAttachment => a !== null
+    )
+    if (parsed.length > 0) {
+      setAttachments((prev) => [...prev, ...parsed].slice(0, 4))
+    }
+  }
+
+  const handleSaveWidgetToPage = async (title: string, markdown: string): Promise<void> => {
+    const target = activePage
+    if (!target) {
+      showToast('No active page to save widget', 'error')
+      return
+    }
+    const nextBlocks = [
+      ...target.blocks,
+      {
+        id: `blk-widget-${Date.now()}`,
+        type: 'callout' as const,
+        calloutTitle: `AI Widget: ${title}`,
+        calloutColor: 'violet' as const,
+        content: markdown.slice(0, 6000)
+      }
+    ]
+    await updatePage({ id: target.id, blocks: nextBlocks })
+    showToast(`Saved "${title}" to ${target.code}`)
   }
 
   const handleToggleMentionPage = (pageId: string): void => {
@@ -294,11 +491,31 @@ export const AIChatView: React.FC = () => {
     const requestId = `req-${Date.now()}`
     const userMsgId = `msg-u-${Date.now()}`
     const assistantMsgId = `msg-a-${Date.now() + 1}`
+    const currentAttachments = [...attachments]
+
+    // Ensure thread is persisted in SQLite if it was an initial placeholder session
+    let targetSessionId = activeSession.id
+    if (targetSessionId.startsWith('session-') && window.noteitAPI?.createAiThread) {
+      const created = await window.noteitAPI.createAiThread({
+        title: text.slice(0, 48),
+        chatMode,
+        uiMode,
+        providerId: preferences.aiProfileId || preferences.aiProvider,
+        modelId: preferences.aiModel
+      })
+      const oldId = targetSessionId
+      targetSessionId = created.id
+      setSessions((prev) => prev.map((s) => (s.id === oldId ? { ...s, id: targetSessionId } : s)))
+      setActiveSessionId(targetSessionId)
+    } else if (activeSession.messages.length === 0 && window.noteitAPI?.updateAiThread) {
+      void window.noteitAPI.updateAiThread({ threadId: targetSessionId, title: text.slice(0, 48), uiMode })
+    }
 
     const userMsg: ChatMessage = {
       id: userMsgId,
       role: 'user',
       content: text,
+      attachments: currentAttachments,
       mentionedPages: mentionedPages.map((p) => ({
         id: p.id,
         code: p.code,
@@ -314,6 +531,8 @@ export const AIChatView: React.FC = () => {
       id: assistantMsgId,
       role: 'assistant',
       content: '',
+      reasoningText: '',
+      uiArtifact: null,
       isStreaming: true,
       toolCalls: [],
       proposals: [],
@@ -326,13 +545,13 @@ export const AIChatView: React.FC = () => {
     ]
 
     activeRequestMap.current[requestId] = {
-      sessionId: activeSession.id,
+      sessionId: targetSessionId,
       assistantMsgId
     }
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === activeSession.id
+        s.id === targetSessionId
           ? {
               ...s,
               title: s.messages.length === 0 ? text.slice(0, 42) : s.title,
@@ -343,17 +562,31 @@ export const AIChatView: React.FC = () => {
       )
     )
     setPromptText('')
+    setAttachments([])
     setIsStreamingReply(true)
+
+    if (window.noteitAPI?.saveAiMessage && !targetSessionId.startsWith('session-')) {
+      void window.noteitAPI.saveAiMessage({
+        id: userMsgId,
+        threadId: targetSessionId,
+        role: 'user',
+        content: text,
+        attachments: currentAttachments
+      })
+    }
 
     await window.noteitAPI.startAIChatStream({
       requestId,
+      threadId: targetSessionId,
       provider: preferences.aiProvider,
       profileId: preferences.aiProfileId,
       modelId: preferences.aiModel,
       apiKey: preferences.aiApiKeyMasked,
       approvalMode: preferences.aiApprovalMode,
       chatMode,
+      uiMode,
       messages: historyForSdk,
+      attachments: currentAttachments,
       mentionedPageIds,
       activePageId: activePage?.id,
       browserContext: browserContextForAI
@@ -476,9 +709,26 @@ export const AIChatView: React.FC = () => {
 
   const renderComposerCard = (): React.ReactNode => (
     <div className="w-full max-w-2xl rounded-[14px] bg-surface-elevated border border-border-hairline shadow-popover p-4 transition-all focus-within:border-accent-cobalt relative">
-      {/* Context Mention & Browser Context Pills */}
-      {(mentionedPages.length > 0 || browserContextForAI) && (
+      {/* Context Mention, Multimodal Attachments & Browser Context Pills */}
+      {(mentionedPages.length > 0 || browserContextForAI || attachments.length > 0) && (
         <div className="flex flex-wrap items-center gap-1.5 mb-2.5 pb-2.5 border-b border-border-subtle">
+          {attachments.map((att) => (
+            <span
+              key={att.id}
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-surface-chrome border border-border-hairline text-[11px] text-ink-primary"
+            >
+              <ImageIcon size={11} className="text-[var(--marker-violet)]" />
+              <span className="truncate max-w-[140px]">{att.name}</span>
+              <button
+                type="button"
+                aria-label={`Remove attachment ${att.name}`}
+                onClick={() => setAttachments((prev) => prev.filter((a) => a.id !== att.id))}
+                className="text-ink-muted hover:text-ink-primary"
+              >
+                <X size={11} aria-hidden="true" />
+              </button>
+            </span>
+          ))}
           {browserContextForAI && (
             <Badge tone="cobalt" size="sm" className="gap-1.5">
               <Globe size={11} />
@@ -514,6 +764,21 @@ export const AIChatView: React.FC = () => {
         </div>
       )}
 
+      {/* Hidden file input for multimodal image/PDF attachments */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.length) {
+            void handleAttachFileList(e.target.files)
+            e.target.value = ''
+          }
+        }}
+      />
+
       {/* Textarea */}
       <textarea
         ref={textareaRef}
@@ -526,6 +791,13 @@ export const AIChatView: React.FC = () => {
             setIsMentionMenuOpen(true)
           }
         }}
+        onPaste={(e) => {
+          const files = Array.from(e.clipboardData?.files || [])
+          if (files.length > 0) {
+            e.preventDefault()
+            void handleAttachFileList(files)
+          }
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
@@ -533,9 +805,42 @@ export const AIChatView: React.FC = () => {
           }
         }}
         rows={3}
-        placeholder="Ask anything, @ to mention pages, or request DBML / Mermaid specs..."
+        placeholder="Ask anything, paste screenshot/PDF, @ to mention pages, or request interactive calculators / simulations..."
         className="w-full bg-transparent resize-none text-[13.5px] text-ink-primary placeholder:text-ink-muted focus:outline-none leading-relaxed"
       />
+
+      {/* Compact UI Mode & Attachment Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 pb-1">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            title="Attach image or PDF (multimodal)"
+            className="h-6 px-2 rounded-[6px] bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-[11px] text-ink-secondary hover:text-ink-primary flex items-center gap-1 transition-colors"
+          >
+            <Paperclip size={11} />
+            <span>Attach</span>
+          </button>
+          <div className="inline-flex items-center rounded-[6px] bg-surface-chrome border border-border-hairline p-0.5">
+            {UI_MODES.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setUiMode(m.id)}
+                className={cn(
+                  'h-5 px-2 rounded-[4px] text-[10.5px] transition-colors flex items-center gap-1',
+                  uiMode === m.id
+                    ? 'bg-surface-elevated text-ink-primary font-medium'
+                    : 'text-ink-muted hover:text-ink-primary'
+                )}
+              >
+                {m.id !== 'markdown' && <Layers size={9.5} className="text-[var(--marker-violet)]" />}
+                <span>{m.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Mention Popover */}
       {isMentionMenuOpen && (
@@ -942,6 +1247,57 @@ export const AIChatView: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Collapsible Reasoning / Thinking Block */}
+                  {msg.reasoningText && msg.reasoningText.trim().length > 0 && (
+                    <div className="mb-2.5 rounded-lg bg-surface-chrome/80 border border-border-subtle overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedReasoningIds((prev) => ({ ...prev, [msg.id]: !prev[msg.id] }))
+                        }
+                        className="w-full px-2.5 py-1.5 flex items-center justify-between text-[11px] text-ink-secondary hover:text-ink-primary"
+                      >
+                        <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase">
+                          <Brain size={11} className="text-[var(--marker-violet)]" />
+                          <span>Reasoning trace</span>
+                        </span>
+                        {expandedReasoningIds[msg.id] ? (
+                          <ChevronDown size={11} />
+                        ) : (
+                          <ChevronRight size={11} />
+                        )}
+                      </button>
+                      {expandedReasoningIds[msg.id] && (
+                        <div className="px-3 pb-2.5 text-[11px] font-mono text-ink-muted whitespace-pre-wrap border-t border-border-subtle pt-2">
+                          {msg.reasoningText}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Multimodal Attachments on User Messages */}
+                  {msg.attachments && msg.attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2.5">
+                      {msg.attachments.map((att) => (
+                        <div
+                          key={att.id}
+                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-elevated border border-border-hairline text-[11px] text-ink-secondary"
+                        >
+                          {att.kind === 'image' && att.dataUrl ? (
+                            <img
+                              src={att.dataUrl}
+                              alt={att.name}
+                              className="w-8 h-8 rounded object-cover"
+                            />
+                          ) : (
+                            <ImageIcon size={12} className="text-accent-cobalt" />
+                          )}
+                          <span className="truncate max-w-[140px]">{att.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Tool Call Trace Pills */}
                   {msg.toolCalls && msg.toolCalls.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mb-2.5">
@@ -958,9 +1314,47 @@ export const AIChatView: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="text-xs text-ink-primary whitespace-pre-line leading-relaxed selectable-text">
-                    {msg.content || (msg.isStreaming ? 'Drafting response...' : '')}
-                  </div>
+                  {msg.role === 'assistant' ? (
+                    <LearnMarkdown
+                      content={msg.content || (msg.isStreaming ? 'Drafting response...' : '')}
+                    />
+                  ) : (
+                    <div className="text-xs text-ink-primary whitespace-pre-line leading-relaxed selectable-text">
+                      {msg.content}
+                    </div>
+                  )}
+
+                  {/* Hybrid Intelligent UI Artifact (OpenUI Lang 1.0 or Sandboxed HTML/CSS/JS) */}
+                  {msg.uiArtifact && (
+                    <IntelligentUiCard
+                      artifact={msg.uiArtifact}
+                      isStreaming={Boolean(msg.isStreaming)}
+                      onFollowUp={(followUpPrompt) => void handleSendMessage(followUpPrompt)}
+                      onSaveToPage={(title, md) => void handleSaveWidgetToPage(title, md)}
+                    />
+                  )}
+
+                  {/* Live Telemetry HUD */}
+                  {msg.role === 'assistant' && !msg.isStreaming && msg.telemetry && (
+                    <div className="mt-2.5 pt-2 border-t border-border-subtle flex flex-wrap items-center gap-2 font-mono text-[10px] text-ink-muted">
+                      <span className="inline-flex items-center gap-1">
+                        <Activity size={10} className="text-[var(--marker-teal)]" />
+                        <span>{msg.telemetry.providerLabel || msg.providerLabel || 'AI Studio'}</span>
+                      </span>
+                      {typeof msg.telemetry.totalTokens === 'number' && msg.telemetry.totalTokens > 0 && (
+                        <span>· {msg.telemetry.totalTokens} tok</span>
+                      )}
+                      {typeof msg.telemetry.latencyMs === 'number' && (
+                        <span>· {(msg.telemetry.latencyMs / 1000).toFixed(1)}s</span>
+                      )}
+                      {typeof msg.telemetry.steps === 'number' && (
+                        <span>· {msg.telemetry.steps} step{msg.telemetry.steps > 1 ? 's' : ''}</span>
+                      )}
+                      {msg.telemetry.routedUiMode && msg.telemetry.routedUiMode !== 'markdown' && (
+                        <Badge tone="violet" size="sm">{msg.telemetry.routedUiMode}</Badge>
+                      )}
+                    </div>
+                  )}
 
                   {/* Orca-Style Approval Gate Cards for Proposed Blocks & ADE Repo Tools */}
                   {msg.proposals &&

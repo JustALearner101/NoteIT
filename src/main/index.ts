@@ -116,6 +116,15 @@ import {
   submitLearnResponse,
   updateKgNodePosition
 } from './services/learn.service'
+import {
+  createAiThread,
+  deleteAiThread,
+  getAiThreadWithMessages,
+  listAiThreads,
+  saveAiMessage,
+  updateAiThread
+} from './services/ai-thread.service'
+import { hybridSemanticSearch } from './services/embedding.service'
 import { deleteSecret, hasSecret, setSecret } from './services/secret.service'
 import { readUiState, writeUiState } from './services/ui-state.service'
 import type { AIApprovalProposal, AIChatStreamRequest } from '@shared/ipc-channels'
@@ -176,7 +185,7 @@ function buildContentSecurityPolicy(isDev: boolean): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https: http: noteit-asset:",
     "media-src 'self' noteit-asset:",
-    "frame-src 'self' https: http: noteit-asset:",
+    "frame-src 'self' https: http: noteit-asset: data: blob:",
     "object-src 'self' noteit-asset:",
     "font-src 'self' data:",
     isDev
@@ -919,6 +928,19 @@ function registerIpcHandlers(): void {
     updateKgNodePosition(input.id, input.x, input.y)
   )
   ipcMain.handle('learn:deleteKgProposition', (_e, id: string) => deleteKgProposition(id))
+
+  // v2.4: Unified AI Studio Persistence & Hybrid Vector Semantic Search
+  ipcMain.handle('ai:threads:list', () => listAiThreads())
+  ipcMain.handle('ai:threads:get', (_e, threadId: string) => getAiThreadWithMessages(threadId))
+  ipcMain.handle('ai:threads:create', (_e, input) => createAiThread(input))
+  ipcMain.handle('ai:threads:update', (_e, input: { threadId: string; title?: string; chatMode?: string; uiMode?: any; providerId?: string; modelId?: string }) =>
+    updateAiThread(input.threadId, input)
+  )
+  ipcMain.handle('ai:threads:delete', (_e, threadId: string) => deleteAiThread(threadId))
+  ipcMain.handle('ai:messages:save', (_e, input) => saveAiMessage(input))
+  ipcMain.handle('workspace:semanticSearch', (_e, input: { query: string; limit?: number }) =>
+    hybridSemanticSearch(input.query, input.limit)
+  )
 }
 
 app.on('web-contents-created', (_event, contents) => {

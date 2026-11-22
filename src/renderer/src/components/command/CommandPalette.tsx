@@ -67,6 +67,7 @@ export const CommandPalette: React.FC = () => {
     toggleTheme,
     theme,
     setActiveMainView,
+    setAiStudioSubMode,
     openHelpCenter,
     showToast
   } = useWorkspaceStore()
@@ -274,11 +275,14 @@ export const CommandPalette: React.FC = () => {
       },
       {
         id: 'open-learn',
-        label: 'Open Learn Workbench & Knowledge Graph',
-        keywords: 'learn study tutor quiz practice knowledge graph learnharness',
+        label: 'Open AI Studio · Active Learn & Knowledge Graph',
+        keywords: 'learn study tutor quiz practice knowledge graph learnharness ai studio',
         transfersFocus: true,
-        icon: <GraduationCap size={13} className="text-accent-teal shrink-0" />,
-        run: () => setActiveMainView('learn')
+        icon: <GraduationCap size={13} className="text-[var(--marker-teal)] shrink-0" />,
+        run: () => {
+          setAiStudioSubMode('learn')
+          setActiveMainView('ai-chat')
+        }
       },
       {
         id: 'open-ai-providers',

@@ -1,4 +1,4 @@
-import { generateText, stepCountIs, streamText, tool } from 'ai'
+import { generateText, Output, stepCountIs, ToolLoopAgent, tool } from 'ai'
 import { execFile } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -10,7 +10,7 @@ import type {
   AIChatStreamRequest,
   ProposedSpecBlock
 } from '@shared/ipc-channels'
-import type { AIProviderKind, BlockType, Page, TaskStatus } from '@shared/types/domain'
+import type { AIAttachment, AIProviderKind, BlockType, Page, TaskStatus } from '@shared/types/domain'
 import { getWorkspaceSnapshot, searchWorkspace, updatePage } from './workspace.service'
 import {
   getFileGitDiff,
@@ -31,6 +31,15 @@ import {
   getProviderProfileById,
   resolveExecutionTarget
 } from './provider.service'
+import { resolveFallbackTarget, wrapWithReasoningMiddleware } from './ai-middleware'
+import {
+  buildIntelligentUiSystemPrompt,
+  buildOfflineIntelligentUiFallback,
+  extractOpenUiArtifact,
+  routePresentationMode,
+  type RoutedPresentation
+} from './ui-router.service'
+import { hybridSemanticSearch } from './embedding.service'
 import { executeCliBridgeStream } from './cli-bridge/cli-bridge.service'
 import type { LoopbackMcpToolDefinition } from './cli-bridge/mcp-loopback'
 
@@ -316,15 +325,18 @@ function buildSystemInstruction(
   req: AIChatStreamRequest,
   mentionedPages: Page[],
   activePage?: Page,
-  boundRepoPath?: string | null
+  boundRepoPath?: string | null,
+  routedUi: RoutedPresentation = 'markdown'
 ): string {
   const lines: string[] = [
-    `You are an AI software engineering assistant inside NoteIT Workbench v2.0 (mode: ${req.chatMode}).`,
+    `You are an AI software engineering & active learning assistant inside NoteIT AI Studio v2.4 (mode: ${req.chatMode}).`,
     `Respond in the same language as the user's prompt with technical precision and conciseness.`,
-    `You have access to NoteIT Workbench & ADE Repository Tools:`,
+    `You have access to NoteIT Workbench, Semantic Search, Intelligent UI & ADE Repository Tools:`,
     `- search_workspace_fts5: search specifications, DBML tables, or pages in SQLite FTS5.`,
+    `- semantic_search_workspace: hybrid vector + FTS5 semantic search across all NoteIT pages.`,
     `- read_page_spec: read blocks, DBML schemas, or Mermaid diagrams from a page.`,
     `- propose_spec_blocks: propose new specification blocks (paragraph, code, dbml, mermaid, graphviz, callout).`,
+    `- render_interactive_widget: stream a self-contained sandboxed HTML/CSS/JS interactive widget (canvas, simulation, custom visualizer).`,
     `- read_active_browser_tab: read the active In-App Browser tab context.`,
     `- list_repo_files: list files and folders in the bound repository.`,
     `- read_repo_file: read a file (with optional startLine/endLine) from the bound repository.`,
@@ -335,6 +347,11 @@ function buildSystemInstruction(
     `- update_spec_task_status: update a checklist item or Project Database task status (subject to Approval Gate).`,
     `- spawn_cli_agent_session: launch a CLI agent mission in an isolated worktree (subject to Approval Gate).`
   ]
+
+  const uiInstruction = buildIntelligentUiSystemPrompt(routedUi)
+  if (uiInstruction) {
+    lines.push(uiInstruction)
+  }
 
   if (activePage) {
     lines.push(
@@ -471,6 +488,79 @@ export async function runTextCompletion(params: {
   }
 }
 
+/**
+ * Schema-validated structured object generation using Vercel AI SDK v7 `Output.object()`.
+ */
+export async function runStructuredObject<T>(params: {
+  slot?: 'primary' | 'background'
+  system: string
+  prompt: string
+  schema: z.ZodType<T>
+}): Promise<{ ok: boolean; object: T | null; providerLabel: string }> {
+  const slots = getModelSlots()
+  const chosenProfileId =
+    params.slot === 'background' ? slots.backgroundProfileId : slots.primaryProfileId
+  const chosenModelId =
+    params.slot === 'background' ? slots.backgroundModelId : slots.primaryModelId
+
+  let provider: AIProviderKind = 'gemini'
+  if (chosenProfileId.startsWith('builtin:')) {
+    provider = chosenProfileId.replace('builtin:', '') as AIProviderKind
+  } else {
+    const prof = getProviderProfileById(chosenProfileId)
+    if (prof) provider = prof.kind
+  }
+
+  const target = resolveExecutionTarget({
+    provider,
+    profileId: chosenProfileId,
+    modelId: chosenModelId
+  })
+
+  if (!target || target.mode !== 'sdk') {
+    return { ok: false, object: null, providerLabel: 'Non-SDK or Unconfigured' }
+  }
+
+  try {
+    const res = await generateText({
+      model: target.model,
+      system: params.system,
+      prompt: params.prompt,
+      output: Output.object({ schema: params.schema as any })
+    })
+    return {
+      ok: true,
+      object: (res.output as T) ?? null,
+      providerLabel: target.label
+    }
+  } catch {
+    return { ok: false, object: null, providerLabel: target.label }
+  }
+}
+
+function buildMultimodalMessages(
+  messages: AIChatStreamRequest['messages'],
+  attachments?: AIAttachment[]
+): Array<any> {
+  if (!attachments || attachments.length === 0 || messages.length === 0) {
+    return messages.map((m) => ({ role: m.role, content: m.content }))
+  }
+  return messages.map((m, idx) => {
+    if (idx !== messages.length - 1 || m.role !== 'user') {
+      return { role: m.role, content: m.content }
+    }
+    const parts: Array<any> = [{ type: 'text', text: m.content }]
+    for (const att of attachments) {
+      if (att.kind === 'image' && att.dataUrl) {
+        parts.push({ type: 'image', image: att.dataUrl })
+      } else if (att.dataUrl) {
+        parts.push({ type: 'file', data: att.dataUrl, mediaType: att.mime || 'application/pdf' })
+      }
+    }
+    return { role: 'user', content: parts }
+  })
+}
+
 async function handleProposalEmission(
   req: AIChatStreamRequest,
   proposal: AIApprovalProposal,
@@ -530,6 +620,8 @@ async function runLocalAgenticFallbackStream(
   const boundRepoPath = resolveActiveRepoPath(activePage)
   const lastUserMsg =
     [...req.messages].reverse().find((m) => m.role === 'user')?.content || ''
+  const routedUi = routePresentationMode(lastUserMsg, req.uiMode)
+  const startedAt = Date.now()
   const lower = lastUserMsg.toLowerCase()
 
   const searchTerms = lastUserMsg
@@ -566,13 +658,41 @@ async function runLocalAgenticFallbackStream(
     })
   }
 
+  const editFileMatch = /edit\s+file\s+([^\s]+)\s*:\s*([\s\S]+)/i.exec(lastUserMsg)
+  const offlineUi = buildOfflineIntelligentUiFallback(lastUserMsg, routedUi)
+
+  if (offlineUi && !editFileMatch) {
+    const chunks = offlineUi.prose.match(/.{1,20}(\s|$)|\S+/g) || [offlineUi.prose]
+    for (const chunk of chunks) {
+      emit({ requestId: req.requestId, type: 'text-delta', textDelta: chunk })
+      await new Promise((r) => setTimeout(r, 12))
+    }
+    emit({ requestId: req.requestId, type: 'ui-artifact', artifact: offlineUi.artifact })
+    emit({
+      requestId: req.requestId,
+      type: 'telemetry',
+      telemetry: {
+        providerLabel: 'NoteIT Local Intelligent UI Simulator',
+        latencyMs: Date.now() - startedAt,
+        steps: 1,
+        routedUiMode: routedUi
+      }
+    })
+    emit({
+      requestId: req.requestId,
+      type: 'done',
+      usedLiveSdk: false,
+      providerLabel: 'NoteIT Local Agentic Engine (Configure CLI Bridge or API key in Settings for Live AI)'
+    })
+    return
+  }
+
   let replyText = ''
   let proposedBlocks: ProposedSpecBlock[] = []
   let proposalSummary = ''
   let customProposal: AIApprovalProposal | null = null
 
   // Check if prompt asks to edit a repo file in a bound repository
-  const editFileMatch = /edit\s+file\s+([^\s]+)\s*:\s*([\s\S]+)/i.exec(lastUserMsg)
   if (boundRepoPath && editFileMatch && activePage) {
     const relPath = editFileMatch[1].trim()
     const newContent = editFileMatch[2]
@@ -738,6 +858,10 @@ export async function executeAIChatStream(
   const activePage = resolveTargetPage(snapshot.pages, undefined, req.activePageId)
   const mentionedPages = snapshot.pages.filter((p) => req.mentionedPageIds.includes(p.id))
   const boundRepoPath = resolveActiveRepoPath(activePage)
+  const lastUserMsg =
+    [...req.messages].reverse().find((m) => m.role === 'user')?.content || ''
+  const routedUi = routePresentationMode(lastUserMsg, req.uiMode)
+  const startedAt = Date.now()
 
   if (resolved.mode === 'cli') {
     const cliTools: LoopbackMcpToolDefinition[] = [
@@ -839,12 +963,36 @@ export async function executeAIChatStream(
       })
     }
 
+    let cliFullText = ''
     await executeCliBridgeStream({
       req,
       profile: resolved.profile,
-      systemPrompt: buildSystemInstruction(req, mentionedPages, activePage, boundRepoPath),
+      systemPrompt: buildSystemInstruction(req, mentionedPages, activePage, boundRepoPath, routedUi),
       tools: cliTools,
-      emit
+      emit: (ev) => {
+        if (ev.type === 'text-delta') {
+          cliFullText += ev.textDelta
+          emit(ev)
+        } else if (ev.type === 'done') {
+          const { artifact } = extractOpenUiArtifact(cliFullText)
+          if (artifact) {
+            emit({ requestId: req.requestId, type: 'ui-artifact', artifact })
+          }
+          emit({
+            requestId: req.requestId,
+            type: 'telemetry',
+            telemetry: {
+              providerLabel: ev.providerLabel,
+              latencyMs: Date.now() - startedAt,
+              steps: 1,
+              routedUiMode: artifact ? 'openui' : routedUi
+            }
+          })
+          emit(ev)
+        } else {
+          emit(ev)
+        }
+      }
     })
     return
   }
@@ -903,17 +1051,83 @@ export async function executeAIChatStream(
     console.warn('[ai.service] Failed to load MCP tools:', err)
   }
 
-  try {
-    const result = streamText({
-      model: resolved.model,
-      system: buildSystemInstruction(req, mentionedPages, activePage, boundRepoPath),
-      messages: req.messages.map((m) => ({
-        role: m.role,
-        content: m.content
-      })),
-      stopWhen: stepCountIs(5),
-      tools: {
-        search_workspace_fts5: tool({
+  // Dynamic MCP tool selection: when > 12 MCP tools are connected, rank against user prompt
+  let activeMcpTools = mcpToolMap
+  const mcpNames = Object.keys(mcpToolMap)
+  if (mcpNames.length > 12 && lastUserMsg.trim()) {
+    const terms = lastUserMsg.toLowerCase().split(/\W+/).filter((w) => w.length >= 3)
+    const ranked = mcpNames
+      .map((name) => {
+        const desc = String(mcpToolMap[name]?.description || '').toLowerCase()
+        const hay = `${name} ${desc}`
+        const score = terms.reduce((acc, t) => acc + (hay.includes(t) ? 1 : 0), 0)
+        return { name, score }
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 12)
+    activeMcpTools = {}
+    for (const item of ranked) activeMcpTools[item.name] = mcpToolMap[item.name]
+  }
+
+  const systemInstruction = buildSystemInstruction(
+    req,
+    mentionedPages,
+    activePage,
+    boundRepoPath,
+    routedUi
+  )
+  const multimodalMessages = buildMultimodalMessages(req.messages, req.attachments)
+
+  const buildTools = () => ({
+    semantic_search_workspace: tool({
+      description:
+        'Hybrid vector + FTS5 semantic search across all NoteIT pages for conceptually related notes.',
+      inputSchema: z.object({
+        query: z.string().describe('Conceptual or keyword search query'),
+        limit: z.number().int().min(1).max(10).default(5)
+      }),
+      execute: async ({ query, limit }) => {
+        emit({
+          requestId: req.requestId,
+          type: 'tool-call',
+          toolName: 'semantic_search_workspace',
+          argsSummary: `query="${query}"`
+        })
+        return hybridSemanticSearch(query, limit)
+      }
+    }),
+
+    render_interactive_widget: tool({
+      description:
+        'Render a self-contained sandboxed HTML/CSS/JS interactive widget (simulation, canvas, calculator, visualizer) directly inside the AI Studio response.',
+      inputSchema: z.object({
+        title: z.string().describe('Widget title'),
+        initialHeight: z.number().int().min(160).max(700).default(320),
+        css: z.string().default(''),
+        html: z.string().describe('Body HTML markup for the widget'),
+        js: z.string().default('').describe('Vanilla JS for interactivity')
+      }),
+      execute: async ({ title, initialHeight, css, html, js }) => {
+        emit({
+          requestId: req.requestId,
+          type: 'tool-call',
+          toolName: 'render_interactive_widget',
+          argsSummary: `title="${title}"`
+        })
+        emit({
+          requestId: req.requestId,
+          type: 'ui-artifact',
+          artifact: {
+            kind: 'sandbox-html',
+            title,
+            sandbox: { initialHeight, css, html, js }
+          }
+        })
+        return { ok: true, rendered: title }
+      }
+    }),
+
+    search_workspace_fts5: tool({
           description:
             'Search specification pages, notes, or DBML schemas in NoteIT SQLite FTS5.',
           inputSchema: z.object({
@@ -1290,27 +1504,109 @@ export async function executeAIChatStream(
           }
         }),
 
-        ...mcpToolMap
+        ...activeMcpTools
+      })
+
+  const runAgentStream = async (
+    modelToUse: typeof resolved.model,
+    providerLabel: string,
+    usedFallback = false,
+    fallbackReason?: string
+  ): Promise<void> => {
+    let stepCount = 0
+    let inputTokens = 0
+    let outputTokens = 0
+    let reasoningTokens = 0
+    let fullText = ''
+    let emittedWidget = false
+
+    const agent = new ToolLoopAgent({
+      model: wrapWithReasoningMiddleware(modelToUse),
+      instructions: systemInstruction,
+      tools: buildTools(),
+      stopWhen: stepCountIs(8),
+      onStepFinish: ({ usage }) => {
+        stepCount++
+        inputTokens += Number((usage as any)?.inputTokens ?? (usage as any)?.promptTokens ?? 0)
+        outputTokens += Number((usage as any)?.outputTokens ?? (usage as any)?.completionTokens ?? 0)
+        reasoningTokens += Number((usage as any)?.reasoningTokens ?? 0)
       }
     })
 
-    for await (const delta of result.textStream) {
-      if (delta) {
-        emit({
-          requestId: req.requestId,
-          type: 'text-delta',
-          textDelta: delta
-        })
+    const result = await agent.stream({
+      messages: multimodalMessages
+    })
+
+    for await (const part of result.fullStream as AsyncIterable<any>) {
+      if (part.type === 'text-delta') {
+        const delta = part.text ?? part.textDelta ?? ''
+        if (delta) {
+          fullText += delta
+          emit({ requestId: req.requestId, type: 'text-delta', textDelta: delta })
+        }
+      } else if (part.type === 'reasoning-delta' || part.type === 'reasoning') {
+        const delta = part.text ?? part.textDelta ?? ''
+        if (delta) {
+          emit({ requestId: req.requestId, type: 'reasoning-delta', reasoningDelta: delta })
+        }
+      } else if (part.type === 'tool-call' && part.toolName === 'render_interactive_widget') {
+        emittedWidget = true
+      }
+    }
+
+    if (!emittedWidget) {
+      const { artifact } = extractOpenUiArtifact(fullText)
+      if (artifact) {
+        emit({ requestId: req.requestId, type: 'ui-artifact', artifact })
       }
     }
 
     emit({
       requestId: req.requestId,
+      type: 'telemetry',
+      telemetry: {
+        providerLabel,
+        inputTokens,
+        outputTokens,
+        reasoningTokens,
+        totalTokens: inputTokens + outputTokens,
+        latencyMs: Date.now() - startedAt,
+        steps: Math.max(1, stepCount),
+        usedFallback,
+        fallbackReason,
+        routedUiMode: emittedWidget ? 'sandbox-html' : routedUi
+      }
+    })
+
+    emit({
+      requestId: req.requestId,
       type: 'done',
       usedLiveSdk: true,
-      providerLabel: resolved.label
+      providerLabel
     })
+  }
+
+  try {
+    await runAgentStream(resolved.model, resolved.label)
   } catch (error) {
+    const errMessage = error instanceof Error ? error.message : String(error)
+    const primaryKey = `${req.profileId || `builtin:${req.provider}`}:${req.modelId}`
+    const fallback = resolveFallbackTarget(primaryKey)
+
+    if (fallback?.target?.mode === 'sdk') {
+      emit({
+        requestId: req.requestId,
+        type: 'fallback-notice',
+        message: `Primary provider failed (${errMessage.slice(0, 80)}). Switched automatically to ${fallback.label}.`
+      })
+      try {
+        await runAgentStream(fallback.target.model, fallback.label, true, errMessage)
+        return
+      } catch (fbErr) {
+        console.warn('[ai.service] Fallback SDK provider also failed:', fbErr)
+      }
+    }
+
     console.warn('[ai.service] Live provider failed, falling back to local agentic engine:', error)
     await runLocalAgenticFallbackStream(req, emit)
   }

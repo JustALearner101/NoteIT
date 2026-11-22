@@ -546,3 +546,78 @@ export interface KgSnapshot {
   propositions: KgProposition[]
   chains: KgChain[]
 }
+
+// v2.4: Unified AI Studio, Hybrid Intelligent UI & Vercel AI SDK v7 Max
+export type AIStudioSubMode = 'chat' | 'learn' | 'graph'
+export type AIUiMode = 'auto' | 'intelligent-ui' | 'markdown'
+
+export interface AIAttachment {
+  id: string
+  kind: 'image' | 'pdf' | 'file'
+  name: string
+  mime: string
+  assetId?: string
+  dataUrl?: string
+}
+
+export interface AIUiArtifact {
+  kind: 'openui' | 'sandbox-html'
+  title?: string
+  /** For OpenUI Lang 1.0 declarative UI */
+  openuiSource?: string
+  /** For CopilotKit-style Sandboxed HTML/CSS/JS interactive widget */
+  sandbox?: {
+    initialHeight?: number
+    css?: string
+    html: string
+    js?: string
+  }
+}
+
+export interface AIMessageTelemetry {
+  providerLabel?: string
+  inputTokens?: number
+  outputTokens?: number
+  reasoningTokens?: number
+  totalTokens?: number
+  latencyMs?: number
+  steps?: number
+  usedFallback?: boolean
+  fallbackReason?: string
+  routedUiMode?: 'markdown' | 'openui' | 'sandbox-html'
+}
+
+export interface AIThreadRecord {
+  id: string
+  title: string
+  studioMode: 'chat' | 'learn'
+  chatMode: string
+  uiMode: AIUiMode
+  providerId: string
+  modelId: string
+  createdAt: number
+  updatedAt: number
+}
+
+export interface AIMessageRecord {
+  id: string
+  threadId: string
+  role: 'user' | 'assistant'
+  content: string
+  reasoningText: string
+  uiArtifact: AIUiArtifact | null
+  attachments: AIAttachment[]
+  toolCalls: { toolName: string; argsSummary: string }[]
+  proposals: unknown[]
+  telemetry: AIMessageTelemetry
+  createdAt: number
+}
+
+export interface SemanticSearchHit {
+  pageId: string
+  pageCode: string
+  title: string
+  score: number
+  source: 'hybrid' | 'vector' | 'fts5'
+  snippet: string
+}

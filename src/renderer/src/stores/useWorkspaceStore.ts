@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type {
+  AIStudioSubMode,
   LearnSeedSource,
   MarkerColor,
   Notebook,
@@ -77,6 +78,7 @@ interface WorkspaceStore {
   diffTarget: DiffInspectorTarget | null
   browserContextForAI: BrowserContextPayload | null
   pendingLearnSeed: LearnSeedSource | null
+  aiStudioSubMode: AIStudioSubMode
   theme: 'dark' | 'light'
   preferences: WorkbenchPreferences
   telemetry: TelemetryState
@@ -111,6 +113,7 @@ interface WorkspaceStore {
   setBrowserContextForAI: (ctx: BrowserContextPayload | null) => void
   startLearnFromSource: (seed: LearnSeedSource) => void
   clearPendingLearnSeed: () => void
+  setAiStudioSubMode: (mode: AIStudioSubMode) => void
   toggleTheme: () => void
   setActiveTheme: (themeId: string) => void
   saveCustomTheme: (theme: ThemeDefinition) => void
@@ -333,6 +336,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   diffTarget: null,
   browserContextForAI: null,
   pendingLearnSeed: null,
+  aiStudioSubMode: 'chat',
   theme: initialThemeDef.colorScheme,
   preferences: initialPrefs,
   telemetry: {
@@ -706,10 +710,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   startLearnFromSource: (seed) =>
     set({
       pendingLearnSeed: seed,
-      activeMainView: 'learn'
+      aiStudioSubMode: 'learn',
+      activeMainView: 'ai-chat'
     }),
 
   clearPendingLearnSeed: () => set({ pendingLearnSeed: null }),
+
+  setAiStudioSubMode: (mode) => set({ aiStudioSubMode: mode }),
 
   toggleTheme: () => {
     set((state) => {

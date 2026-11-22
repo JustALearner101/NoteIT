@@ -129,6 +129,16 @@ const noteitAPI: NoteItAPI = {
   updateKgNodePosition: (input) => ipcRenderer.invoke('learn:updateKgNodePosition', input),
   deleteKgProposition: (id: string) => ipcRenderer.invoke('learn:deleteKgProposition', id),
 
+  // v2.4: Unified AI Studio Persistence & Hybrid Vector Semantic Search
+  listAiThreads: () => ipcRenderer.invoke('ai:threads:list'),
+  getAiThread: (threadId: string) => ipcRenderer.invoke('ai:threads:get', threadId),
+  createAiThread: (input) => ipcRenderer.invoke('ai:threads:create', input),
+  updateAiThread: (input) => ipcRenderer.invoke('ai:threads:update', input),
+  deleteAiThread: (threadId: string) => ipcRenderer.invoke('ai:threads:delete', threadId),
+  saveAiMessage: (input) => ipcRenderer.invoke('ai:messages:save', input),
+  semanticSearchWorkspace: (query: string, limit?: number) =>
+    ipcRenderer.invoke('workspace:semanticSearch', { query, limit }),
+
   // ADE Pilar 1: Embedded PTY Terminal Multiplexer
   detectCliPresets: () => ipcRenderer.invoke('terminal:detectClis'),
   createTerminalSession: (input) => ipcRenderer.invoke('terminal:createSession', input),

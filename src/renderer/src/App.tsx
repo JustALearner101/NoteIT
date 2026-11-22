@@ -31,9 +31,9 @@ const SettingsView = React.lazy(() =>
     default: m.SettingsView
   }))
 )
-const AIChatView = React.lazy(() =>
-  import('@renderer/components/chat/AIChatView').then((m) => ({
-    default: m.AIChatView
+const AIStudioView = React.lazy(() =>
+  import('@renderer/components/ai-studio/AIStudioView').then((m) => ({
+    default: m.AIStudioView
   }))
 )
 const InAppBrowserView = React.lazy(() =>
@@ -44,11 +44,6 @@ const InAppBrowserView = React.lazy(() =>
 const AgentMissionControlView = React.lazy(() =>
   import('@renderer/components/agents/AgentMissionControlView').then((m) => ({
     default: m.AgentMissionControlView
-  }))
-)
-const LearnWorkbenchView = React.lazy(() =>
-  import('@renderer/components/learn/LearnWorkbenchView').then((m) => ({
-    default: m.LearnWorkbenchView
   }))
 )
 const MissionBriefingDrawer = React.lazy(() =>
@@ -426,9 +421,9 @@ export const App: React.FC = () => {
           <div className="flex-1 flex min-h-0 overflow-hidden">
             <IndexRailSidebar collapsed={isSidebarCollapsed} />
 
-            {activeMainView === 'ai-chat' ? (
-              <Suspense fallback={<LazyViewFallback label="Loading AI Chat..." />}>
-                <AIChatView />
+            {activeMainView === 'ai-chat' || activeMainView === 'learn' ? (
+              <Suspense fallback={<LazyViewFallback label="Loading AI Studio..." />}>
+                <AIStudioView />
               </Suspense>
             ) : activeMainView === 'browser' ? (
               <Suspense fallback={<LazyViewFallback label="Loading Browser..." />}>
@@ -437,10 +432,6 @@ export const App: React.FC = () => {
             ) : activeMainView === 'agent-board' ? (
               <Suspense fallback={<LazyViewFallback label="Loading Mission Control..." />}>
                 <AgentMissionControlView />
-              </Suspense>
-            ) : activeMainView === 'learn' ? (
-              <Suspense fallback={<LazyViewFallback label="Loading Learn Workbench..." />}>
-                <LearnWorkbenchView />
               </Suspense>
             ) : (
               <main

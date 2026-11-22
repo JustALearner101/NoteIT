@@ -342,6 +342,40 @@ export function initDatabase(workspaceDir: string): DatabaseSync {
       source_session_id TEXT DEFAULT NULL,
       created_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS ai_threads (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      studio_mode TEXT NOT NULL DEFAULT 'chat',
+      chat_mode TEXT NOT NULL DEFAULT 'Free chat',
+      ui_mode TEXT NOT NULL DEFAULT 'auto',
+      provider_id TEXT NOT NULL DEFAULT '',
+      model_id TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS ai_messages (
+      id TEXT PRIMARY KEY,
+      thread_id TEXT NOT NULL REFERENCES ai_threads(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      reasoning_text TEXT NOT NULL DEFAULT '',
+      ui_payload_json TEXT NOT NULL DEFAULT '',
+      attachments_json TEXT NOT NULL DEFAULT '[]',
+      tool_calls_json TEXT NOT NULL DEFAULT '[]',
+      proposals_json TEXT NOT NULL DEFAULT '[]',
+      telemetry_json TEXT NOT NULL DEFAULT '{}',
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS page_embeddings (
+      page_id TEXT PRIMARY KEY REFERENCES pages(id) ON DELETE CASCADE,
+      content_hash TEXT NOT NULL,
+      model_id TEXT NOT NULL,
+      vector_json TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
   `)
 
   const countRow = db.prepare('SELECT COUNT(*) as cnt FROM notebooks').get() as { cnt: number }

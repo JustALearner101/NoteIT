@@ -1,10 +1,16 @@
 import type {
   AgentSessionRecord,
+  AIAttachment,
+  AIMessageRecord,
+  AIMessageTelemetry,
   AIModelSlots,
   AIProviderKind,
   AIProviderProfile,
   AIProviderProfileInput,
   AIProviderTestResult,
+  AIThreadRecord,
+  AIUiArtifact,
+  AIUiMode,
   AssetRecord,
   BacklinkItem,
   BlockType,
@@ -33,6 +39,7 @@ import type {
   RepoGitStatusSummary,
   SearchResultItem,
   Section,
+  SemanticSearchHit,
   SpecBundleSummary,
   TaskStatus,
   TerminalSessionInfo,
@@ -99,13 +106,16 @@ export interface AIApprovalProposal {
 
 export interface AIChatStreamRequest {
   requestId: string
+  threadId?: string
   provider: AIProviderKind
   profileId?: string
   modelId: string
   apiKey?: string
   approvalMode: 'ask' | 'auto-edit' | 'plan-only'
   chatMode: string
+  uiMode?: AIUiMode
   messages: { role: 'user' | 'assistant'; content: string }[]
+  attachments?: AIAttachment[]
   mentionedPageIds: string[]
   activePageId?: string
   browserContext?: {
@@ -117,6 +127,10 @@ export interface AIChatStreamRequest {
 
 export type AIChatStreamEvent =
   | { requestId: string; type: 'text-delta'; textDelta: string }
+  | { requestId: string; type: 'reasoning-delta'; reasoningDelta: string }
+  | { requestId: string; type: 'ui-artifact'; artifact: AIUiArtifact }
+  | { requestId: string; type: 'telemetry'; telemetry: AIMessageTelemetry }
+  | { requestId: string; type: 'fallback-notice'; message: string }
   | {
       requestId: string
       type: 'tool-call'
@@ -459,4 +473,38 @@ export interface NoteItAPI {
   }): Promise<{ addedPropositions: number; addedChains: number; snapshot: KgSnapshot }>
   updateKgNodePosition(input: { id: string; x: number; y: number }): Promise<{ ok: boolean }>
   deleteKgProposition(id: string): Promise<{ ok: boolean }>
+
+  // v2.4: Unified AI Studio Persistence & Hybrid Vector Semantic Search
+  listAiThreads(): Promise<AIThreadRecord[]>
+  getAiThread(threadId: string): Promise<{ thread: AIThreadRecord; messages: AIMessageRecord[] } | null>
+  createAiThread(input?: {
+    title?: string
+    studioMode?: 'chat' | 'learn'
+    chatMode?: string
+    uiMode?: AIUiMode
+    providerId?: string
+    modelId?: string
+  }): Promise<AIThreadRecord>
+  updateAiThread(input: {
+    threadId: string
+    title?: string
+    chatMode?: string
+    uiMode?: AIUiMode
+    providerId?: string
+    modelId?: string
+  }): Promise<AIThreadRecord | null>
+  deleteAiThread(threadId: string): Promise<{ ok: boolean }>
+  saveAiMessage(input: {
+    id?: string
+    threadId: string
+    role: 'user' | 'assistant'
+    content: string
+    reasoningText?: string
+    uiArtifact?: AIUiArtifact | null
+    attachments?: AIAttachment[]
+    toolCalls?: { toolName: string; argsSummary: string }[]
+    proposals?: unknown[]
+    telemetry?: AIMessageTelemetry
+  }): Promise<AIMessageRecord>
+  semanticSearchWorkspace(query: string, limit?: number): Promise<SemanticSearchHit[]>
 }
