@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { DatabaseSync } from 'node:sqlite'
 import { formatLocalTimestamp } from '@shared/date'
 import { getDb, getDbPath } from '../db/client'
 
@@ -119,6 +120,16 @@ export function runBackup(): BackupResult {
 
     // VACUUM INTO menolak target yang sudah ada, jadi nama unik di atas wajib.
     db.exec(`VACUUM INTO ${quoteSqlLiteral(targetPath)}`)
+
+    // Hardening: hapus seluruh tabel `secrets` dari berkas backup .db agar API key tidak pernah ikut tersalin ke backup.
+    const backupDb = new DatabaseSync(targetPath)
+    try {
+      backupDb.exec('DELETE FROM secrets;')
+    } catch {
+      // Abaikan bila tabel secrets belum ada pada DB legacy
+    } finally {
+      backupDb.close()
+    }
 
     // Aset ikut disalin ke folder pasangan <nama backup>.assets secara inkremental.
     const assetDir = getBackupAssetDir(targetPath)

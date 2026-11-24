@@ -28,6 +28,7 @@ export type ShortcutId =
   | 'toggle-settings'
   | 'settings-search'
   | 'toggle-ai-chat'
+  | 'toggle-ai-split'
   | 'toggle-browser'
   | 'toggle-mission-control'
   | 'toggle-terminal'
@@ -123,6 +124,16 @@ export const APP_SHORTCUTS: readonly ShortcutDefinition[] = [
     category: 'navigation',
     scope: 'renderer',
     combo: { key: 'c', mod: true, shift: true, alt: false }
+  },
+  {
+    id: 'toggle-ai-split',
+    label: 'Toggle AI Studio Split Pane',
+    description: 'Open or close AI Studio side-by-side next to your active note',
+    keys: 'Ctrl+Alt+C',
+    keyTokens: ['Ctrl', 'Alt', 'C'],
+    category: 'navigation',
+    scope: 'renderer',
+    combo: { key: 'c', mod: true, shift: false, alt: true }
   },
   {
     id: 'toggle-browser',

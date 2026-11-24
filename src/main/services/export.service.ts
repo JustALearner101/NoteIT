@@ -181,6 +181,10 @@ export function renderBlock(block: DocumentBlock): string {
     }
     case 'divider':
       return '---'
+    case 'math':
+      return ['$$', content, '$$'].join('\n')
+    case 'table':
+      return content
     case 'image': {
       if (!block.assetId || !block.assetExt) return content
       const alt = block.assetName || content || 'gambar'

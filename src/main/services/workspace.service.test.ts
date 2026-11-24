@@ -2,7 +2,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { closeDb, getDb, initDatabase } from '../db/client'
+import { closeDb, getDb, initDatabase, seedInitialWorkspace } from '../db/client'
 import {
   createNotebook,
   createPage,
@@ -15,10 +15,12 @@ import {
   getPageVersions,
   getWorkspaceSnapshot,
   renamePageSnapshot,
+  resetWorkspace,
   restorePageSnapshot,
   searchWorkspace,
   updatePage
 } from './workspace.service'
+import { hasSecret, setSecret } from './secret.service'
 
 let tempDir: string
 let notebookId: string
@@ -27,7 +29,10 @@ let pageId: string
 
 beforeAll(() => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'noteit-test-'))
-  initDatabase(tempDir)
+  const db = initDatabase(tempDir)
+  // Verify fresh production DB starts 100% empty before seeding test fixture data
+  expect(getWorkspaceSnapshot().notebooks).toHaveLength(0)
+  seedInitialWorkspace(db)
 })
 
 afterAll(() => {
@@ -669,3 +674,18 @@ describe('migrasi page_versions.tags_json', () => {
   })
 })
 
+describe('resetWorkspace (Content Reset vs Factory Reset)', () => {
+  it('clears all content while preserving encrypted secrets in Content Reset, and wipes secrets in Factory Reset', () => {
+    setSecret('ai.provider.gemini', 'AIzaSyTestResetKey_1234567890')
+    expect(hasSecret('ai.provider.gemini')).toBe(true)
+    expect(getWorkspaceSnapshot().notebooks.length).toBeGreaterThan(0)
+
+    resetWorkspace({ includeSecretsAndProviders: false })
+    expect(getWorkspaceSnapshot().notebooks).toHaveLength(0)
+    expect(getWorkspaceSnapshot().pages).toHaveLength(0)
+    expect(hasSecret('ai.provider.gemini')).toBe(true)
+
+    resetWorkspace({ includeSecretsAndProviders: true })
+    expect(hasSecret('ai.provider.gemini')).toBe(false)
+  })
+})

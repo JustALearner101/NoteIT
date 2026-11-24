@@ -59,6 +59,8 @@ export type BlockType =
   | 'columns'
   | 'toggle'
   | 'divider'
+  | 'math'
+  | 'table'
 
 export interface DBMLTableLayout {
   [tableName: string]: { x: number; y: number; color?: MarkerColor }
@@ -83,6 +85,8 @@ export interface DocumentBlock {
   // For 'graphviz' block (DOT language)
   graphvizViewMode?: 'code' | 'split' | 'diagram'
   graphvizEngine?: 'dot' | 'neato' | 'fdp' | 'circo' | 'twopi'
+  // For 'math' block (KaTeX / LaTeX)
+  mathViewMode?: 'code' | 'split' | 'preview'
   // For 'database' block (Gantt / Kanban / Table / Chart / Calendar)
   databaseTitle?: string
   databaseActiveView?: 'gantt' | 'kanban' | 'table' | 'chart' | 'calendar'
@@ -428,6 +432,16 @@ export interface AIProviderTestResult {
   latencyMs: number
   message: string
   models?: string[]
+}
+
+export interface AIProviderPreset {
+  id: string
+  name: string
+  kind: 'openai-compat' | 'anthropic-compat'
+  baseUrl: string
+  defaultModel: string
+  extraHeaders?: Record<string, string>
+  description: string
 }
 
 export interface AIModelSlots {

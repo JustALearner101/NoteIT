@@ -515,3 +515,18 @@ describe('export.service — workspaceToMarkdownFiles', () => {
     expect(slugifyTitle('  --Judul--Aneh!!  ')).toBe('judul-aneh')
   })
 })
+
+
+describe('export.service — v2.5 math & table blocks', () => {
+  it('merender blok math sebagai display LaTeX ($$) dan blok table sebagai GFM Markdown', () => {
+    const mathBlock = makeBlock({ id: 'm1', type: 'math', content: 'E = mc^2' })
+    const tableBlock = makeBlock({
+      id: 't1',
+      type: 'table',
+      content: '| A | B |\n| --- | --- |\n| 1 | 2 |'
+    })
+
+    expect(renderBlock(mathBlock)).toBe('$$\nE = mc^2\n$$')
+    expect(renderBlock(tableBlock)).toBe('| A | B |\n| --- | --- |\n| 1 | 2 |')
+  })
+})

@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { closeDb, initDatabase } from '../db/client'
+import { closeDb, initDatabase, seedInitialWorkspace } from '../db/client'
 import {
   deleteAgentSession,
   findAgentSessionById,
@@ -18,7 +18,8 @@ let tempDir: string
 
 beforeAll(() => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'noteit-worktree-test-'))
-  initDatabase(tempDir)
+  const db = initDatabase(tempDir)
+  seedInitialWorkspace(db)
 })
 
 afterAll(() => {

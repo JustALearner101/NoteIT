@@ -9,7 +9,7 @@ import type {
   Section,
   WorkspaceSnapshot
 } from '@shared/types/domain'
-import type { CreatePageInput, UpdatePageInput } from '@shared/ipc-channels'
+import type { BlockContextForAI, CreatePageInput, UpdatePageInput } from '@shared/ipc-channels'
 import { createSaveQueue } from '@renderer/lib/save-queue'
 import { createUndoStack } from '@renderer/lib/undo-stack'
 import * as tabRules from '@renderer/lib/tabs'
@@ -23,7 +23,15 @@ import {
 } from '@renderer/lib/themes'
 
 export type MainViewMode = 'workbench' | 'settings' | 'ai-chat' | 'browser' | 'agent-board' | 'learn'
-export type RightSplitMode = 'page' | 'browser' | 'repo-explorer' | 'diff'
+export type RightSplitMode = 'page' | 'browser' | 'repo-explorer' | 'diff' | 'ai-studio'
+
+export type BlockAIContextPreset = 'ask' | 'explain' | 'improve' | 'diagram'
+
+export interface BlockContextPayload extends BlockContextForAI {
+  preset?: BlockAIContextPreset
+  promptDraft?: string
+  nonce?: number
+}
 
 export interface DiffInspectorTarget {
   repoPath: string
@@ -77,6 +85,7 @@ interface WorkspaceStore {
   rightSplitMode: RightSplitMode
   diffTarget: DiffInspectorTarget | null
   browserContextForAI: BrowserContextPayload | null
+  blockContextForAI: BlockContextPayload | null
   pendingLearnSeed: LearnSeedSource | null
   aiStudioSubMode: AIStudioSubMode
   theme: 'dark' | 'light'
@@ -106,11 +115,14 @@ interface WorkspaceStore {
   setActiveMainView: (view: MainViewMode, settingsSection?: string) => void
   setActiveSettingsSection: (section: string) => void
   toggleBrowserSplitPane: () => void
+  toggleAiStudioSplitPane: (subMode?: AIStudioSubMode) => void
   setRightSplitMode: (mode: RightSplitMode) => void
   openCodeInDiffInspector: (target: DiffInspectorTarget) => void
   updateNotebookRepo: (notebookId: string, repoPath: string | null, defaultBranch?: string) => Promise<void>
   updateSectionRepo: (sectionId: string, repoPathOverride: string | null) => Promise<void>
   setBrowserContextForAI: (ctx: BrowserContextPayload | null) => void
+  setBlockContextForAI: (ctx: BlockContextPayload | null) => void
+  sendBlockToAI: (payload: BlockContextPayload) => void
   startLearnFromSource: (seed: LearnSeedSource) => void
   clearPendingLearnSeed: () => void
   setAiStudioSubMode: (mode: AIStudioSubMode) => void
@@ -335,6 +347,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   rightSplitMode: 'page',
   diffTarget: null,
   browserContextForAI: null,
+  blockContextForAI: null,
   pendingLearnSeed: null,
   aiStudioSubMode: 'chat',
   theme: initialThemeDef.colorScheme,
@@ -653,6 +666,28 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       splitPageId: !state.isBrowserSplitOpen ? null : state.splitPageId
     })),
 
+  toggleAiStudioSplitPane: (subMode) =>
+    set((state) => {
+      const isAlreadyOpen =
+        state.activeMainView === 'workbench' &&
+        state.rightSplitMode === 'ai-studio' &&
+        (!subMode || state.aiStudioSubMode === subMode)
+      if (isAlreadyOpen) {
+        return {
+          rightSplitMode: 'page',
+          isBrowserSplitOpen: false
+        }
+      }
+      return {
+        activeMainView: 'workbench',
+        rightSplitMode: 'ai-studio',
+        isBrowserSplitOpen: false,
+        splitPageId: null,
+        focusedPane: 'primary',
+        aiStudioSubMode: subMode ?? state.aiStudioSubMode
+      }
+    }),
+
   setRightSplitMode: (mode) =>
     set((state) => ({
       rightSplitMode: mode,
@@ -707,11 +742,41 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   setBrowserContextForAI: (ctx) => set({ browserContextForAI: ctx }),
 
-  startLearnFromSource: (seed) =>
+  setBlockContextForAI: (ctx) => set({ blockContextForAI: ctx }),
+
+  sendBlockToAI: (payload) =>
     set({
-      pendingLearnSeed: seed,
-      aiStudioSubMode: 'learn',
-      activeMainView: 'ai-chat'
+      activeMainView: 'workbench',
+      rightSplitMode: 'ai-studio',
+      isBrowserSplitOpen: false,
+      splitPageId: null,
+      focusedPane: 'primary',
+      aiStudioSubMode: 'chat',
+      blockContextForAI: {
+        ...payload,
+        nonce: Date.now()
+      }
+    }),
+
+  startLearnFromSource: (seed) =>
+    set((state) => {
+      // When launching Learn from a page inside Workbench, open side-by-side AI Studio split
+      // so the user keeps their note visible while studying.
+      if (seed.sourceType === 'page' && state.activeMainView === 'workbench') {
+        return {
+          pendingLearnSeed: seed,
+          aiStudioSubMode: 'learn',
+          activeMainView: 'workbench',
+          rightSplitMode: 'ai-studio',
+          isBrowserSplitOpen: false,
+          splitPageId: null
+        }
+      }
+      return {
+        pendingLearnSeed: seed,
+        aiStudioSubMode: 'learn',
+        activeMainView: 'ai-chat'
+      }
     }),
 
   clearPendingLearnSeed: () => set({ pendingLearnSeed: null }),

@@ -28,6 +28,7 @@ import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { Badge, Button, cn } from '@renderer/components/ui'
 import { LearnMarkdown } from '@renderer/components/learn/LearnMarkdown'
 import { IntelligentUiCard } from '@renderer/components/ai-ui/IntelligentUiCard'
+import { applyBlocksInsertion, parseMarkdownToBlocks } from '@shared/markdown-to-blocks'
 import type { AIApprovalProposal, AIChatStreamEvent } from '@shared/ipc-channels'
 import type {
   AIAttachment,
@@ -58,6 +59,7 @@ interface ChatMessage {
   proposals?: AIApprovalProposal[]
   mentionedPages?: { id: string; code: string; title: string }[]
   browserContext?: { url: string; title: string } | null
+  blockContext?: { pageCode: string; blockType: string; preview: string } | null
   createdAt: number
 }
 
@@ -115,7 +117,11 @@ const STARTER_PROMPTS = [
   }
 ]
 
-export const AIChatView: React.FC = () => {
+interface AIChatViewProps {
+  isSplitMode?: boolean
+}
+
+export const AIChatView: React.FC<AIChatViewProps> = ({ isSplitMode = false }) => {
   const {
     pages,
     sections,
@@ -130,6 +136,8 @@ export const AIChatView: React.FC = () => {
     updatePreferences,
     browserContextForAI,
     setBrowserContextForAI,
+    blockContextForAI,
+    setBlockContextForAI,
     setActiveMainView,
     showToast
   } = useWorkspaceStore()
@@ -220,6 +228,17 @@ export const AIChatView: React.FC = () => {
     () => pages.find((p) => p.id === activePageId) || pages[0],
     [pages, activePageId]
   )
+
+  // When a block is sent from BlockEditor, pre-fill promptDraft (if any) and focus composer
+  useEffect(() => {
+    if (!blockContextForAI?.nonce) return
+    if (blockContextForAI.promptDraft) {
+      setPromptText(blockContextForAI.promptDraft)
+    }
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus()
+    })
+  }, [blockContextForAI?.nonce, blockContextForAI?.promptDraft])
 
   // Langganan stream dari Vercel AI SDK di Main Process
   useEffect(() => {
@@ -524,6 +543,13 @@ export const AIChatView: React.FC = () => {
       browserContext: browserContextForAI
         ? { url: browserContextForAI.url, title: browserContextForAI.title }
         : null,
+      blockContext: blockContextForAI
+        ? {
+            pageCode: blockContextForAI.pageCode,
+            blockType: blockContextForAI.blockType,
+            preview: (blockContextForAI.selectedText || blockContextForAI.content).slice(0, 40)
+          }
+        : null,
       createdAt: Date.now()
     }
 
@@ -581,7 +607,6 @@ export const AIChatView: React.FC = () => {
       provider: preferences.aiProvider,
       profileId: preferences.aiProfileId,
       modelId: preferences.aiModel,
-      apiKey: preferences.aiApiKeyMasked,
       approvalMode: preferences.aiApprovalMode,
       chatMode,
       uiMode,
@@ -589,7 +614,18 @@ export const AIChatView: React.FC = () => {
       attachments: currentAttachments,
       mentionedPageIds,
       activePageId: activePage?.id,
-      browserContext: browserContextForAI
+      browserContext: browserContextForAI,
+      blockContext: blockContextForAI
+        ? {
+            pageId: blockContextForAI.pageId,
+            pageCode: blockContextForAI.pageCode,
+            pageTitle: blockContextForAI.pageTitle,
+            blockId: blockContextForAI.blockId,
+            blockType: blockContextForAI.blockType,
+            content: blockContextForAI.content,
+            selectedText: blockContextForAI.selectedText
+          }
+        : null
     })
   }
 
@@ -707,11 +743,89 @@ export const AIChatView: React.FC = () => {
     openPageInTab(created.id)
   }
 
+  const handleApplyAssistantToPage = async (
+    msg: ChatMessage,
+    mode: 'insert-after' | 'replace' | 'append'
+  ): Promise<void> => {
+    if (!activePage) {
+      showToast('No active page open to insert into', 'error')
+      return
+    }
+    const parsedBlocks = parseMarkdownToBlocks(msg.content)
+    if (parsedBlocks.length === 0) {
+      showToast('Nothing to insert from this reply', 'error')
+      return
+    }
+
+    const canTargetPinnedBlock =
+      mode !== 'append' &&
+      blockContextForAI &&
+      blockContextForAI.pageId === activePage.id &&
+      activePage.blocks.some((b) => b.id === blockContextForAI.blockId)
+
+    const nextBlocks = canTargetPinnedBlock
+      ? applyBlocksInsertion(activePage.blocks, parsedBlocks, {
+          mode,
+          blockId: blockContextForAI.blockId
+        })
+      : applyBlocksInsertion(activePage.blocks, parsedBlocks, { mode: 'append' })
+
+    await updatePage({ id: activePage.id, blocks: nextBlocks })
+    const countLabel = `${parsedBlocks.length} block${parsedBlocks.length === 1 ? '' : 's'}`
+    if (canTargetPinnedBlock && mode === 'replace') {
+      showToast(`Replaced block with ${countLabel} in ${activePage.code} (Ctrl+Z to undo)`)
+    } else if (canTargetPinnedBlock && mode === 'insert-after') {
+      showToast(`Inserted ${countLabel} after block in ${activePage.code} (Ctrl+Z to undo)`)
+    } else {
+      showToast(`Appended ${countLabel} to ${activePage.code} (Ctrl+Z to undo)`)
+    }
+  }
+
   const renderComposerCard = (): React.ReactNode => (
-    <div className="w-full max-w-2xl rounded-[14px] bg-surface-elevated border border-border-hairline shadow-popover p-4 transition-all focus-within:border-accent-cobalt relative">
-      {/* Context Mention, Multimodal Attachments & Browser Context Pills */}
-      {(mentionedPages.length > 0 || browserContextForAI || attachments.length > 0) && (
+    <div
+      className={cn(
+        'w-full max-w-2xl rounded-[14px] bg-surface-elevated border border-border-hairline shadow-popover transition-all focus-within:border-accent-cobalt relative',
+        isSplitMode ? 'p-3' : 'p-4'
+      )}
+    >
+      {/* Context Mention, Active Page, Block Pin, Multimodal Attachments & Browser Context Pills */}
+      {(mentionedPages.length > 0 ||
+        browserContextForAI ||
+        blockContextForAI ||
+        attachments.length > 0 ||
+        (isSplitMode && activePage)) && (
         <div className="flex flex-wrap items-center gap-1.5 mb-2.5 pb-2.5 border-b border-border-subtle">
+          {isSplitMode && activePage && (
+            <span
+              title={`AI automatically sees active page: ${activePage.title}`}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-surface-chrome border border-border-hairline text-[10.5px] text-ink-secondary"
+            >
+              <FileText size={10.5} className="text-accent-cobalt shrink-0" aria-hidden="true" />
+              <span className="font-mono text-[10px] text-accent-cobalt">{activePage.code}</span>
+              <span className="truncate max-w-[120px]">{activePage.title}</span>
+            </span>
+          )}
+          {blockContextForAI && (
+            <span
+              title={blockContextForAI.selectedText || blockContextForAI.content}
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-[var(--pill-violet-bg)] border border-[var(--pill-violet-border)] text-[11px] text-[var(--pill-violet-text)]"
+            >
+              <Sparkles size={10.5} className="shrink-0" aria-hidden="true" />
+              <span className="font-mono text-[10px] uppercase">{blockContextForAI.blockType}</span>
+              <span className="truncate max-w-[150px]">
+                {(blockContextForAI.selectedText || blockContextForAI.content).trim() ||
+                  blockContextForAI.pageCode}
+              </span>
+              <button
+                type="button"
+                aria-label="Dismiss pinned block context"
+                onClick={() => setBlockContextForAI(null)}
+                className="hover:opacity-75"
+              >
+                <X size={11} aria-hidden="true" />
+              </button>
+            </span>
+          )}
           {attachments.map((att) => (
             <span
               key={att.id}
@@ -1236,6 +1350,11 @@ export const AIChatView: React.FC = () => {
                           🌐 {msg.browserContext.title.slice(0, 22)}
                         </span>
                       )}
+                      {msg.blockContext && (
+                        <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-[var(--pill-violet-bg)] text-[var(--pill-violet-text)]">
+                          ✦ {msg.blockContext.pageCode}·{msg.blockContext.blockType}
+                        </span>
+                      )}
                       {msg.mentionedPages?.map((mp) => (
                         <span
                           key={mp.id}
@@ -1528,25 +1647,48 @@ export const AIChatView: React.FC = () => {
 
                   {msg.role === 'assistant' && !msg.isStreaming && (
                     <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2.5 border-t border-border-subtle">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void handleCreateSpecFromMessage(msg)}
-                          className="px-2.5 py-1 rounded bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-[11px] text-ink-primary flex items-center gap-1.5"
-                        >
-                          <FilePlus2 size={11} className="text-accent-amber" aria-hidden="true" />
-                          <span>Save as New Specification Page</span>
-                        </button>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {activePage &&
+                          blockContextForAI &&
+                          blockContextForAI.pageId === activePage.id &&
+                          activePage.blocks.some((b) => b.id === blockContextForAI.blockId) && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => void handleApplyAssistantToPage(msg, 'insert-after')}
+                                className="px-2 py-1 rounded bg-[var(--pill-violet-bg)] hover:brightness-110 border border-[var(--pill-violet-border)] text-[11px] font-medium text-[var(--pill-violet-text)] flex items-center gap-1"
+                              >
+                                <Plus size={11} aria-hidden="true" />
+                                <span>Insert after block</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void handleApplyAssistantToPage(msg, 'replace')}
+                                className="px-2 py-1 rounded bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-[11px] text-ink-primary flex items-center gap-1"
+                              >
+                                <Sparkles size={11} className="text-accent-amber" aria-hidden="true" />
+                                <span>Replace block</span>
+                              </button>
+                            </>
+                          )}
                         {activePage && (
                           <button
                             type="button"
-                            onClick={() => openPageInTab(activePage.id)}
-                            className="px-2.5 py-1 rounded bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-[11px] text-ink-secondary hover:text-ink-primary flex items-center gap-1.5"
+                            onClick={() => void handleApplyAssistantToPage(msg, 'append')}
+                            className="px-2 py-1 rounded bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-[11px] text-ink-primary flex items-center gap-1"
                           >
                             <FileText size={11} className="text-accent-cobalt" aria-hidden="true" />
-                            <span>Open {activePage.code}</span>
+                            <span>Append to {activePage.code}</span>
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => void handleCreateSpecFromMessage(msg)}
+                          className="px-2 py-1 rounded bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-[11px] text-ink-secondary hover:text-ink-primary flex items-center gap-1"
+                        >
+                          <FilePlus2 size={11} className="text-accent-amber" aria-hidden="true" />
+                          <span>{isSplitMode ? 'New Page' : 'Save as New Specification Page'}</span>
+                        </button>
                       </div>
                       {msg.providerLabel && (
                         <span className="font-mono text-[10px] text-ink-muted">

@@ -1,6 +1,5 @@
 import crypto from 'node:crypto'
-import os from 'node:os'
-import { getDb, getDbPath } from '../db/client'
+import { getDb } from '../db/client'
 
 export interface EncryptionBackend {
   isEncryptionAvailable(): boolean
@@ -9,8 +8,34 @@ export interface EncryptionBackend {
 }
 
 let customBackend: EncryptionBackend | null = null
+let ephemeralTestKey: Buffer | null = null
 
-function resolveDefaultBackend(): EncryptionBackend {
+function getEphemeralTestBackend(): EncryptionBackend {
+  if (!ephemeralTestKey) {
+    ephemeralTestKey = crypto.randomBytes(32)
+  }
+  const key = ephemeralTestKey
+  return {
+    isEncryptionAvailable: () => true,
+    encryptString: (plainText: string): Buffer => {
+      const iv = crypto.randomBytes(12)
+      const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
+      const encrypted = Buffer.concat([cipher.update(plainText, 'utf-8'), cipher.final()])
+      const authTag = cipher.getAuthTag()
+      return Buffer.concat([iv, authTag, encrypted])
+    },
+    decryptString: (payload: Buffer): string => {
+      const iv = payload.subarray(0, 12)
+      const authTag = payload.subarray(12, 28)
+      const ciphertext = payload.subarray(28)
+      const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv)
+      decipher.setAuthTag(authTag)
+      return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf-8')
+    }
+  }
+}
+
+function tryResolveElectronSafeStorage(): EncryptionBackend | null {
   try {
     // Dynamically resolve electron.safeStorage when running inside Electron main process
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -23,44 +48,65 @@ function resolveDefaultBackend(): EncryptionBackend {
       return electronMod.safeStorage
     }
   } catch {
-    // Running inside Vitest / Node environment outside Electron binary
+    // Outside Electron binary (e.g. Vitest)
+  }
+  return null
+}
+
+function getBackend(): { backend: EncryptionBackend; scheme: string } {
+  if (customBackend) {
+    if (!customBackend.isEncryptionAvailable()) {
+      throw new Error(
+        'OS credential encryption (Electron safeStorage) is unavailable. Refusing to store secrets insecurely.'
+      )
+    }
+    return { backend: customBackend, scheme: 'custom' }
   }
 
-  // Fallback AES-256-GCM bound to local machine user + workspace DB path (never stores plaintext!)
-  return {
-    isEncryptionAvailable: () => true,
-    encryptString: (plainText: string): Buffer => {
-      const keyMaterial = `${os.hostname()}:${os.userInfo().username}:${getDbPath()}:noteit-v2-key`
-      const key = crypto.createHash('sha256').update(keyMaterial).digest()
-      const iv = crypto.randomBytes(12)
-      const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
-      const encrypted = Buffer.concat([cipher.update(plainText, 'utf-8'), cipher.final()])
-      const authTag = cipher.getAuthTag()
-      return Buffer.concat([iv, authTag, encrypted])
-    },
-    decryptString: (payload: Buffer): string => {
-      const keyMaterial = `${os.hostname()}:${os.userInfo().username}:${getDbPath()}:noteit-v2-key`
-      const key = crypto.createHash('sha256').update(keyMaterial).digest()
-      const iv = payload.subarray(0, 12)
-      const authTag = payload.subarray(12, 28)
-      const ciphertext = payload.subarray(28)
-      const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv)
-      decipher.setAuthTag(authTag)
-      return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf-8')
-    }
+  const electronSafe = tryResolveElectronSafeStorage()
+  if (electronSafe) {
+    return { backend: electronSafe, scheme: 'safeStorage' }
   }
+
+  // Only permit an ephemeral in-memory AES-256-GCM test backend inside Vitest.
+  // Production Electron runtime NEVER downgrades to deterministic/weak encryption.
+  if (process.env.VITEST || process.env.NODE_ENV === 'test') {
+    return { backend: getEphemeralTestBackend(), scheme: 'test-ephemeral' }
+  }
+
+  throw new Error(
+    'OS credential encryption (Electron safeStorage / Windows DPAPI / macOS Keychain) is unavailable. Refusing to store secrets insecurely.'
+  )
 }
 
 export function setSecretEncryptionBackend(backend: EncryptionBackend | null): void {
   customBackend = backend
 }
 
-function getBackend(): { backend: EncryptionBackend; scheme: string } {
-  if (customBackend) {
-    return { backend: customBackend, scheme: 'custom' }
+export function getEncryptionStatus(): { available: boolean; scheme: string } {
+  try {
+    const { scheme } = getBackend()
+    return { available: true, scheme }
+  } catch {
+    return { available: false, scheme: 'unavailable' }
   }
-  const backend = resolveDefaultBackend()
-  return { backend, scheme: 'safeStorage' }
+}
+
+/**
+ * Returns true if an HTTP header name likely carries credentials or tokens
+ * and must be encrypted inside the `secrets` table instead of plaintext JSON.
+ */
+export function isSensitiveHeaderName(headerName: string): boolean {
+  const lower = headerName.trim().toLowerCase()
+  return (
+    lower === 'authorization' ||
+    lower === 'proxy-authorization' ||
+    lower === 'cookie' ||
+    lower.includes('api-key') ||
+    lower.includes('apikey') ||
+    lower.includes('token') ||
+    lower.includes('secret')
+  )
 }
 
 /**
@@ -143,4 +189,47 @@ export function getSecret(key: string): string | null {
 
 export function getProviderSecretKeyName(provider: string): string {
   return `ai.provider.${provider.trim().toLowerCase()}`
+}
+
+const SECRET_PATTERNS: RegExp[] = [
+  /\bsk-ant-[A-Za-z0-9_-]{10,}\b/g,
+  /\bsk-or-v1-[A-Za-z0-9_-]{10,}\b/g,
+  /\bsk-[A-Za-z0-9_-]{16,}\b/g,
+  /\bAIza[0-9A-Za-z_-]{20,}\b/g,
+  /\bgsk_[A-Za-z0-9_-]{12,}\b/g,
+  /\bxai-[A-Za-z0-9_-]{12,}\b/g,
+  /\bBearer\s+[A-Za-z0-9._~+/=-]{12,}/gi
+]
+
+/**
+ * Redacts known API key patterns and any currently stored decrypted secrets
+ * from error messages, logs, or telemetry strings before sending to the renderer.
+ */
+export function redactSecrets(input: string): string {
+  if (!input) return ''
+  let sanitized = input
+  for (const pattern of SECRET_PATTERNS) {
+    sanitized = sanitized.replace(pattern, (match) =>
+      match.toLowerCase().startsWith('bearer ') ? 'Bearer [REDACTED]' : '[REDACTED]'
+    )
+  }
+
+  try {
+    const rows = getDb()
+      .prepare('SELECT key FROM secrets')
+      .all() as Array<{ key: string }>
+    for (const row of rows) {
+      const val = getSecret(row.key)
+      if (!val || val.length < 8) continue
+      // Skip local URLs (e.g. Ollama http://localhost:11434) so diagnostics stay readable
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(val)) continue
+      if (sanitized.includes(val)) {
+        sanitized = sanitized.split(val).join('[REDACTED]')
+      }
+    }
+  } catch {
+    // Ignore if DB is not initialized yet
+  }
+
+  return sanitized
 }

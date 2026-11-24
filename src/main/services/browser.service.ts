@@ -11,14 +11,6 @@ interface BookmarkRow {
   created_at: number
 }
 
-const DEFAULT_BOOKMARKS: Array<{ title: string; url: string }> = [
-  { title: 'AI SDK Docs', url: 'https://ai-sdk.dev/docs/introduction' },
-  { title: 'MDN Web Docs', url: 'https://developer.mozilla.org' },
-  { title: 'GitHub', url: 'https://github.com' },
-  { title: 'Localhost :3000', url: 'http://localhost:3000' },
-  { title: 'DBML Docs', url: 'https://dbml.dbdiagram.io/home' }
-]
-
 function rowToBookmark(row: BookmarkRow): BrowserBookmark {
   return {
     id: row.id,
@@ -32,16 +24,6 @@ function rowToBookmark(row: BookmarkRow): BrowserBookmark {
 
 export function listBrowserBookmarks(notebookId?: string): BrowserBookmark[] {
   const db = getDb()
-  const count = db.prepare('SELECT COUNT(*) as cnt FROM browser_bookmarks').get() as { cnt: number }
-  if (!count || count.cnt === 0) {
-    const now = Date.now()
-    const ins = db.prepare(
-      'INSERT INTO browser_bookmarks (id, title, url, notebook_id, sort_order, created_at) VALUES (?, ?, ?, NULL, ?, ?)'
-    )
-    DEFAULT_BOOKMARKS.forEach((bm, idx) => {
-      ins.run(`bm-default-${idx + 1}`, bm.title, bm.url, idx, now)
-    })
-  }
 
   const rows = notebookId
     ? (db

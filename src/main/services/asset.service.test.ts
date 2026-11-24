@@ -3,7 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { closeDb, getDb, initDatabase } from '../db/client'
+import { closeDb, getDb, initDatabase, seedInitialWorkspace } from '../db/client'
 import { createPage, deletePage, searchWorkspace, updatePage } from './workspace.service'
 import {
   MAX_ASSET_BYTES,
@@ -63,7 +63,8 @@ function makePageWithAsset(assetId: string): string {
 
 beforeAll(() => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'noteit-asset-test-'))
-  initDatabase(tempDir)
+  const db = initDatabase(tempDir)
+  seedInitialWorkspace(db)
   const section = getDb().prepare('SELECT id FROM sections LIMIT 1').get() as { id: string }
   sectionId = section.id
 })

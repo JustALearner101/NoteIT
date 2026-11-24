@@ -14,6 +14,7 @@ import {
   Pencil,
   Plus,
   RotateCcw,
+  Sparkles,
   Star,
   Tag,
   Terminal as TerminalIcon,
@@ -89,6 +90,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
     sections,
     rightSplitMode,
     setRightSplitMode,
+    toggleAiStudioSplitPane,
     missionBriefingPageId,
     openMissionBriefing,
     updatePage,
@@ -340,8 +342,24 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
           </Badge>
         </div>
 
-        {/* Utility Metadata Controls: Learn, Backlinks, Snapshots, Favorite, Export */}
+        {/* Utility Metadata Controls: AI Split, Learn, Backlinks, Snapshots, Favorite, Export */}
         <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => toggleAiStudioSplitPane()}
+            aria-pressed={rightSplitMode === 'ai-studio'}
+            title="Toggle AI Studio side-by-side split pane (Ctrl+Alt+C)"
+            className={cn(
+              'h-6 px-2 rounded-[6px] border text-[11.5px] font-medium flex items-center gap-1 transition-colors',
+              rightSplitMode === 'ai-studio'
+                ? 'bg-[var(--pill-violet-bg)] border-[var(--pill-violet-border)] text-[var(--pill-violet-text)]'
+                : 'bg-surface-elevated/80 hover:bg-surface-hover border-border-hairline text-[var(--marker-violet)]'
+            )}
+          >
+            <Sparkles size={11.5} aria-hidden="true" />
+            <span>AI Split</span>
+          </button>
+
           <button
             type="button"
             onClick={() =>
@@ -352,7 +370,7 @@ export const SpecHeader: React.FC<SpecHeaderProps> = ({ page }) => {
                 pageId: page.id
               })
             }
-            title="Start a Learn Workbench session from this page"
+            title="Start a Learn Workbench session from this page (opens side-by-side)"
             className="h-6 px-2 rounded-[6px] border bg-surface-elevated/80 hover:bg-surface-hover border-border-hairline text-[11.5px] font-medium text-accent-teal flex items-center gap-1 transition-colors"
           >
             <GraduationCap size={11.5} aria-hidden="true" />

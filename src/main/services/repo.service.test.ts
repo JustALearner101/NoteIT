@@ -62,7 +62,7 @@ describe('repo.service', () => {
       fs.rmSync(tempRepoDir, { recursive: true, force: true })
     })
 
-    it('rejects path traversal (../outside.txt), null bytes, and absolute/cross-drive paths', () => {
+    it('rejects path traversal (../outside.txt), null bytes, absolute/cross-drive paths, and NoteIT DB files', () => {
       expect(() => resolveSafeRepoFilePath(tempRepoDir, '../outside.txt')).toThrow(/denied/i)
       expect(() => resolveSafeRepoFilePath(tempRepoDir, 'src/../../outside.txt')).toThrow(/denied/i)
       expect(() => resolveSafeRepoFilePath(tempRepoDir, '/etc/passwd')).toThrow(/denied/i)
@@ -70,6 +70,10 @@ describe('repo.service', () => {
         /denied/i
       )
       expect(() => resolveSafeRepoFilePath(tempRepoDir, 'src/hello.ts\0.txt')).toThrow(/invalid/i)
+      expect(() => resolveSafeRepoFilePath(tempRepoDir, 'noteit-v2.db')).toThrow(/denied/i)
+      expect(() => resolveSafeRepoFilePath(tempRepoDir, 'nested/noteit-v2.db-wal')).toThrow(
+        /denied/i
+      )
     })
 
     it('computes HEAD vs working tree diff, atomic write, and discard changes', async () => {

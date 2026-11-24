@@ -17,6 +17,7 @@ import {
   Radio,
   Search,
   Settings,
+  Sparkles,
   Sun,
   Terminal,
   X,
@@ -68,6 +69,7 @@ export const CommandPalette: React.FC = () => {
     theme,
     setActiveMainView,
     setAiStudioSubMode,
+    toggleAiStudioSplitPane,
     openHelpCenter,
     showToast
   } = useWorkspaceStore()
@@ -263,6 +265,15 @@ export const CommandPalette: React.FC = () => {
         transfersFocus: true,
         icon: <MessageSquare size={13} className="text-accent-cobalt shrink-0" />,
         run: () => setActiveMainView('ai-chat')
+      },
+      {
+        id: 'toggle-ai-split',
+        label: 'Toggle AI Studio Split Pane (Side-by-Side)',
+        keywords: 'ai studio split pane copilot side by side chat learn',
+        shortcut: SHORTCUT_BY_ID['toggle-ai-split'].keys,
+        transfersFocus: true,
+        icon: <Sparkles size={13} className="text-[var(--marker-violet)] shrink-0" />,
+        run: () => toggleAiStudioSplitPane()
       },
       {
         id: 'open-browser',

@@ -16,7 +16,9 @@ import {
   Network,
   Paperclip,
   Search,
+  Sigma,
   Sparkles,
+  Table as TableIcon,
   Type
 } from 'lucide-react'
 import { Kbd, cn } from '@renderer/components/ui'
@@ -31,11 +33,14 @@ import type { BlockType } from '@shared/types/domain'
 interface SlashCommandMenuProps {
   initialQuery?: string
   onSelect: (type: BlockType, columnCount?: number) => void
+  onAskAI?: () => void
   onClose: () => void
 }
 
 function renderSlashIcon(option: SlashCommandOption): React.ReactNode {
   switch (option.id) {
+    case 'ask-ai':
+      return <Sparkles size={13} className="text-[var(--marker-violet)]" aria-hidden="true" />
     case 'paragraph':
       return <Type size={13} className="text-ink-secondary" aria-hidden="true" />
     case 'h1':
@@ -52,6 +57,10 @@ function renderSlashIcon(option: SlashCommandOption): React.ReactNode {
       return <ChevronRight size={13} className="text-accent-cobalt" aria-hidden="true" />
     case 'code':
       return <Code2 size={13} className="text-[#8B5CF6]" aria-hidden="true" />
+    case 'math':
+      return <Sigma size={13} className="text-[var(--marker-violet)]" aria-hidden="true" />
+    case 'table':
+      return <TableIcon size={13} className="text-accent-cobalt" aria-hidden="true" />
     case 'divider':
       return <Minus size={13} className="text-ink-secondary" aria-hidden="true" />
     case 'columns-2':
@@ -78,6 +87,7 @@ function renderSlashIcon(option: SlashCommandOption): React.ReactNode {
 export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
   initialQuery = '',
   onSelect,
+  onAskAI,
   onClose
 }) => {
   const [query, setQuery] = useState(initialQuery)
@@ -133,7 +143,11 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
       e.preventDefault()
       const target = filtered[activeIndex] || filtered[0]
       if (target) {
-        onSelect(target.type, target.columnCount)
+        if (target.action === 'ask-ai') {
+          onAskAI?.()
+        } else {
+          onSelect(target.type, target.columnCount)
+        }
       }
     }
   }
@@ -198,7 +212,13 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
                     role="option"
                     aria-selected={isSelected}
                     onMouseEnter={() => setActiveIndex(flatIdx)}
-                    onClick={() => onSelect(opt.type, opt.columnCount)}
+                    onClick={() => {
+                      if (opt.action === 'ask-ai') {
+                        onAskAI?.()
+                      } else {
+                        onSelect(opt.type, opt.columnCount)
+                      }
+                    }}
                     className={cn(
                       'w-full px-2.5 py-1.5 rounded-[7px] text-left flex items-center gap-2.5 transition-colors',
                       isSelected

@@ -2,19 +2,22 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { closeDb, initDatabase } from '../db/client'
+import { closeDb, getDb, initDatabase } from '../db/client'
 import {
+  buildModelsProbeUrl,
   deleteProviderProfile,
   getModelSlots,
   getProfileSecretKeyName,
+  getProfileSensitiveHeadersKeyName,
   listProviderProfiles,
   resolveExecutionTarget,
   saveModelSlots,
+  THIRD_PARTY_PROVIDER_PRESETS,
   upsertProviderProfile
 } from './provider.service'
 import { hasSecret } from './secret.service'
 
-describe('provider.service (Unified AI Provider Registry)', () => {
+describe('provider.service (Unified AI Provider Registry & Security)', () => {
   let tmpDir: string
 
   beforeEach(() => {
@@ -31,11 +34,23 @@ describe('provider.service (Unified AI Provider Registry)', () => {
     const openRouter = upsertProviderProfile({
       name: 'OpenRouter',
       kind: 'openai-compat',
-      baseUrl: 'https://openrouter.ai/api/v1',
+      baseUrl: 'https://openrouter.ai/api/v1/',
       defaultModel: 'deepseek/deepseek-chat',
       apiKey: 'sk-or-test-1234',
-      extraHeaders: { 'HTTP-Referer': 'https://noteit.local' }
+      extraHeaders: {
+        'HTTP-Referer': 'https://noteit.local',
+        Authorization: 'Bearer super-secret-header-token'
+      }
     })
+
+    // Sensitive headers must be encrypted in `secrets` and NEVER stored plaintext in `ai_provider_profiles`
+    expect(hasSecret(getProfileSensitiveHeadersKeyName(openRouter.id))).toBe(true)
+    const rawRow = getDb()
+      .prepare('SELECT extra_headers_json FROM ai_provider_profiles WHERE id = ?')
+      .get(openRouter.id) as { extra_headers_json: string }
+    expect(rawRow.extra_headers_json).not.toContain('super-secret-header-token')
+    expect(openRouter.extraHeaders['HTTP-Referer']).toBe('https://noteit.local')
+    expect(openRouter.extraHeaders['Authorization']).toBe('__ENCRYPTED__')
 
     const miniMax = upsertProviderProfile({
       name: 'Anthropic Proxy',
@@ -76,6 +91,21 @@ describe('provider.service (Unified AI Provider Registry)', () => {
     deleteProviderProfile(openRouter.id)
     expect(listProviderProfiles()).toHaveLength(1)
     expect(hasSecret(getProfileSecretKeyName(openRouter.id))).toBe(false)
+    expect(hasSecret(getProfileSensitiveHeadersKeyName(openRouter.id))).toBe(false)
+  })
+
+  it('normalizes /models probe URLs without duplicating /v1', () => {
+    expect(buildModelsProbeUrl('anthropic-compat', 'https://api.minimax.io/anthropic/v1/')).toBe(
+      'https://api.minimax.io/anthropic/v1/models'
+    )
+    expect(buildModelsProbeUrl('anthropic-compat', 'https://api.anthropic.com')).toBe(
+      'https://api.anthropic.com/v1/models'
+    )
+    expect(buildModelsProbeUrl('openai-compat', 'https://openrouter.ai/api/v1/')).toBe(
+      'https://openrouter.ai/api/v1/models'
+    )
+    expect(THIRD_PARTY_PROVIDER_PRESETS.some((p) => p.id === 'openrouter')).toBe(true)
+    expect(THIRD_PARTY_PROVIDER_PRESETS.some((p) => p.id === 'deepseek')).toBe(true)
   })
 
   it('resolves built-in CLI bridge targets without requiring any API key', () => {

@@ -18,9 +18,8 @@ describe('browser.service (Web Workbench Bookmarks)', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true })
   })
 
-  it('seeds default bookmarks, adds custom bookmarks, and deletes them', () => {
-    const seeded = listBrowserBookmarks()
-    expect(seeded.length).toBeGreaterThanOrEqual(5)
+  it('starts 100% empty on fresh DB, then adds and deletes custom bookmarks', () => {
+    expect(listBrowserBookmarks()).toHaveLength(0)
 
     const added = addBrowserBookmark({
       title: 'LearnHarness Repo',

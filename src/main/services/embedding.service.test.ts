@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { closeDb, initDatabase } from '../db/client'
+import { closeDb, initDatabase, seedInitialWorkspace } from '../db/client'
 import {
   computeLocalTrigramVector,
   hybridSemanticSearch,
@@ -14,7 +14,8 @@ describe('embedding.service (Hybrid SQLite Vector + FTS5 Search)', () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'noteit-embed-test-'))
-    initDatabase(tmpDir)
+    const db = initDatabase(tmpDir)
+    seedInitialWorkspace(db)
   })
 
   afterEach(() => {

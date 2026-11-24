@@ -182,6 +182,9 @@ export const LearnWorkbenchView: React.FC = () => {
       setLastProviderLabel(created.providerLabel)
       setLastUsedLiveProvider(created.usedLiveProvider)
       showToast(`Started learning session "${created.session.title}"`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      showToast(msg, 'error')
     } finally {
       setIsSubmitting(false)
     }
@@ -212,6 +215,9 @@ export const LearnWorkbenchView: React.FC = () => {
         setThinkingText('')
       }
       await refreshSessions()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      showToast(msg, 'error')
     } finally {
       setIsSubmitting(false)
     }
@@ -231,6 +237,9 @@ export const LearnWorkbenchView: React.FC = () => {
       })
       setSideQuestionInput('')
       await loadSessionDetail(activeSession.id)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      showToast(msg, 'error')
     } finally {
       setIsAskingSide(false)
     }
@@ -238,10 +247,15 @@ export const LearnWorkbenchView: React.FC = () => {
 
   const handleExtractToKG = async (): Promise<void> => {
     if (!activeSession) return
-    const res = await window.noteitAPI.extractKnowledgeGraph({ sessionId: activeSession.id })
-    showToast(
-      `Extracted ${res.addedPropositions} proposition(s) & ${res.addedChains} chain(s) to Knowledge Graph`
-    )
+    try {
+      const res = await window.noteitAPI.extractKnowledgeGraph({ sessionId: activeSession.id })
+      showToast(
+        `Extracted ${res.addedPropositions} proposition(s) & ${res.addedChains} chain(s) to Knowledge Graph`
+      )
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      showToast(msg, 'error')
+    }
   }
 
   const handleCrystallizeToPage = async (): Promise<void> => {

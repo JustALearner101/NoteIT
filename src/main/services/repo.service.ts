@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { getDbPath } from '../db/client'
 import type {
   GitFileStatus,
   RepoEntry,
@@ -133,6 +134,28 @@ export function resolveSafeRepoFilePath(
     const relReal = path.relative(rootReal, realProbe)
     if (relReal.startsWith('..') || path.isAbsolute(relReal)) {
       throw new Error('Access outside repository is denied (symlink escape rejected).')
+    }
+  }
+
+  // Hardening: never allow repo tools to read or write NoteIT's SQLite database or backup directory
+  const baseNameLower = path.basename(candidatePath).toLowerCase()
+  if (
+    baseNameLower === 'noteit-v2.db' ||
+    baseNameLower === 'noteit-v2.db-wal' ||
+    baseNameLower === 'noteit-v2.db-shm'
+  ) {
+    throw new Error('Access to NoteIT internal database files is denied.')
+  }
+
+  const activeDbPath = getDbPath()
+  if (activeDbPath) {
+    const dbDirResolved = path.resolve(path.dirname(activeDbPath))
+    const resolvedCandidate = path.resolve(candidatePath)
+    if (
+      resolvedCandidate.toLowerCase() === activeDbPath.toLowerCase() ||
+      resolvedCandidate.toLowerCase().startsWith((dbDirResolved + path.sep).toLowerCase())
+    ) {
+      throw new Error('Access to NoteIT internal storage directory is denied.')
     }
   }
 

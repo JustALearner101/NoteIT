@@ -34,8 +34,8 @@ function comboSignature(c: ShortcutCombo): string {
 }
 
 describe('shortcuts registry', () => {
-  it('defines all 20 required shortcuts with unique IDs and non-empty English metadata', () => {
-    expect(APP_SHORTCUTS.length).toBe(20)
+  it('defines all 21 required shortcuts with unique IDs and non-empty English metadata', () => {
+    expect(APP_SHORTCUTS.length).toBe(21)
     const ids = new Set(APP_SHORTCUTS.map((s) => s.id))
     expect(ids.size).toBe(APP_SHORTCUTS.length)
 

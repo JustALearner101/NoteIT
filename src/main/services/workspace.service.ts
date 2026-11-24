@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto'
+import fs from 'node:fs'
+import path from 'node:path'
 import {
   extractPlainTextFromPage,
   getDb,
@@ -8,6 +10,7 @@ import {
   rebuildPageLinksForPage,
   withTransaction
 } from '../db/client'
+import { writeUiState } from './ui-state.service'
 import { INITIAL_SEED_DBML } from '../db/seed'
 import { toLocalIsoDate } from '@shared/date'
 import {
@@ -864,4 +867,81 @@ export function searchWorkspace(query: string): SearchResultItem[] {
       updatedAt: r.updated_at
     }
   })
+}
+
+/**
+ * Resets workspace content to a 100% clean slate.
+ * - `includeSecretsAndProviders: false` (default): wipes notebooks, sections, pages, versions,
+ *   assets, bookmarks, agent sessions, AI threads/messages, learn sessions, and knowledge graph,
+ *   while preserving encrypted API keys, provider profiles, MCP servers, and model slots.
+ * - `includeSecretsAndProviders: true` (Factory Reset): also wipes `secrets`, `ai_provider_profiles`,
+ *   `mcp_servers`, and `app_kv`.
+ */
+export function resetWorkspace(options?: {
+  includeSecretsAndProviders?: boolean
+}): { ok: boolean } {
+  const includeSecrets = Boolean(options?.includeSecretsAndProviders)
+  const db = getDb()
+
+  withTransaction(() => {
+    db.exec(`
+      DELETE FROM page_embeddings;
+      DELETE FROM ai_messages;
+      DELETE FROM ai_threads;
+      DELETE FROM kg_chains;
+      DELETE FROM kg_propositions;
+      DELETE FROM learn_side_threads;
+      DELETE FROM learn_turns;
+      DELETE FROM learn_sessions;
+      DELETE FROM browser_bookmarks;
+      DELETE FROM agent_sessions;
+      DELETE FROM page_links;
+      DELETE FROM page_aliases;
+      DELETE FROM page_versions;
+      DELETE FROM pages;
+      DELETE FROM pages_fts;
+      DELETE FROM sections;
+      DELETE FROM notebooks;
+      DELETE FROM assets;
+    `)
+
+    if (includeSecrets) {
+      db.exec(`
+        DELETE FROM secrets;
+        DELETE FROM ai_provider_profiles;
+        DELETE FROM mcp_servers;
+        DELETE FROM app_kv;
+      `)
+    }
+  })
+
+  // Remove stored binary assets on disk if present
+  const dbPath = getDbPath()
+  if (dbPath) {
+    const assetsDir = path.join(path.dirname(dbPath), 'assets')
+    if (fs.existsSync(assetsDir)) {
+      try {
+        fs.rmSync(assetsDir, { recursive: true, force: true })
+      } catch {
+        // Ignore locked file errors
+      }
+    }
+  }
+
+  // Clear persisted open tabs & browser tabs
+  try {
+    writeUiState({
+      openTabIds: [],
+      activePageId: '',
+      splitPageId: null,
+      closedTabIds: [],
+      activeNotebookId: '',
+      browserTabs: [],
+      activeBrowserTabId: ''
+    })
+  } catch {
+    // Ignore if ui-state file is not initialized in unit tests
+  }
+
+  return { ok: true }
 }

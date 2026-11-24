@@ -7,7 +7,12 @@
 ## Core Pillars
 
 ### 1. Structured Notes, Diagrams & Project Databases
-- **Dual-Mode Pages**: Switch any page between **Block Document** mode (Notion-style slash commands, multi-column layouts, checklists, callouts, toggles, code blocks, content-addressed image/PDF attachments) and **Spatial Canvas** mode (`@xyflow/react`).
+- **Dual-Mode Pages**: Switch any page between **Block Document** mode and **Spatial Canvas** mode (`@xyflow/react`).
+- **v2.5 Writing Experience**:
+  - **Obsidian-Style Pure Live Preview**: Unfocused text blocks (`paragraph`, `callout`, `checklist`, `toggle`) render cleanly as formatted Markdown + inline `$KaTeX$` math + clickable `[[WikiLinks]]` / `[[src/file.ts#L42]]`, switching to auto-grow raw editing on click or keyboard navigation.
+  - **Notion-Style Keyboard Flow & Markdown Auto-Shortcuts**: Type `# `, `## `, `### `, `[] `, `- [ ] `, `> `, `---`, ```` ```ts ````, or `$$ ` at the start of a block to auto-convert; `Enter` / `Shift+Enter` split/newline flow, `Backspace` merge/delete, `ArrowUp`/`ArrowDown` cross-block focus, `Ctrl+D` duplicate, **Turn Into** block conversion, and **Smart Markdown Paste** (single undo step + `Ctrl+Shift+V` raw paste).
+  - **Offline KaTeX Math & Interactive GFM Tables**: Dedicated `math` block (`/math`, display LaTeX with Preview/Split/TeX modes, on-demand KaTeX lazy loading) and `table` block (`/table`, Tab/Enter cell navigation, alignment cycling, canonical GFM Markdown stored in `block.content` for FTS5 & export).
+  - **CodeMirror 6 Code Blocks**: Syntax-highlighted code blocks (TS/JS, Python, SQL, JSON, HTML, CSS, Markdown, Bash) with language picker, line numbers toggle, Tab indent, and one-click Copy.
 - **100% Offline Engineering Diagrams**:
   - **DBML Studio**: Real-time ERD rendering, draggable table layouts persisted in SQLite, foreign-key highlighting, and SQL DDL export.
   - **Mermaid Studio**: Dynamic lazy-loaded rendering with strict SVG sanitization (`svg-sanitize.ts`).
@@ -20,6 +25,9 @@
 - **Zero-API-Key External CLI Bridges**: Reuse CLIs already signed in on your machine (**Claude Code**, **Gemini CLI**, **Codex CLI**, or custom CLIs like **Antigravity `agy`**) without paying for separate API keys.
   - Claude Code connects through a **token-protected loopback MCP server** (`127.0.0.1`) so NoteIT retains control over workspace tools, approvals, and credentials while stripping NoteIT-stored keys from the child environment.
 - **Custom OpenAI-Compatible & Anthropic-Compatible Endpoints**: Connect OpenRouter, DeepSeek, Groq, vLLM, LiteLLM, LM Studio, MiniMax, GLM, or any custom proxy with custom Base URLs, dynamic Model IDs, and encrypted OS keychain secrets (`safeStorage`).
+- **AI Studio Side-by-Side Split Pane & Block-to-AI Actions (v2.5)**:
+  - Open **AI Studio** (Chat, Active Learn, Knowledge Graph) side-by-side next to your active note (`Ctrl+Alt+C` or **AI Split** in page header) using the same resizable split divider, with one-click Pop-out to full view.
+  - Trigger **Block-to-AI** from any block's Sparkles menu, floating text-selection toolbar, or `/ai` slash command (`Ask`, `Explain simply`, `Improve & tighten`, `Turn into diagram`, `Learn this block`), and apply AI replies back into your note via **Insert after block**, **Replace block**, or **Append to page** with automatic Markdown-to-Blocks parsing (single `Ctrl+Z` undo).
 - **Model Slots**: Separate **Primary** (AI Chat & Learn Tutor) and **Background** (Knowledge Graph Extraction) model slots.
 - **Agentic Development Environment (ADE)**:
   - **Agent Mission Control**: Bind repositories to Notebooks/Sections, compile `.noteit/` spec bundles, and dispatch CLI agents into isolated **Git Worktrees** (with NTFS junction bootstrap for `node_modules`/`.venv`).
@@ -122,7 +130,8 @@ npm run dist:win
 | `Ctrl+K` | Open Command Palette & SQLite FTS5 Search |
 | `Ctrl+Shift+Space` | Global Quick Capture → Inbox |
 | `Ctrl+Alt+D` | Open / Create Today's Daily Note (`YYYY-MM-DD`) |
-| `Ctrl+Shift+C` | Toggle AI Assistant |
+| `Ctrl+Shift+C` | Toggle AI Assistant (Full View) |
+| `Ctrl+Alt+C` | Toggle AI Studio Split Pane (Side-by-Side) |
 | `Ctrl+Shift+A` | Toggle Agent Mission Control |
 | `Ctrl+Shift+B` | Toggle Reference Web Workbench |
 | `` Ctrl+` `` | Toggle Bottom PTY Terminal Drawer |

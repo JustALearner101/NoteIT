@@ -47,6 +47,7 @@ import {
   restorePageSnapshot,
   searchWorkspace,
   updateNotebookRepo,
+  resetWorkspace,
   updatePage,
   updateSectionRepo
 } from './services/workspace.service'
@@ -91,10 +92,13 @@ import {
 import { executeAIChatStream, executeApprovedProposal } from './services/ai.service'
 import {
   deleteProviderProfile,
+  fetchProviderModels,
   getModelSlots,
   listProviderProfiles,
   saveModelSlots,
+  testBuiltinProvider,
   testProviderProfile,
+  THIRD_PARTY_PROVIDER_PRESETS,
   upsertProviderProfile
 } from './services/provider.service'
 import { detectCliBridges } from './services/cli-bridge/cli-bridge.service'
@@ -125,7 +129,7 @@ import {
   updateAiThread
 } from './services/ai-thread.service'
 import { hybridSemanticSearch } from './services/embedding.service'
-import { deleteSecret, hasSecret, setSecret } from './services/secret.service'
+import { deleteSecret, getEncryptionStatus, hasSecret, setSecret } from './services/secret.service'
 import { readUiState, writeUiState } from './services/ui-state.service'
 import type { AIApprovalProposal, AIChatStreamRequest } from '@shared/ipc-channels'
 
@@ -749,6 +753,11 @@ function registerIpcHandlers(): void {
   )
   ipcMain.handle('secrets:has', (_e, key: string) => hasSecret(key))
   ipcMain.handle('secrets:delete', (_e, key: string) => deleteSecret(key))
+  ipcMain.handle('secrets:encryptionStatus', () => getEncryptionStatus())
+  ipcMain.handle(
+    'workspace:reset',
+    (_e, options?: { includeSecretsAndProviders?: boolean }) => resetWorkspace(options)
+  )
   ipcMain.handle('workspace:getUiState', () => readUiState())
   ipcMain.handle('workspace:saveUiState', (_e, input) => {
     writeUiState(input)
@@ -899,10 +908,26 @@ function registerIpcHandlers(): void {
   })
 
   // v2.3 Wave 1: Unified AI Provider Registry & Headless CLI Bridges
+  ipcMain.handle('providers:presets', () => THIRD_PARTY_PROVIDER_PRESETS)
   ipcMain.handle('providers:list', () => listProviderProfiles())
   ipcMain.handle('providers:upsert', (_e, input) => upsertProviderProfile(input))
   ipcMain.handle('providers:delete', (_e, id: string) => deleteProviderProfile(id))
   ipcMain.handle('providers:test', (_e, idOrConfig) => testProviderProfile(idOrConfig))
+  ipcMain.handle(
+    'providers:testBuiltin',
+    (_e, input: { provider: 'gemini' | 'openai' | 'anthropic' | 'ollama'; modelId?: string }) =>
+      testBuiltinProvider(input.provider, input.modelId)
+  )
+  ipcMain.handle(
+    'providers:fetchModels',
+    (
+      _e,
+      input: {
+        profileId?: string
+        builtinProvider?: 'gemini' | 'openai' | 'anthropic' | 'ollama'
+      }
+    ) => fetchProviderModels(input)
+  )
   ipcMain.handle('providers:getSlots', () => getModelSlots())
   ipcMain.handle('providers:saveSlots', (_e, slots) => saveModelSlots(slots))
   ipcMain.handle('providers:detectCliBridges', () => detectCliBridges())

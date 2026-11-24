@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyInlineMarkdownShortcut,
+  computeAutoGrowRows,
+  convertBlockType,
   filterSlashOptions,
+  matchMarkdownBlockShortcut,
   matchSlashTrigger,
   matchWikiAutocompleteTrigger,
-  reorderTopLevelBlocks
+  reorderTopLevelBlocks,
+  shouldSmartPasteMarkdown
 } from './editor-v2'
 import type { DocumentBlock } from '@shared/types/domain'
 
@@ -87,6 +91,57 @@ describe('editor-v2 pure helpers', () => {
       expect(movedBefore?.map((b) => b.id)).toEqual(['b3', 'b1', 'b2'])
 
       expect(reorderTopLevelBlocks(sampleBlocks, 'b1', 'b1', 'after')).toBeNull()
+    })
+  })
+
+  describe('writing ergonomics helpers (v2.5)', () => {
+    it('matches start-of-block Markdown shortcuts (#, ##, [], >, ---, ```ts, $$)', () => {
+      expect(matchMarkdownBlockShortcut('# Heading')).toEqual({ type: 'h1', content: 'Heading' })
+      expect(matchMarkdownBlockShortcut('## Sub')).toEqual({ type: 'h2', content: 'Sub' })
+      expect(matchMarkdownBlockShortcut('### Deep')).toEqual({ type: 'h3', content: 'Deep' })
+      expect(matchMarkdownBlockShortcut('[] Ship v2.5')).toEqual({
+        type: 'checklist',
+        checked: false,
+        content: 'Ship v2.5'
+      })
+      expect(matchMarkdownBlockShortcut('- [x] Done')).toEqual({
+        type: 'checklist',
+        checked: true,
+        content: 'Done'
+      })
+      expect(matchMarkdownBlockShortcut('> Important note')).toEqual({
+        type: 'callout',
+        content: 'Important note'
+      })
+      expect(matchMarkdownBlockShortcut('---')).toEqual({ type: 'divider', content: '' })
+      expect(matchMarkdownBlockShortcut('```python ')).toEqual({
+        type: 'code',
+        language: 'python',
+        content: ''
+      })
+      expect(matchMarkdownBlockShortcut('$$ ')).toEqual({ type: 'math', content: '' })
+      expect(matchMarkdownBlockShortcut('Normal sentence')).toBeNull()
+    })
+
+    it('computes auto-grow rows using both explicit newlines and wrapping', () => {
+      expect(computeAutoGrowRows('')).toBe(1)
+      expect(computeAutoGrowRows('a\nb\nc\nd')).toBe(4)
+      expect(computeAutoGrowRows('x'.repeat(200), 80)).toBe(3)
+    })
+
+    it('converts block types with sensible defaults', () => {
+      const para: DocumentBlock = { id: 'b1', type: 'paragraph', content: 'x + y' }
+      expect(convertBlockType(para, 'math')).toEqual({ type: 'math', mathViewMode: 'preview' })
+      expect(convertBlockType(para, 'code')).toEqual({ type: 'code', language: 'typescript' })
+      expect(convertBlockType(para, 'paragraph')).toEqual({})
+    })
+
+    it('detects multi-block Markdown for Smart Paste and skips single-line text', () => {
+      expect(shouldSmartPasteMarkdown('just a single line')).toBe(false)
+      expect(shouldSmartPasteMarkdown('line 1\nline 2')).toBe(false)
+      expect(shouldSmartPasteMarkdown('Paragraph 1\n\nParagraph 2')).toBe(true)
+      expect(shouldSmartPasteMarkdown('# Title\nBody text')).toBe(true)
+      expect(shouldSmartPasteMarkdown('| A | B |\n| --- | --- |\n| 1 | 2 |')).toBe(true)
     })
   })
 })

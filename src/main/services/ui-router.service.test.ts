@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  buildOfflineIntelligentUiFallback,
-  extractOpenUiArtifact,
-  routePresentationMode
-} from './ui-router.service'
+import { extractOpenUiArtifact, routePresentationMode } from './ui-router.service'
 
 describe('ui-router.service (Intelligent UI Presentation Router)', () => {
   it('routes simulation prompts to sandbox-html, calculator/chart prompts to openui, and plain questions to markdown', () => {
@@ -24,15 +20,5 @@ describe('ui-router.service (Intelligent UI Presentation Router)', () => {
     expect(prose).not.toContain('```openui')
     expect(artifact?.kind).toBe('openui')
     expect(artifact?.openuiSource).toBe('root = Card([Title("SQLite vs Postgres")])')
-  })
-
-  it('provides offline fallback artifacts for both openui and sandbox-html', () => {
-    const openui = buildOfflineIntelligentUiFallback('loan calculator', 'openui')
-    expect(openui?.artifact.kind).toBe('openui')
-    expect(openui?.artifact.openuiSource).toContain('root =')
-
-    const sandbox = buildOfflineIntelligentUiFallback('wave simulation', 'sandbox-html')
-    expect(sandbox?.artifact.kind).toBe('sandbox-html')
-    expect(sandbox?.artifact.sandbox?.html).toContain('<canvas')
   })
 })

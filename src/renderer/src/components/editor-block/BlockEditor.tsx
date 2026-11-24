@@ -5,7 +5,9 @@ import {
   GanttChart,
   Minus,
   Network,
+  Sigma,
   Sparkles,
+  Table as TableIcon,
   Trash2,
   Type
 } from 'lucide-react'
@@ -13,6 +15,7 @@ import { useWorkspaceStore } from '@renderer/stores/useWorkspaceStore'
 import { Badge } from '@renderer/components/ui'
 import { createId } from '@renderer/lib/ids'
 import { isImageMime } from '@shared/assets'
+import { applyBlocksInsertion, parseMarkdownToBlocks } from '@shared/markdown-to-blocks'
 import { DEFAULT_DOT } from '@renderer/lib/diagrams/graphviz'
 import { ColumnGroup } from '@renderer/components/editor-block/ColumnGroup'
 import { BlockItem } from '@renderer/components/editor-block/BlockItem'
@@ -24,6 +27,7 @@ import {
   resolveColumnDrop
 } from '@renderer/lib/columns'
 import {
+  convertBlockType,
   createDefaultBlock,
   reorderTopLevelBlocks
 } from '@renderer/lib/editor-v2'
@@ -68,7 +72,18 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
   const [slashMenuForBlockId, setSlashMenuForBlockId] = useState<string | null>(null)
   const [slashInitialQuery, setSlashInitialQuery] = useState<string>('')
   const [wikiPickerForBlockId, setWikiPickerForBlockId] = useState<string | null>(null)
+  const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null)
+  const [focusRequest, setFocusRequest] = useState<{
+    blockId: string
+    caret: 'start' | 'end'
+    nonce: number
+  } | null>(null)
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null)
+
+  const requestFocusBlock = (blockId: string, caret: 'start' | 'end' = 'end'): void => {
+    setFocusedBlockId(blockId)
+    setFocusRequest({ blockId, caret, nonce: Date.now() + Math.random() })
+  }
   const [dropTarget, setDropTarget] = useState<{
     blockId: string
     position: 'before' | 'after'
@@ -86,6 +101,114 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
       defaultDot: DEFAULT_DOT
     })
     insertBlocksAfter(afterId, [newBlock])
+    requestFocusBlock(newBlock.id, 'start')
+  }
+
+  const splitOrInsertAfter = (
+    blockId: string,
+    beforeContent: string,
+    afterContent: string,
+    nextType: BlockType
+  ): void => {
+    const idx = page.blocks.findIndex((b) => b.id === blockId)
+    if (idx < 0) return
+    const current = page.blocks[idx]
+    const created = createDefaultBlock(nextType, {
+      baseDate: todayIso(),
+      addDaysFn: addDays,
+      defaultDot: DEFAULT_DOT
+    })
+    const nextBlock: DocumentBlock = {
+      ...created,
+      content: afterContent,
+      ...(current.columnGroupId !== undefined && current.columnIndex !== undefined
+        ? { columnGroupId: current.columnGroupId, columnIndex: current.columnIndex }
+        : {})
+    }
+    const nextBlocks = [...page.blocks]
+    nextBlocks[idx] = { ...current, content: beforeContent }
+    nextBlocks.splice(idx + 1, 0, nextBlock)
+    updatePage({ id: page.id, blocks: nextBlocks })
+    requestFocusBlock(nextBlock.id, 'start')
+  }
+
+  const mergeOrDeleteEmptyBlock = (blockId: string): void => {
+    if (page.blocks.length <= 1) return
+    const idx = page.blocks.findIndex((b) => b.id === blockId)
+    if (idx <= 0) return
+
+    const current = page.blocks[idx]
+    const prev = page.blocks[idx - 1]
+    const prevIsText =
+      prev.type === 'paragraph' ||
+      prev.type === 'h1' ||
+      prev.type === 'h2' ||
+      prev.type === 'h3' ||
+      prev.type === 'checklist'
+
+    const nextBlocks = [...page.blocks]
+    if (current.content.length === 0) {
+      nextBlocks.splice(idx, 1)
+      updatePage({ id: page.id, blocks: nextBlocks })
+      requestFocusBlock(prev.id, 'end')
+      return
+    }
+
+    if (prevIsText && (current.type === 'paragraph' || current.type === 'checklist')) {
+      nextBlocks[idx - 1] = {
+        ...prev,
+        content: prev.content + current.content
+      }
+      nextBlocks.splice(idx, 1)
+      updatePage({ id: page.id, blocks: nextBlocks })
+      requestFocusBlock(prev.id, 'end')
+    }
+  }
+
+  const focusAdjacentBlock = (blockId: string, dir: -1 | 1): void => {
+    const idx = page.blocks.findIndex((b) => b.id === blockId)
+    const target = page.blocks[idx + dir]
+    if (!target) return
+    requestFocusBlock(target.id, dir === -1 ? 'end' : 'start')
+  }
+
+  const duplicateBlock = (blockId: string): void => {
+    const idx = page.blocks.findIndex((b) => b.id === blockId)
+    if (idx < 0) return
+    const copy: DocumentBlock = {
+      ...page.blocks[idx],
+      id: createId('blk')
+    }
+    const nextBlocks = [...page.blocks]
+    nextBlocks.splice(idx + 1, 0, copy)
+    updatePage({ id: page.id, blocks: nextBlocks })
+    requestFocusBlock(copy.id, 'end')
+  }
+
+  const convertBlock = (blockId: string, targetType: BlockType): void => {
+    const target = page.blocks.find((b) => b.id === blockId)
+    if (!target) return
+    const patch = convertBlockType(target, targetType)
+    if (Object.keys(patch).length === 0) return
+    updateBlock(blockId, patch)
+    requestFocusBlock(blockId, 'end')
+  }
+
+  const smartPasteBlocks = (blockId: string, pastedText: string): boolean => {
+    const parsed = parseMarkdownToBlocks(pastedText, { idPrefix: 'blk-paste' })
+    if (parsed.length <= 1) return false
+
+    const target = page.blocks.find((b) => b.id === blockId)
+    const isEmptyTarget = target && target.content.trim().length === 0
+    const nextBlocks = applyBlocksInsertion(page.blocks, parsed, {
+      mode: isEmptyTarget ? 'replace' : 'insert-after',
+      blockId
+    })
+    updatePage({ id: page.id, blocks: nextBlocks })
+    const lastInserted = parsed[parsed.length - 1]
+    if (lastInserted) requestFocusBlock(lastInserted.id, 'end')
+    showToast(`Pasted as ${parsed.length} blocks · Ctrl+Z to undo`)
+    return true
   }
 
   const insertBlocksAfter = (afterId: string | null, blocks: DocumentBlock[]): void => {
@@ -287,11 +410,21 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
       pages={pages}
       boundRepoPath={boundRepoPath}
       canDelete={page.blocks.length > 1}
+      isFocused={focusedBlockId === block.id}
+      focusRequest={focusRequest?.blockId === block.id ? focusRequest : null}
       isSlashMenuOpen={slashMenuForBlockId === block.id}
       slashInitialQuery={slashMenuForBlockId === block.id ? slashInitialQuery : ''}
       isWikiPickerOpen={wikiPickerForBlockId === block.id}
       isDragging={draggingBlockId === block.id}
       dropIndicator={dropTarget?.blockId === block.id ? dropTarget.position : null}
+      onFocusBlock={() => setFocusedBlockId(block.id)}
+      onBlurBlock={() => setFocusedBlockId((cur) => (cur === block.id ? null : cur))}
+      onSplitOrInsertAfter={splitOrInsertAfter}
+      onMergeOrDeleteEmpty={mergeOrDeleteEmptyBlock}
+      onFocusAdjacent={focusAdjacentBlock}
+      onDuplicateBlock={duplicateBlock}
+      onConvertBlock={convertBlock}
+      onSmartPaste={smartPasteBlocks}
       onSetDragging={(id) => {
         setDraggingBlockId(id)
         if (!id) setDropTarget(null)
@@ -384,6 +517,20 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ page }) => {
             className="h-7 px-2.5 rounded-[7px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
           >
             <Minus size={12} aria-hidden="true" /> Divider
+          </button>
+          <button
+            type="button"
+            onClick={() => insertBlockAfter(null, 'math')}
+            className="h-7 px-2.5 rounded-[7px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
+          >
+            <Sigma size={12} className="text-[var(--marker-violet)]" aria-hidden="true" /> Math
+          </button>
+          <button
+            type="button"
+            onClick={() => insertBlockAfter(null, 'table')}
+            className="h-7 px-2.5 rounded-[7px] bg-surface-elevated hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-secondary hover:text-ink-primary flex items-center gap-1.5 transition-colors"
+          >
+            <TableIcon size={12} className="text-accent-cobalt" aria-hidden="true" /> Table
           </button>
           <button
             type="button"

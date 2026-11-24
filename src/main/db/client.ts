@@ -378,16 +378,11 @@ export function initDatabase(workspaceDir: string): DatabaseSync {
     );
   `)
 
-  const countRow = db.prepare('SELECT COUNT(*) as cnt FROM notebooks').get() as { cnt: number }
-  if (!countRow || countRow.cnt === 0) {
-    seedInitialWorkspace(db)
-  }
-
   dbInstance = db
   return db
 }
 
-function seedInitialWorkspace(db: DatabaseSync): void {
+export function seedInitialWorkspace(db: DatabaseSync): void {
   const { notebooks, sections, pages } = getSeedData()
 
   const insertNotebook = db.prepare(`

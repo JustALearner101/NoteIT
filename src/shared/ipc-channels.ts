@@ -5,6 +5,7 @@ import type {
   AIMessageTelemetry,
   AIModelSlots,
   AIProviderKind,
+  AIProviderPreset,
   AIProviderProfile,
   AIProviderProfileInput,
   AIProviderTestResult,
@@ -104,13 +105,22 @@ export interface AIApprovalProposal {
   executionResult?: string
 }
 
+export interface BlockContextForAI {
+  pageId: string
+  pageCode: string
+  pageTitle: string
+  blockId: string
+  blockType: BlockType
+  content: string
+  selectedText?: string
+}
+
 export interface AIChatStreamRequest {
   requestId: string
   threadId?: string
   provider: AIProviderKind
   profileId?: string
   modelId: string
-  apiKey?: string
   approvalMode: 'ask' | 'auto-edit' | 'plan-only'
   chatMode: string
   uiMode?: AIUiMode
@@ -123,6 +133,7 @@ export interface AIChatStreamRequest {
     title: string
     excerpt: string
   } | null
+  blockContext?: BlockContextForAI | null
 }
 
 export type AIChatStreamEvent =
@@ -376,12 +387,23 @@ export interface NoteItAPI {
   setSecret(input: { key: string; value: string }): Promise<{ ok: boolean }>
   hasSecret(key: string): Promise<boolean>
   deleteSecret(key: string): Promise<{ ok: boolean }>
+  getEncryptionStatus(): Promise<{ available: boolean; scheme: string }>
+  resetWorkspace(options?: { includeSecretsAndProviders?: boolean }): Promise<{ ok: boolean }>
 
   // v2.3 Wave 1: Unified AI Provider Registry & Headless CLI Bridges
+  listProviderPresets(): Promise<AIProviderPreset[]>
   listProviderProfiles(): Promise<AIProviderProfile[]>
   upsertProviderProfile(input: AIProviderProfileInput): Promise<AIProviderProfile>
   deleteProviderProfile(id: string): Promise<{ ok: boolean }>
   testProviderProfile(idOrConfig: string | AIProviderProfileInput): Promise<AIProviderTestResult>
+  testBuiltinProvider(input: {
+    provider: 'gemini' | 'openai' | 'anthropic' | 'ollama'
+    modelId?: string
+  }): Promise<AIProviderTestResult>
+  fetchProviderModels(input: {
+    profileId?: string
+    builtinProvider?: 'gemini' | 'openai' | 'anthropic' | 'ollama'
+  }): Promise<{ ok: boolean; models: string[]; error?: string }>
   getModelSlots(): Promise<AIModelSlots>
   saveModelSlots(slots: Partial<AIModelSlots>): Promise<AIModelSlots>
   detectCliBridges(): Promise<CliBridgeStatus[]>

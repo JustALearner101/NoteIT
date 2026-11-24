@@ -2,10 +2,11 @@ import crypto from 'node:crypto'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
-import type { LanguageModel } from 'ai'
+import { generateText, type LanguageModel } from 'ai'
 import type {
   AIModelSlots,
   AIProviderKind,
+  AIProviderPreset,
   AIProviderProfile,
   AIProviderProfileInput,
   AIProviderTestResult
@@ -16,11 +17,14 @@ import {
   getProviderSecretKeyName,
   getSecret,
   hasSecret,
+  isSensitiveHeaderName,
+  redactSecrets,
   setSecret
 } from './secret.service'
 import { detectCliBridges } from './cli-bridge/cli-bridge.service'
 
 const MODEL_SLOTS_KV_KEY = 'ai.model_slots'
+const REDACTED_HEADER_PLACEHOLDER = '__ENCRYPTED__'
 
 const DEFAULT_MODEL_SLOTS: AIModelSlots = {
   primaryProfileId: 'builtin:gemini',
@@ -29,8 +33,91 @@ const DEFAULT_MODEL_SLOTS: AIModelSlots = {
   backgroundModelId: 'gemini-2.5-flash'
 }
 
+export const THIRD_PARTY_PROVIDER_PRESETS: AIProviderPreset[] = [
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    kind: 'openai-compat',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    defaultModel: 'anthropic/claude-sonnet-4',
+    extraHeaders: {
+      'HTTP-Referer': 'https://noteit.local',
+      'X-Title': 'NoteIT'
+    },
+    description: 'Access 300+ models through one unified OpenAI-compatible gateway.'
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    kind: 'openai-compat',
+    baseUrl: 'https://api.deepseek.com/v1',
+    defaultModel: 'deepseek-chat',
+    description: 'DeepSeek V3 & R1 reasoning models.'
+  },
+  {
+    id: 'groq',
+    name: 'Groq',
+    kind: 'openai-compat',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    defaultModel: 'llama-3.3-70b-versatile',
+    description: 'Ultra-low-latency LPU inference.'
+  },
+  {
+    id: 'xai',
+    name: 'xAI (Grok)',
+    kind: 'openai-compat',
+    baseUrl: 'https://api.x.ai/v1',
+    defaultModel: 'grok-3-mini',
+    description: 'xAI Grok models via OpenAI-compatible API.'
+  },
+  {
+    id: 'together',
+    name: 'Together AI',
+    kind: 'openai-compat',
+    baseUrl: 'https://api.together.xyz/v1',
+    defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+    description: 'Fast open-weights serverless inference.'
+  },
+  {
+    id: 'fireworks',
+    name: 'Fireworks AI',
+    kind: 'openai-compat',
+    baseUrl: 'https://api.fireworks.ai/inference/v1',
+    defaultModel: 'accounts/fireworks/models/deepseek-v3',
+    description: 'High-throughput OpenAI-compatible inference.'
+  },
+  {
+    id: 'lmstudio',
+    name: 'LM Studio (Local)',
+    kind: 'openai-compat',
+    baseUrl: 'http://localhost:1234/v1',
+    defaultModel: 'local-model',
+    description: 'Local offline server (no API key required).'
+  },
+  {
+    id: 'minimax',
+    name: 'MiniMax (Anthropic-Compat)',
+    kind: 'anthropic-compat',
+    baseUrl: 'https://api.minimax.io/anthropic/v1',
+    defaultModel: 'MiniMax-M1',
+    description: 'MiniMax via Anthropic Messages-compatible endpoint.'
+  },
+  {
+    id: 'zhipu-glm',
+    name: 'Zhipu GLM',
+    kind: 'openai-compat',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    defaultModel: 'glm-4-plus',
+    description: 'Zhipu AI GLM-4 models.'
+  }
+]
+
 export function getProfileSecretKeyName(profileId: string): string {
   return `ai.profile.${profileId.trim()}`
+}
+
+export function getProfileSensitiveHeadersKeyName(profileId: string): string {
+  return `ai.profile.${profileId.trim()}.headers`
 }
 
 export function isCliProviderKind(kind: AIProviderKind): boolean {
@@ -40,6 +127,83 @@ export function isCliProviderKind(kind: AIProviderKind): boolean {
     kind === 'cli-codex' ||
     kind === 'cli-custom'
   )
+}
+
+/**
+ * Normalizes a custom endpoint base URL without duplicating `/v1`.
+ */
+export function normalizeBaseUrl(raw: string): string {
+  return raw.trim().replace(/\/+$/, '')
+}
+
+/**
+ * Resolves the `/models` discovery URL for OpenAI-compat or Anthropic-compat endpoints
+ * without accidentally producing `/v1/v1/models`.
+ */
+export function buildModelsProbeUrl(kind: AIProviderKind, baseUrl: string): string {
+  const clean = normalizeBaseUrl(baseUrl)
+  if (kind === 'anthropic-compat') {
+    return /\/v1$/i.test(clean) ? `${clean}/models` : `${clean}/v1/models`
+  }
+  return `${clean}/models`
+}
+
+/**
+ * Splits custom headers into public (safe for SQLite/renderer) and sensitive (encrypted in `secrets`).
+ */
+function partitionHeaders(
+  headers: Record<string, string>,
+  existingEncryptedHeaders: Record<string, string>
+): { publicHeaders: Record<string, string>; sensitiveHeaders: Record<string, string> } {
+  const publicHeaders: Record<string, string> = {}
+  const sensitiveHeaders: Record<string, string> = {}
+
+  for (const [rawKey, rawVal] of Object.entries(headers)) {
+    const key = rawKey.trim()
+    const val = String(rawVal ?? '').trim()
+    if (!key || !val) continue
+
+    if (isSensitiveHeaderName(key)) {
+      // Preserve previously encrypted value if UI sent back the redacted placeholder
+      if (val === REDACTED_HEADER_PLACEHOLDER && existingEncryptedHeaders[key]) {
+        sensitiveHeaders[key] = existingEncryptedHeaders[key]
+      } else if (val !== REDACTED_HEADER_PLACEHOLDER) {
+        sensitiveHeaders[key] = val
+      }
+    } else {
+      publicHeaders[key] = val
+    }
+  }
+
+  return { publicHeaders, sensitiveHeaders }
+}
+
+function readDecryptedSensitiveHeaders(profileId: string): Record<string, string> {
+  const raw = getSecret(getProfileSensitiveHeadersKeyName(profileId))
+  if (!raw) return {}
+  try {
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed === 'object') {
+      return parsed as Record<string, string>
+    }
+  } catch {
+    // ignore malformed
+  }
+  return {}
+}
+
+/**
+ * Main-process-only helper that merges public extraHeaders with encrypted sensitive headers.
+ */
+function resolveMergedHeadersForProfile(profileId: string, publicHeaders: Record<string, string>): Record<string, string> {
+  const merged: Record<string, string> = {}
+  for (const [k, v] of Object.entries(publicHeaders)) {
+    if (v !== REDACTED_HEADER_PLACEHOLDER) {
+      merged[k] = v
+    }
+  }
+  const sensitive = readDecryptedSensitiveHeaders(profileId)
+  return { ...merged, ...sensitive }
 }
 
 interface ProviderProfileRow {
@@ -57,14 +221,26 @@ interface ProviderProfileRow {
 }
 
 function rowToProfile(row: ProviderProfileRow): AIProviderProfile {
-  let extraHeaders: Record<string, string> = {}
+  let publicHeaders: Record<string, string> = {}
   let cliArgsTemplate: string[] = []
   try {
     const parsed = JSON.parse(row.extra_headers_json || '{}')
-    if (parsed && typeof parsed === 'object') extraHeaders = parsed
+    if (parsed && typeof parsed === 'object') {
+      for (const [k, v] of Object.entries(parsed as Record<string, string>)) {
+        // Defense-in-depth: never leak any sensitive header value to renderer even on legacy rows
+        publicHeaders[k] = isSensitiveHeaderName(k) ? REDACTED_HEADER_PLACEHOLDER : String(v)
+      }
+    }
   } catch {
-    extraHeaders = {}
+    publicHeaders = {}
   }
+
+  // Expose encrypted sensitive header names as redacted placeholders so UI knows they exist
+  const sensitiveKeyNames = Object.keys(readDecryptedSensitiveHeaders(row.id))
+  for (const keyName of sensitiveKeyNames) {
+    publicHeaders[keyName] = REDACTED_HEADER_PLACEHOLDER
+  }
+
   try {
     const parsed = JSON.parse(row.cli_args_json || '[]')
     if (Array.isArray(parsed)) cliArgsTemplate = parsed.map(String)
@@ -78,7 +254,7 @@ function rowToProfile(row: ProviderProfileRow): AIProviderProfile {
     kind: row.kind as AIProviderKind,
     baseUrl: row.base_url || '',
     defaultModel: row.default_model || '',
-    extraHeaders,
+    extraHeaders: publicHeaders,
     cliCommand: row.cli_command || '',
     cliArgsTemplate,
     enabled: Boolean(row.enabled),
@@ -112,12 +288,18 @@ export function upsertProviderProfile(input: AIProviderProfileInput): AIProvider
   }
 
   const kind = input.kind
-  const baseUrl = (input.baseUrl ?? existing?.baseUrl ?? '').trim()
+  const baseUrl = normalizeBaseUrl(input.baseUrl ?? existing?.baseUrl ?? '')
   const defaultModel = (input.defaultModel ?? existing?.defaultModel ?? '').trim()
-  const extraHeaders = input.extraHeaders ?? existing?.extraHeaders ?? {}
   const cliCommand = (input.cliCommand ?? existing?.cliCommand ?? '').trim()
   const cliArgsTemplate = input.cliArgsTemplate ?? existing?.cliArgsTemplate ?? []
   const enabled = input.enabled ?? existing?.enabled ?? true
+
+  const existingEncryptedHeaders = existing ? readDecryptedSensitiveHeaders(id) : {}
+  const incomingHeaders = input.extraHeaders ?? existing?.extraHeaders ?? {}
+  const { publicHeaders, sensitiveHeaders } = partitionHeaders(
+    incomingHeaders,
+    existingEncryptedHeaders
+  )
 
   getDb()
     .prepare(
@@ -142,13 +324,19 @@ export function upsertProviderProfile(input: AIProviderProfileInput): AIProvider
       kind,
       baseUrl,
       defaultModel,
-      JSON.stringify(extraHeaders),
+      JSON.stringify(publicHeaders),
       cliCommand,
       JSON.stringify(cliArgsTemplate),
       enabled ? 1 : 0,
       existing?.createdAt ?? now,
       now
     )
+
+  if (Object.keys(sensitiveHeaders).length > 0) {
+    setSecret(getProfileSensitiveHeadersKeyName(id), JSON.stringify(sensitiveHeaders))
+  } else {
+    deleteSecret(getProfileSensitiveHeadersKeyName(id))
+  }
 
   if (input.apiKey !== undefined) {
     const trimmedKey = input.apiKey.trim()
@@ -163,6 +351,7 @@ export function upsertProviderProfile(input: AIProviderProfileInput): AIProvider
 export function deleteProviderProfile(id: string): { ok: boolean } {
   getDb().prepare('DELETE FROM ai_provider_profiles WHERE id = ?').run(id)
   deleteSecret(getProfileSecretKeyName(id))
+  deleteSecret(getProfileSensitiveHeadersKeyName(id))
   return { ok: true }
 }
 
@@ -223,6 +412,7 @@ export type ResolvedExecutionTarget =
 /**
  * Resolves an AI execution target from either a saved custom profile, a CLI bridge,
  * or a built-in provider (gemini / openai / anthropic / ollama).
+ * Secrets are ALWAYS read from the encrypted main-process `secrets` store.
  */
 export function resolveExecutionTarget(params: {
   provider: AIProviderKind
@@ -240,14 +430,17 @@ export function resolveExecutionTarget(params: {
         return { mode: 'cli', profile }
       }
       const key = (getSecret(getProfileSecretKeyName(profile.id)) || apiKey || '').trim()
+      const mergedHeaders = resolveMergedHeadersForProfile(profile.id, profile.extraHeaders)
+      const headersOpt = Object.keys(mergedHeaders).length > 0 ? mergedHeaders : undefined
+
       if (profile.kind === 'openai-compat') {
         if (!profile.baseUrl) return null
-        const normalizedBase = profile.baseUrl.replace(/\/+$/, '')
+        const normalizedBase = normalizeBaseUrl(profile.baseUrl)
         const chosenModel = normalizeModelId(modelId, profile.defaultModel || 'gpt-4o-mini')
         const openai = createOpenAI({
           baseURL: normalizedBase,
           apiKey: key || 'no-key',
-          headers: Object.keys(profile.extraHeaders).length > 0 ? profile.extraHeaders : undefined
+          headers: headersOpt
         })
         return {
           mode: 'sdk',
@@ -257,12 +450,12 @@ export function resolveExecutionTarget(params: {
       }
       if (profile.kind === 'anthropic-compat') {
         if (!profile.baseUrl) return null
-        const normalizedBase = profile.baseUrl.replace(/\/+$/, '')
+        const normalizedBase = normalizeBaseUrl(profile.baseUrl)
         const chosenModel = normalizeModelId(modelId, profile.defaultModel || 'claude-sonnet-4-20250514')
         const anthropic = createAnthropic({
           baseURL: normalizedBase,
           apiKey: key || 'no-key',
-          headers: Object.keys(profile.extraHeaders).length > 0 ? profile.extraHeaders : undefined
+          headers: headersOpt
         })
         return {
           mode: 'sdk',
@@ -314,13 +507,13 @@ export function resolveExecutionTarget(params: {
   // 3. Built-in SDK providers (with dynamic modelId support!)
   const storedSecret = getSecret(getProviderSecretKeyName(provider))
   const rawKey = (storedSecret || apiKey || '').trim()
-  if (!rawKey) return null
 
   if (provider === 'ollama') {
-    const normalizedBase = rawKey.startsWith('http')
-      ? rawKey.endsWith('/v1')
-        ? rawKey
-        : `${rawKey.replace(/\/+$/, '')}/v1`
+    const baseInput = rawKey || 'http://localhost:11434'
+    const normalizedBase = baseInput.startsWith('http')
+      ? baseInput.endsWith('/v1')
+        ? baseInput
+        : `${baseInput.replace(/\/+$/, '')}/v1`
       : 'http://localhost:11434/v1'
     const ollama = createOpenAI({
       baseURL: normalizedBase,
@@ -331,9 +524,11 @@ export function resolveExecutionTarget(params: {
     return {
       mode: 'sdk',
       model: ollama.chat(modelName),
-      label: `Vercel AI SDK · Ollama (${modelName})`
+      label: `Ollama (${modelName})`
     }
   }
+
+  if (!rawKey) return null
 
   if (provider === 'openai') {
     const openai = createOpenAI({ apiKey: rawKey })
@@ -341,17 +536,17 @@ export function resolveExecutionTarget(params: {
     return {
       mode: 'sdk',
       model: openai(chosenModel),
-      label: `Vercel AI SDK · OpenAI (${chosenModel})`
+      label: `OpenAI (${chosenModel})`
     }
   }
 
   if (provider === 'anthropic') {
     const anthropic = createAnthropic({ apiKey: rawKey })
-    const chosenModel = normalizeModelId(modelId, 'claude-3-5-sonnet-latest')
+    const chosenModel = normalizeModelId(modelId, 'claude-sonnet-4-20250514')
     return {
       mode: 'sdk',
       model: anthropic(chosenModel),
-      label: `Vercel AI SDK · Anthropic (${chosenModel})`
+      label: `Anthropic (${chosenModel})`
     }
   }
 
@@ -360,7 +555,145 @@ export function resolveExecutionTarget(params: {
   return {
     mode: 'sdk',
     model: google(chosenModel),
-    label: `Vercel AI SDK · Google Gemini (${chosenModel})`
+    label: `Google Gemini (${chosenModel})`
+  }
+}
+
+async function runLiveOneTokenPing(model: LanguageModel): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await generateText({
+      model,
+      prompt: 'Reply with OK.',
+      maxOutputTokens: 4
+    })
+    return { ok: true }
+  } catch (err) {
+    return {
+      ok: false,
+      error: redactSecrets(err instanceof Error ? err.message : String(err))
+    }
+  }
+}
+
+function extractModelsFromPayload(payload: unknown): string[] {
+  if (!payload || typeof payload !== 'object') return []
+  const obj = payload as Record<string, unknown>
+
+  // OpenAI / Anthropic / OpenRouter format: { data: [{ id: "..." }] }
+  if (Array.isArray(obj.data)) {
+    return obj.data
+      .map((item) => (item && typeof item === 'object' ? String((item as Record<string, unknown>).id || '') : ''))
+      .filter(Boolean)
+      .slice(0, 60)
+  }
+
+  // Gemini format: { models: [{ name: "models/gemini-2.5-flash" }] }
+  // Ollama format: { models: [{ name: "qwen2.5-coder:latest" }] }
+  if (Array.isArray(obj.models)) {
+    return obj.models
+      .map((item) => {
+        if (!item || typeof item !== 'object') return ''
+        const rawName = String((item as Record<string, unknown>).name || (item as Record<string, unknown>).id || '')
+        return rawName.replace(/^models\//, '')
+      })
+      .filter(Boolean)
+      .slice(0, 60)
+  }
+
+  return []
+}
+
+/**
+ * Tests a built-in provider (gemini / openai / anthropic / ollama) live.
+ */
+export async function testBuiltinProvider(
+  provider: 'gemini' | 'openai' | 'anthropic' | 'ollama',
+  modelId?: string
+): Promise<AIProviderTestResult> {
+  const started = Date.now()
+  const storedKey = getSecret(getProviderSecretKeyName(provider)) || ''
+
+  if (provider !== 'ollama' && !storedKey.trim()) {
+    return {
+      ok: false,
+      latencyMs: Date.now() - started,
+      message: `No API key saved for ${provider}. Save an encrypted key first.`
+    }
+  }
+
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 8000)
+
+    let res: Response
+    if (provider === 'ollama') {
+      const base = (storedKey.trim() || 'http://localhost:11434').replace(/\/v1\/?$/, '').replace(/\/+$/, '')
+      res = await fetch(`${base}/api/tags`, { method: 'GET', signal: controller.signal })
+    } else if (provider === 'gemini') {
+      res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(storedKey.trim())}`,
+        { method: 'GET', signal: controller.signal }
+      )
+    } else if (provider === 'anthropic') {
+      res = await fetch('https://api.anthropic.com/v1/models', {
+        method: 'GET',
+        headers: {
+          'x-api-key': storedKey.trim(),
+          'anthropic-version': '2023-06-01'
+        },
+        signal: controller.signal
+      })
+    } else {
+      res = await fetch('https://api.openai.com/v1/models', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${storedKey.trim()}` },
+        signal: controller.signal
+      })
+    }
+    clearTimeout(timer)
+
+    if (res.ok) {
+      let models: string[] = []
+      try {
+        models = extractModelsFromPayload(await res.json())
+      } catch {
+        // non-JSON ok response
+      }
+      return {
+        ok: true,
+        latencyMs: Date.now() - started,
+        message:
+          models.length > 0
+            ? `Connected! Discovered ${models.length} model(s).`
+            : 'Connected successfully.',
+        models
+      }
+    }
+
+    // If /models returned 404/405, fallback to 1-token live completion
+    if (res.status === 404 || res.status === 405) {
+      const target = resolveExecutionTarget({ provider, modelId })
+      if (target?.mode === 'sdk') {
+        const ping = await runLiveOneTokenPing(target.model)
+        return {
+          ok: ping.ok,
+          latencyMs: Date.now() - started,
+          message: ping.ok ? `Connected via live completion (${target.label}).` : ping.error || 'Live test failed.'
+        }
+      }
+    }
+
+    return {
+      ok: false,
+      latencyMs: Date.now() - started,
+      message: redactSecrets(`HTTP ${res.status} ${res.statusText}`)
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      latencyMs: Date.now() - started,
+      message: redactSecrets(err instanceof Error ? err.message : String(err))
+    }
   }
 }
 
@@ -421,55 +754,94 @@ export async function testProviderProfile(
     (profile.id ? getSecret(getProfileSecretKeyName(profile.id)) : null) ||
     ''
 
-  const baseUrl = profile.baseUrl.replace(/\/+$/, '')
+  const baseUrl = normalizeBaseUrl(profile.baseUrl)
   if (!baseUrl) {
     return { ok: false, latencyMs: Date.now() - started, message: 'Base URL is required.' }
   }
 
-  try {
-    const probeUrl =
-      profile.kind === 'anthropic-compat' ? `${baseUrl}/v1/models` : `${baseUrl}/models`
-    const headers: Record<string, string> = { ...profile.extraHeaders }
-    if (apiKey) {
-      if (profile.kind === 'anthropic-compat') {
-        headers['x-api-key'] = apiKey
-        headers['anthropic-version'] = headers['anthropic-version'] || '2023-06-01'
-      } else {
-        headers['Authorization'] = `Bearer ${apiKey}`
-      }
-    }
+  const headers: Record<string, string> = profile.id
+    ? resolveMergedHeadersForProfile(profile.id, profile.extraHeaders)
+    : { ...profile.extraHeaders }
 
+  if (apiKey) {
+    if (profile.kind === 'anthropic-compat') {
+      headers['x-api-key'] = apiKey
+      headers['anthropic-version'] = headers['anthropic-version'] || '2023-06-01'
+    } else {
+      headers['Authorization'] = `Bearer ${apiKey}`
+    }
+  }
+
+  try {
+    const probeUrl = buildModelsProbeUrl(profile.kind, baseUrl)
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 8000)
     const res = await fetch(probeUrl, { method: 'GET', headers, signal: controller.signal })
     clearTimeout(timer)
 
-    if (!res.ok) {
+    if (res.ok) {
+      let models: string[] = []
+      try {
+        models = extractModelsFromPayload(await res.json())
+      } catch {
+        // non-JSON ok response
+      }
       return {
-        ok: false,
+        ok: true,
         latencyMs: Date.now() - started,
-        message: `HTTP ${res.status} from ${probeUrl}`
+        message:
+          models.length > 0
+            ? `Connected! Discovered ${models.length} model(s).`
+            : 'Endpoint reachable and authenticated.',
+        models
       }
     }
 
-    const json = (await res.json().catch(() => null)) as { data?: Array<{ id?: string }> } | null
-    const models = Array.isArray(json?.data)
-      ? json.data.map((m) => m.id).filter((id): id is string => Boolean(id)).slice(0, 20)
-      : undefined
+    // Many third-party gateways (MiniMax, GLM, proxies) don't implement GET /models (404/405).
+    // Fall back to a real 1-token completion against the configured default model.
+    if (res.status === 404 || res.status === 405 || res.status === 501) {
+      const modelName = profile.defaultModel || (profile.kind === 'anthropic-compat' ? 'claude-sonnet-4-20250514' : 'gpt-4o-mini')
+      const headersOpt = Object.keys(headers).length > 0 ? headers : undefined
+      const model =
+        profile.kind === 'anthropic-compat'
+          ? createAnthropic({ baseURL: baseUrl, apiKey: apiKey || 'no-key', headers: headersOpt })(modelName)
+          : createOpenAI({ baseURL: baseUrl, apiKey: apiKey || 'no-key', headers: headersOpt }).chat(modelName)
+
+      const ping = await runLiveOneTokenPing(model)
+      return {
+        ok: ping.ok,
+        latencyMs: Date.now() - started,
+        message: ping.ok
+          ? `Connected via live 1-token test (${modelName}).`
+          : ping.error || `HTTP ${res.status} ${res.statusText}`
+      }
+    }
 
     return {
-      ok: true,
+      ok: false,
       latencyMs: Date.now() - started,
-      message: models?.length
-        ? `Connected (${models.length} models discovered)`
-        : 'Endpoint reachable (HTTP 200)',
-      models
+      message: redactSecrets(`HTTP ${res.status} ${res.statusText}`)
     }
   } catch (err) {
     return {
       ok: false,
       latencyMs: Date.now() - started,
-      message: err instanceof Error ? err.message : String(err)
+      message: redactSecrets(err instanceof Error ? err.message : String(err))
     }
   }
+}
+
+export async function fetchProviderModels(input: {
+  profileId?: string
+  builtinProvider?: 'gemini' | 'openai' | 'anthropic' | 'ollama'
+}): Promise<{ ok: boolean; models: string[]; error?: string }> {
+  if (input.builtinProvider) {
+    const res = await testBuiltinProvider(input.builtinProvider)
+    return { ok: res.ok, models: res.models || [], error: res.ok ? undefined : res.message }
+  }
+  if (input.profileId) {
+    const res = await testProviderProfile(input.profileId)
+    return { ok: res.ok, models: res.models || [], error: res.ok ? undefined : res.message }
+  }
+  return { ok: false, models: [], error: 'No provider specified.' }
 }

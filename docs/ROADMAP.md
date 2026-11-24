@@ -121,3 +121,16 @@ Log lengkap: [LOG-v2.3.md](./LOG-v2.3.md). Status test: **392 test / 37 berkas**
 | 2 ✅ | **Web Workbench (In-App Browser Upgrade)** | Tab & sesi persisten (`persist:noteit-browser` + `ui-state.json`), bookmark editable per notebook, popup-to-tab, Find-in-Page (`Ctrl+F`), Zoom, Smart Markdown & Code-Block Clipper, Localhost Console Inspector, mesin pencari default Google (dapat diubah di Settings → Browser), dan perbaikan loop `ERR_ABORTED (-3)`. |
 | 3 ✅ | **Native Learning Workbench & Propositional Knowledge Graph** | Loop pedagogis 4 fase (**Measure → Plan → Teach → Practice**), *Think out loud*, skala *Confidence 1–5*, **Side Questions**, renderer Markdown + Mermaid SVG ter-sanitasi (`LearnMarkdown.tsx`), Knowledge Graph interaktif (`@xyflow/react`) dengan deduplikasi deterministik, dan **Crystallize to NoteIT Page**. |
 | 4 ✅ | **Core Polish & Semantic Sidebar** | Warna ikon semantik adaptif untuk 5 menu utama sidebar (expanded & collapsed), entri Command Palette baru, serta verifikasi penuh Quick Capture, Daily Notes, Mermaid strict sanitizer, dan drag-and-drop Kanban/Gantt. |
+
+
+---
+
+## v2.4 & v2.5 — Unified AI Studio, Side-by-Side Split, & Writing Experience (selesai)
+
+Status test: **420 test / 43 berkas** hijau, typecheck & build produksi hijau.
+
+| Rilis / Wave | Fitur | Ringkasan |
+|---|---|---|
+| v2.4 ✅ | **Unified AI Studio & Hybrid Intelligent UI** | Menyatukan Chat & Build, Active Learn, dan Knowledge Graph dalam satu shell `AIStudioView`, upgrade Vercel AI SDK v7, serta dukungan OpenUI + sandboxed interactive widgets. |
+| v2.5A ✅ | **AI Studio Split Pane & Block-to-AI Loop** | `RightSplitMode = 'ai-studio'` (`Ctrl+Alt+C`, tombol **AI Split** & auto-split **Learn**), menu aksi AI di tiap blok + selection toolbar + `/ai` slash command, pinned Block Context Chip + auto-synced Active Page badge, serta **Insert after block / Replace block / Append to page** dengan parser `markdown-to-blocks.ts` (1 langkah undo). |
+| v2.5B ✅ | **Writing Experience Upgrade (3 Wave)** | Pure Live Preview ala Obsidian (`InlineRichText.tsx`), keyboard flow ala Notion (Markdown auto-shortcuts, `Enter`/`Backspace`/`Arrow` antar-blok, auto-grow textarea, Turn Into, `Ctrl+D`, Smart Markdown Paste), Offline KaTeX Math (`math` block + inline `$...$`, lazy-loaded on-demand), Interactive GFM Table (`table` block + `markdown-table.ts`), CodeMirror 6 syntax-highlighted code blocks, serta optimasi clean-slate startup (`BlockEditor` idle preload). |

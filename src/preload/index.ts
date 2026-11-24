@@ -92,12 +92,17 @@ const noteitAPI: NoteItAPI = {
   setSecret: (input) => ipcRenderer.invoke('secrets:set', input),
   hasSecret: (key: string) => ipcRenderer.invoke('secrets:has', key),
   deleteSecret: (key: string) => ipcRenderer.invoke('secrets:delete', key),
+  getEncryptionStatus: () => ipcRenderer.invoke('secrets:encryptionStatus'),
+  resetWorkspace: (options) => ipcRenderer.invoke('workspace:reset', options),
 
   // v2.3 Wave 1: Unified AI Provider Registry & Headless CLI Bridges
+  listProviderPresets: () => ipcRenderer.invoke('providers:presets'),
   listProviderProfiles: () => ipcRenderer.invoke('providers:list'),
   upsertProviderProfile: (input) => ipcRenderer.invoke('providers:upsert', input),
   deleteProviderProfile: (id: string) => ipcRenderer.invoke('providers:delete', id),
   testProviderProfile: (idOrConfig) => ipcRenderer.invoke('providers:test', idOrConfig),
+  testBuiltinProvider: (input) => ipcRenderer.invoke('providers:testBuiltin', input),
+  fetchProviderModels: (input) => ipcRenderer.invoke('providers:fetchModels', input),
   getModelSlots: () => ipcRenderer.invoke('providers:getSlots'),
   saveModelSlots: (slots) => ipcRenderer.invoke('providers:saveSlots', slots),
   detectCliBridges: () => ipcRenderer.invoke('providers:detectCliBridges'),

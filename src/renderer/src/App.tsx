@@ -109,6 +109,7 @@ export const App: React.FC = () => {
   const {
     loadWorkspace,
     isLoading,
+    notebooks,
     pages,
     sections,
     openTabIds,
@@ -122,6 +123,7 @@ export const App: React.FC = () => {
     setActiveMainView,
     isBrowserSplitOpen,
     rightSplitMode,
+    toggleAiStudioSplitPane,
     openPageInTab,
     closeTab,
     reorderTabs,
@@ -158,6 +160,24 @@ export const App: React.FC = () => {
   useEffect(() => {
     loadWorkspace()
   }, [loadWorkspace])
+
+  // Warm up BlockEditor chunk during idle so creating the first note on a clean slate is instant.
+  useEffect(() => {
+    if (isLoading) return
+    const warmUp = (): void => {
+      void import('@renderer/components/editor-block/BlockEditor')
+    }
+    const win = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
+      cancelIdleCallback?: (id: number) => void
+    }
+    if (typeof win.requestIdleCallback === 'function') {
+      const id = win.requestIdleCallback(warmUp, { timeout: 800 })
+      return () => win.cancelIdleCallback?.(id)
+    }
+    const timer = window.setTimeout(warmUp, 150)
+    return () => window.clearTimeout(timer)
+  }, [isLoading])
 
   // Chevron appears only when the tab strip overflows horizontally.
   useEffect(() => {
@@ -283,6 +303,9 @@ export const App: React.FC = () => {
       } else if (matchesShortcutEvent(e, 'toggle-ai-chat')) {
         e.preventDefault()
         setActiveMainView(activeMainView === 'ai-chat' ? 'workbench' : 'ai-chat')
+      } else if (matchesShortcutEvent(e, 'toggle-ai-split')) {
+        e.preventDefault()
+        toggleAiStudioSplitPane()
       } else if (matchesShortcutEvent(e, 'toggle-browser')) {
         e.preventDefault()
         setActiveMainView(activeMainView === 'browser' ? 'workbench' : 'browser')
@@ -319,6 +342,7 @@ export const App: React.FC = () => {
     missionBriefingPageId,
     switchPageMode,
     toggleSidebar,
+    toggleAiStudioSplitPane,
     toggleTerminalDrawer,
     isCommandPaletteOpen,
     isShortcutCheatsheetOpen,
@@ -614,14 +638,15 @@ export const App: React.FC = () => {
                   aria-labelledby={activePage ? `workspace-tab-${activePage.id}` : undefined}
                   className="flex-1 flex min-h-0 overflow-hidden"
                 >
-                  {activePage && (
+                  {activePage ? (
                     <div
                       className="flex flex-col min-w-0 h-full overflow-hidden"
                       style={
                         splitPage ||
                         isBrowserSplitOpen ||
                         rightSplitMode === 'repo-explorer' ||
-                        rightSplitMode === 'diff'
+                        rightSplitMode === 'diff' ||
+                        rightSplitMode === 'ai-studio'
                           ? {
                               flexBasis: `${splitRatio * 100}%`,
                               flexGrow: 0,
@@ -632,11 +657,82 @@ export const App: React.FC = () => {
                     >
                       <WorkbenchPane page={activePage} onActivate={() => setFocusedPane('primary')} />
                     </div>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center p-8 bg-canvas-primary">
+                      <div className="max-w-md w-full p-6 rounded-2xl bg-surface-elevated border border-border-hairline text-center space-y-4">
+                        <div className="font-display text-lg font-bold text-ink-primary">
+                          {notebooks.length === 0 ? 'Welcome to NoteIT' : 'No page open'}
+                        </div>
+                        <p className="text-xs text-ink-secondary leading-relaxed">
+                          {notebooks.length === 0
+                            ? 'Your workspace is 100% clean and ready. Create your first notebook to start writing specifications, diagrams, or code plans.'
+                            : 'Select a page from the sidebar or create a new specification page to begin.'}
+                        </p>
+                        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                          {notebooks.length === 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void (async () => {
+                                  const nb = await window.noteitAPI.createNotebook({
+                                    name: 'My Workspace',
+                                    icon: '📐',
+                                    color: 'cobalt'
+                                  })
+                                  const snap = await window.noteitAPI.getWorkspace()
+                                  const defaultSec =
+                                    snap.sections.find((s) => s.notebookId === nb.id) ??
+                                    (await window.noteitAPI.createSection({
+                                      notebookId: nb.id,
+                                      name: 'General Specs',
+                                      color: 'cobalt'
+                                    }))
+                                  await createPage({
+                                    sectionId: defaultSec.id,
+                                    title: 'Untitled Page',
+                                    icon: '📄',
+                                    mode: 'block'
+                                  })
+                                })()
+                              }}
+                              className="px-4 py-2 rounded-lg bg-accent-cobalt text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                            >
+                              + Create First Notebook
+                            </button>
+                          ) : (
+                            sections[0] && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void createPage({
+                                    sectionId: sections[0].id,
+                                    title: 'Untitled Page',
+                                    icon: '📄',
+                                    mode: 'block'
+                                  })
+                                }
+                                className="px-4 py-2 rounded-lg bg-accent-cobalt text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                              >
+                                + New Page
+                              </button>
+                            )
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setActiveMainView('settings')}
+                            className="px-4 py-2 rounded-lg bg-surface-chrome hover:bg-surface-hover border border-border-hairline text-xs font-medium text-ink-primary"
+                          >
+                            Configure AI Providers
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   )}
                   {(splitPage ||
                     isBrowserSplitOpen ||
                     rightSplitMode === 'repo-explorer' ||
-                    rightSplitMode === 'diff') && (
+                    rightSplitMode === 'diff' ||
+                    rightSplitMode === 'ai-studio') && (
                     <>
                       <div
                         role="separator"
@@ -693,6 +789,8 @@ export const App: React.FC = () => {
                         <Suspense fallback={<LazyViewFallback label="Loading Split Pane..." />}>
                           {isBrowserSplitOpen ? (
                             <InAppBrowserView isSplitMode />
+                          ) : rightSplitMode === 'ai-studio' ? (
+                            <AIStudioView isSplitMode />
                           ) : rightSplitMode === 'repo-explorer' ? (
                             <RepoExplorerTree isSplitMode />
                           ) : rightSplitMode === 'diff' ? (

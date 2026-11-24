@@ -2,7 +2,9 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { DatabaseSync } from 'node:sqlite'
 import { closeDb, initDatabase } from '../db/client'
+import { setSecret } from './secret.service'
 import { importAsset } from './asset.service'
 import {
   copyAssetsIncremental,
@@ -47,7 +49,8 @@ describe('backup.service (integration)', () => {
     expect(backupDir).toBe(path.join(tempDir, 'backups'))
   })
 
-  it('runBackup menghasilkan berkas backup nyata', () => {
+  it('runBackup menghasilkan berkas backup nyata dan menghapus tabel secrets dari berkas backup', () => {
+    setSecret('ai.provider.openai', 'sk-secret-must-not-appear-in-backup-12345')
     const result = runBackup()
 
     expect(result.ok).toBe(true)
@@ -59,6 +62,13 @@ describe('backup.service (integration)', () => {
     expect(path.dirname(filePath)).toBe(backupDir)
     expect(path.basename(filePath)).toMatch(/^noteit-\d{8}-\d{6}\.db$/)
     expect(fs.statSync(filePath).size).toBeGreaterThan(0)
+
+    const backupDb = new DatabaseSync(filePath)
+    const secretCount = backupDb.prepare('SELECT COUNT(*) as cnt FROM secrets').get() as {
+      cnt: number
+    }
+    backupDb.close()
+    expect(secretCount.cnt).toBe(0)
   })
 
   it('dua backup berurutan tidak saling menimpa', () => {

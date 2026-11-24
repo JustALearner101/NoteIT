@@ -1,7 +1,8 @@
 import type { BlockType, DocumentBlock } from '@shared/types/domain'
+import { DEFAULT_MARKDOWN_TABLE, isMarkdownTableHeaderPair } from '@shared/markdown-table'
 import { createId } from './ids'
 
-export type SlashCategory = 'Text' | 'Layout' | 'Diagrams' | 'Data' | 'Media'
+export type SlashCategory = 'AI' | 'Text' | 'Layout' | 'Diagrams' | 'Data' | 'Media'
 
 export interface SlashCommandOption {
   id: string
@@ -11,9 +12,11 @@ export interface SlashCommandOption {
   category: SlashCategory
   keywords: string[]
   columnCount?: number
+  action?: 'ask-ai'
 }
 
 export const SLASH_CATEGORIES: readonly SlashCategory[] = [
+  'AI',
   'Text',
   'Layout',
   'Diagrams',
@@ -22,6 +25,15 @@ export const SLASH_CATEGORIES: readonly SlashCategory[] = [
 ]
 
 export const SLASH_COMMAND_OPTIONS: readonly SlashCommandOption[] = [
+  {
+    id: 'ask-ai',
+    type: 'paragraph',
+    label: 'Ask AI about this block',
+    desc: 'Open AI Studio side-by-side with this block pinned as context',
+    category: 'AI',
+    keywords: ['ai', 'ask', 'copilot', 'assistant', 'explain', 'improve', 'generate'],
+    action: 'ask-ai'
+  },
   {
     id: 'paragraph',
     type: 'paragraph',
@@ -82,9 +94,17 @@ export const SLASH_COMMAND_OPTIONS: readonly SlashCommandOption[] = [
     id: 'code',
     type: 'code',
     label: 'Technical Code Block',
-    desc: 'Monospace code snippet (SQL, TypeScript, JSON)',
+    desc: 'Syntax-highlighted code editor (TS, Python, SQL, JSON, HTML, CSS)',
     category: 'Text',
-    keywords: ['code', 'snippet', 'sql', 'ts', 'json']
+    keywords: ['code', 'snippet', 'sql', 'ts', 'json', 'python']
+  },
+  {
+    id: 'math',
+    type: 'math',
+    label: 'LaTeX Math Equation',
+    desc: 'Offline KaTeX display formula ($$ ... $$) with live preview',
+    category: 'Text',
+    keywords: ['math', 'latex', 'katex', 'equation', 'formula', 'tex']
   },
   {
     id: 'divider',
@@ -93,6 +113,14 @@ export const SLASH_COMMAND_OPTIONS: readonly SlashCommandOption[] = [
     desc: 'Subtle hairline section separator',
     category: 'Layout',
     keywords: ['divider', 'hr', 'line', 'separator', 'rule']
+  },
+  {
+    id: 'table',
+    type: 'table',
+    label: 'Markdown Table',
+    desc: 'Interactive editable GFM table with column alignment & Tab navigation',
+    category: 'Data',
+    keywords: ['table', 'grid', 'matrix', 'columns', 'rows', 'gfm', 'markdown']
   },
   {
     id: 'columns-2',
@@ -381,17 +409,28 @@ export function createDefaultBlock(
             ? defaults?.defaultDot || 'digraph G {\n  A -> B;\n}'
             : type === 'code'
               ? `-- Write your query or code here\nSELECT * FROM pages_fts WHERE pages_fts MATCH 'dbml';`
-              : '',
+              : type === 'math'
+                ? `\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}`
+                : type === 'table'
+                  ? DEFAULT_MARKDOWN_TABLE
+                  : '',
     checked: false,
+    language: type === 'code' ? 'typescript' : undefined,
     calloutColor: 'cobalt',
     calloutTitle: 'SPECIFICATION NOTE',
     toggleTitle: type === 'toggle' ? 'Technical details' : undefined,
     toggleOpen: type === 'toggle' ? true : undefined,
-    wide: type === 'dbml' || type === 'mermaid' || type === 'graphviz' || type === 'database',
+    wide:
+      type === 'dbml' ||
+      type === 'mermaid' ||
+      type === 'graphviz' ||
+      type === 'database' ||
+      type === 'table',
     dbmlViewMode: 'split',
     mermaidViewMode: 'split',
     graphvizViewMode: 'split',
     graphvizEngine: 'dot',
+    mathViewMode: 'preview',
     databaseTitle: 'MODULE SCHEDULE & METRICS',
     databaseActiveView: 'gantt',
     databaseChartType: 'bar',
@@ -431,4 +470,129 @@ export function createDefaultBlock(
           ]
         : undefined
   }
+}
+
+
+export interface MarkdownShortcutMatch {
+  type: BlockType
+  content: string
+  checked?: boolean
+  language?: string
+}
+
+/**
+ * Matches start-of-block Markdown shortcuts as the user types:
+ * `# `, `## `, `### `, `[] `, `- [ ] `, `[x] `, `- [x] `, `> `, `---`, ```` ```lang ````, `$$`.
+ */
+export function matchMarkdownBlockShortcut(text: string): MarkdownShortcutMatch | null {
+  if (!text) return null
+  if (text.startsWith('# ')) return { type: 'h1', content: text.slice(2) }
+  if (text.startsWith('## ')) return { type: 'h2', content: text.slice(3) }
+  if (text.startsWith('### ')) return { type: 'h3', content: text.slice(4) }
+  if (text.startsWith('[] ') || text.startsWith('[ ] ')) {
+    return { type: 'checklist', checked: false, content: text.slice(text.startsWith('[] ') ? 3 : 4) }
+  }
+  if (text.startsWith('- [ ] ')) return { type: 'checklist', checked: false, content: text.slice(6) }
+  if (text.startsWith('[x] ') || text.startsWith('[X] ')) {
+    return { type: 'checklist', checked: true, content: text.slice(4) }
+  }
+  if (text.startsWith('- [x] ') || text.startsWith('- [X] ')) {
+    return { type: 'checklist', checked: true, content: text.slice(6) }
+  }
+  if (text.startsWith('> ')) return { type: 'callout', content: text.slice(2) }
+  if (text === '---' || text === '***') return { type: 'divider', content: '' }
+  if (text === '$$ ' || text === '$$\n') return { type: 'math', content: '' }
+
+  const codeFenceMatch = /^```([a-zA-Z0-9_+-]*)[\s\n]$/.exec(text)
+  if (codeFenceMatch) {
+    return {
+      type: 'code',
+      language: codeFenceMatch[1]?.trim().toLowerCase() || 'typescript',
+      content: ''
+    }
+  }
+  return null
+}
+
+/**
+ * Computes textarea rows accurately by accounting for both explicit newlines (`\n`)
+ * and visual line wrapping so multi-line paragraphs never clip.
+ */
+export function computeAutoGrowRows(
+  text: string,
+  charsPerLine = 82,
+  minRows = 1
+): number {
+  if (!text) return Math.max(1, minRows)
+  const lines = text.split('\n')
+  let totalRows = 0
+  for (const line of lines) {
+    totalRows += Math.max(1, Math.ceil(line.length / Math.max(20, charsPerLine)))
+  }
+  return Math.max(minRows, totalRows)
+}
+
+export const TURN_INTO_OPTIONS: readonly { type: BlockType; label: string }[] = [
+  { type: 'paragraph', label: 'Paragraph' },
+  { type: 'h1', label: 'Heading 1' },
+  { type: 'h2', label: 'Heading 2' },
+  { type: 'h3', label: 'Heading 3' },
+  { type: 'checklist', label: 'Checklist' },
+  { type: 'callout', label: 'Callout' },
+  { type: 'toggle', label: 'Toggle' },
+  { type: 'code', label: 'Code Block' },
+  { type: 'math', label: 'LaTeX Math' }
+]
+
+export function convertBlockType(block: DocumentBlock, targetType: BlockType): Partial<DocumentBlock> {
+  if (block.type === targetType) return {}
+  const patch: Partial<DocumentBlock> = { type: targetType }
+  if (targetType === 'checklist' && block.checked === undefined) {
+    patch.checked = false
+  }
+  if (targetType === 'callout' && !block.calloutTitle) {
+    patch.calloutTitle = 'SPECIFICATION NOTE'
+    patch.calloutColor = block.calloutColor || 'cobalt'
+  }
+  if (targetType === 'toggle') {
+    patch.toggleTitle = block.toggleTitle || 'Technical details'
+    patch.toggleOpen = block.toggleOpen ?? true
+  }
+  if (targetType === 'code' && !block.language) {
+    patch.language = 'typescript'
+  }
+  if (targetType === 'math') {
+    patch.mathViewMode = block.mathViewMode || 'preview'
+  }
+  return patch
+}
+
+/**
+ * Returns true when pasted text contains multi-block Markdown structure
+ * (headings, checklists, fences, math blocks, GFM tables, or multiple paragraphs)
+ * so Smart Paste can split it into native NoteIT blocks in one undo step.
+ */
+export function shouldSmartPasteMarkdown(text: string): boolean {
+  const normalized = (text || '').replace(/\r\n/g, '\n').trim()
+  if (!normalized || !normalized.includes('\n')) return false
+
+  const lines = normalized.split('\n')
+  if (lines.length < 2) return false
+
+  // Multi-paragraph separation
+  if (/\n\s*\n/.test(normalized)) return true
+
+  // Structural Markdown lines
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim()
+    if (/^#{1,3}\s+/.test(trimmed)) return true
+    if (/^[-*+]\s+\[[ xX]\]\s+/.test(trimmed)) return true
+    if (/^```/.test(trimmed)) return true
+    if (/^\$\$/.test(trimmed)) return true
+    if (/^>\s+/.test(trimmed)) return true
+    if (/^(?:---+|___+|\*\*\*+)$/.test(trimmed)) return true
+    if (i + 1 < lines.length && isMarkdownTableHeaderPair(lines[i], lines[i + 1])) return true
+  }
+
+  return false
 }

@@ -357,12 +357,15 @@ export async function createLearnSession(input: {
       : `Learning goal: ${goal}\n\nStart the session.`
   })
 
-  const openingContent =
-    completion.ok && completion.text.trim()
-      ? completion.text.trim()
-      : kind === 'practice'
-        ? `**Practice Problem (${title})**\n\nWithout looking at notes, how would you apply the core idea behind **${goal}** to a concrete engineering scenario? Explain the reasoning chain step by step in the *Think out loud* field.`
-        : `**Diagnostic Probe — Let's map your starting point**\n\nBefore we build a lesson plan for **${goal}**, tell me in your own words: what do you already know about this topic, and which part currently feels fuzzy or counterintuitive?\n\n*(Tip: use the **Think out loud** box below and pick your confidence 1–5 so I can tailor the dependency map.)*`
+  if (!completion.ok || !completion.text.trim()) {
+    deleteLearnSession(id)
+    throw new Error(
+      completion.text.trim() ||
+        'No AI provider is configured. Open Settings → AI Providers to connect an API key, custom endpoint, or CLI bridge.'
+    )
+  }
+
+  const openingContent = completion.text.trim()
 
   const firstTurn = insertTurn({
     sessionId: id,
@@ -457,26 +460,23 @@ export async function submitLearnResponse(input: {
     prompt: `Goal: ${session.goal}\nCurrent Phase: ${nextPhase}\nConfidence: ${input.confidence ?? 'unset'}/5\n\n${sourceCtx ? `Source Material:\n${sourceCtx}\n\n` : ''}Recent Transcript:\n${transcript}`
   })
 
-  let replyText = completion.ok ? completion.text.trim() : ''
+  if (!completion.ok || !completion.text.trim()) {
+    throw new Error(
+      completion.text.trim() ||
+        'AI provider failed to respond. Check your connection or API key in Settings → AI Providers.'
+    )
+  }
+
+  const replyText = completion.text.trim()
   let nextPlanMermaid = session.planMermaid
   let nextActiveNode = session.activeNodeId || 'N1'
   const visitedSet = new Set(session.visitedNodes)
 
-  if (!replyText) {
-    if (nextPhase === 'plan') {
-      nextPlanMermaid = buildDefaultMermaidPlan(session.goal)
-      replyText = `Here is a dependency map tailored to your starting point for **${session.goal}**:\n\n\`\`\`mermaid\n${nextPlanMermaid}\n\`\`\`\n\nWe will start at **N1 (Core Intuition & Prerequisites)**. Ready to step into **N1**, or would you like to adjust any node?`
-    } else if (nextPhase === 'teach') {
-      visitedSet.add(nextActiveNode)
-      nextActiveNode = nextActiveNode === 'N1' ? 'N2' : nextActiveNode === 'N2' ? 'N3' : 'N4'
-      replyText = `**Step ${nextActiveNode} — Building from your reasoning**\n\nYour intuition ("${input.answer.slice(0, 80)}") gives us a solid anchor. Notice how the key invariant connects directly to **${session.goal}**.\n\n**Quick Check:** If one of the core assumptions changes, what breaks first — and why?`
-    } else {
-      visitedSet.add(nextActiveNode)
-      replyText = `**Transfer Practice — ${session.goal}**\n\nGood reasoning! Now apply this without hints: suppose you encounter a failure mode in production related to **${session.goal}**. What is the first diagnostic signal you would inspect, and what trade-off governs the fix?`
-    }
-  } else if (nextPhase === 'plan') {
+  if (nextPhase === 'plan') {
     const mermaidMatch = /```mermaid\s*([\s\S]*?)```/i.exec(replyText)
-    nextPlanMermaid = mermaidMatch ? mermaidMatch[1].trim() : session.planMermaid || buildDefaultMermaidPlan(session.goal)
+    if (mermaidMatch?.[1]?.trim()) {
+      nextPlanMermaid = mermaidMatch[1].trim()
+    }
   } else if (nextPhase === 'teach') {
     visitedSet.add(nextActiveNode)
     nextActiveNode = nextActiveNode === 'N1' ? 'N2' : nextActiveNode === 'N2' ? 'N3' : 'N4'
@@ -562,13 +562,17 @@ export async function askLearnSideQuestion(input: {
     prompt: `Lesson goal: ${detail.session.goal}\n${input.selectedQuote ? `Quoted passage: "${input.selectedQuote}"\n` : ''}Recent lesson context:\n${lessonExcerpt}\n\nSide question: ${input.question}`
   })
 
+  if (!completion.ok || !completion.text.trim()) {
+    throw new Error(
+      completion.text.trim() ||
+        'AI provider failed to answer the side question. Check Settings → AI Providers.'
+    )
+  }
+
   const assistantMsg: LearnSideMessage = {
     id: `smsg-a-${Date.now()}`,
     role: 'assistant',
-    content:
-      completion.ok && completion.text.trim()
-        ? completion.text.trim()
-        : `Clarification on "${(input.selectedQuote || detail.session.goal).slice(0, 60)}": ${input.question.trim()} — focus on how the underlying premise constrains the result, then return to the active step to test it.`,
+    content: completion.text.trim(),
     createdAt: Date.now()
   }
 
@@ -769,26 +773,29 @@ export async function extractKnowledgeGraph(input: {
       : null
   }
 
-  const extracted =
-    parsed && Array.isArray(parsed.propositions) && parsed.propositions.length > 0
-      ? {
-          propositions: parsed.propositions
-            .filter((p): p is { statement: string; domainTag?: string } => Boolean(p?.statement?.trim()))
-            .map((p) => ({
-              statement: p.statement.trim(),
-              domainTag: (p.domainTag || domainTag).trim()
-            })),
-          chains: Array.isArray(parsed.chains)
-            ? parsed.chains
-                .filter((c) => Array.isArray(c?.premises) && c.premises.length > 0 && Boolean(c?.conclusion))
-                .map((c) => ({
-                  premises: c.premises!.map(String),
-                  conclusion: String(c.conclusion),
-                  relationLabel: String(c.relationLabel || 'entails')
-                }))
-            : []
-        }
-      : deterministicExtractPropositions(sourceText, domainTag)
+  if (!parsed || !Array.isArray(parsed.propositions) || parsed.propositions.length === 0) {
+    throw new Error(
+      'Knowledge Graph extraction requires a live AI provider. Configure a Primary/Background model in Settings → AI Providers.'
+    )
+  }
+
+  const extracted = {
+    propositions: parsed.propositions
+      .filter((p): p is { statement: string; domainTag?: string } => Boolean(p?.statement?.trim()))
+      .map((p) => ({
+        statement: p.statement.trim(),
+        domainTag: (p.domainTag || domainTag).trim()
+      })),
+    chains: Array.isArray(parsed.chains)
+      ? parsed.chains
+          .filter((c) => Array.isArray(c?.premises) && c.premises.length > 0 && Boolean(c?.conclusion))
+          .map((c) => ({
+            premises: c.premises!.map(String),
+            conclusion: String(c.conclusion),
+            relationLabel: String(c.relationLabel || 'entails')
+          }))
+      : []
+  }
 
   // Deterministic identity audit & merge against existing SQLite graph
   const db = getDb()
